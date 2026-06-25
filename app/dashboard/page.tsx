@@ -18,7 +18,7 @@ import {
   Store,
   Users,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 const modules = [
   ["Planner", Calendar, "/planner"],
@@ -35,6 +35,17 @@ export default function DashboardPage() {
   const [messages, setMessages] = useState<{ role: "user" | "assistant"; content: string }[]>([]);
   const [loading, setLoading] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
+  const [history, setHistory] = useState<any[]>([]);
+
+  async function loadHistory() {
+    const res = await fetch("/api/conversation/list");
+    const data = await res.json();
+    if (Array.isArray(data)) setHistory(data);
+  }
+
+  useEffect(() => {
+    loadHistory();
+  }, []);
 
   async function sendMessage() {
     if (!input.trim()) return;
@@ -54,6 +65,7 @@ export default function DashboardPage() {
 
     if (data.conversationId) {
       setConversationId(data.conversationId);
+      loadHistory();
     }
 
     setMessages((prev) => [
@@ -90,6 +102,19 @@ export default function DashboardPage() {
         </div>
 
         <div className="flex-1 overflow-y-auto px-3 pb-4 text-sm">
+          <h5 className="mb-2 px-2 text-xs font-medium text-[#6B7280]">HISTORIAL</h5>
+          {history.map((chat) => (
+            <button
+              key={chat.id}
+              onClick={() => setConversationId(chat.id)}
+              className="block w-full truncate rounded-lg px-2 py-1.5 text-left text-[#6B7280] hover:bg-gray-200 hover:text-black"
+            >
+              {chat.title || "Nueva conversación"}
+            </button>
+          ))}
+
+          <div className="mx-2 my-6 h-px bg-[#E5E7EB]" />
+
           <h5 className="mb-2 px-2 text-xs font-medium text-[#6B7280]">MÓDULOS</h5>
           {modules.map(([name, Icon, href]: any) => (
             <a key={name} href={href} className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[#6B7280] hover:bg-gray-200 hover:text-black">
@@ -200,4 +225,5 @@ export default function DashboardPage() {
     </main>
   );
 }
+
 

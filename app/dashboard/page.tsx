@@ -34,6 +34,7 @@ export default function DashboardPage() {
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<{ role: "user" | "assistant"; content: string }[]>([]);
   const [loading, setLoading] = useState(false);
+  const [conversationId, setConversationId] = useState<string | null>(null);
 
   async function sendMessage() {
     if (!input.trim()) return;
@@ -46,10 +47,14 @@ export default function DashboardPage() {
     const res = await fetch("/api/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message: userMessage }),
+      body: JSON.stringify({ message: userMessage, conversationId }),
     });
 
     const data = await res.json();
+
+    if (data.conversationId) {
+      setConversationId(data.conversationId);
+    }
 
     setMessages((prev) => [
       ...prev,
@@ -195,3 +200,4 @@ export default function DashboardPage() {
     </main>
   );
 }
+

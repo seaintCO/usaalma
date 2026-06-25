@@ -18,13 +18,13 @@
 } from "lucide-react";
 
 const modules = [
-  ["Planner", Calendar],
-  ["Tasks", CheckCircle2],
-  ["Calendar", Calendar],
-  ["Notes", FileText],
-  ["CRM", Users],
-  ["Invoicing", ReceiptText],
-  ["Documents", FolderOpen],
+  ["Planner", Calendar, "/planner"],
+  ["Tasks", CheckCircle2, "/tasks"],
+  ["Calendar", Calendar, "/planner"],
+  ["Notes", FileText, "/notes"],
+  ["CRM", Users, "/crm"],
+  ["Facturación", ReceiptText, "/invoicing"],
+  ["Documentos", FolderOpen, "/documents"],
 ];
 
 export default function DashboardPage() {
@@ -143,3 +143,4 @@ export default function DashboardPage() {
     </main>
   );
 }
+

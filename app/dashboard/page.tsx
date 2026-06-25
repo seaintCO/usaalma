@@ -40,6 +40,22 @@ export default function DashboardPage() {
   const [history, setHistory] = useState<any[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  async function loadConversation(id:string) {
+    const res = await fetch("/api/conversation/load", {
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify({ conversationId:id }),
+    });
+
+    const data = await res.json();
+
+    if (Array.isArray(data)) {
+      setMessages(data);
+      setConversationId(id);
+      setSidebarOpen(false);
+    }
+  }
+
   async function loadHistory() {
     const res = await fetch("/api/conversation/list");
     const data = await res.json();
@@ -119,10 +135,7 @@ export default function DashboardPage() {
           {history.map((chat) => (
             <button
               key={chat.id}
-              onClick={() => {
-                setConversationId(chat.id);
-                setSidebarOpen(false);
-              }}
+              onClick={() => loadConversation(chat.id)}
               className="block w-full truncate rounded-lg px-2 py-1.5 text-left text-[#6B7280] hover:bg-gray-200 hover:text-black"
             >
               {chat.title || "Nueva conversación"}
@@ -282,3 +295,4 @@ export default function DashboardPage() {
     </main>
   );
 }
+

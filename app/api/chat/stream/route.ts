@@ -9,6 +9,7 @@ import { saveExtractedMemory } from "@/lib/ai/memory/saveMemory";
 import { executeTool, toolDefinitions } from "@/lib/ai/tools/registry";
 import { safeJsonParse } from "@/lib/ai/tools/utils";
 import { buildDocumentContext } from "@/lib/ai/documents/context";
+import { buildWorkspaceContext } from "@/lib/ai/workspaces/context";
 import { selectAgent } from "@/lib/ai/agents/selector";
 
 export async function POST(req:Request) {
@@ -39,6 +40,7 @@ export async function POST(req:Request) {
   const memoryContext = await buildContext(user.id);
   const integrationContext = await buildIntegrationContext(user.id);
   const documentContext = await buildDocumentContext(user.id);
+  const workspaceContext = await buildWorkspaceContext(user.id);
 
   const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -70,6 +72,9 @@ Si el usuario pide una acción, usa la herramienta correcta.
 
 Integraciones conectadas:
 ${integrationContext}
+
+Workspaces:
+${workspaceContext}
 
 Documentos guardados:
 ${documentContext}
@@ -187,5 +192,6 @@ ${memoryContext || "Sin memoria guardada todavía."}
     },
   });
 }
+
 
 

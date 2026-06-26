@@ -55,7 +55,13 @@ export default function AdminPage() {
             {error}
           </div>
         ) : (
-          <div className="mt-10 grid gap-5 md:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-8">
+          <a href="/admin/calls" className="inline-flex rounded-full bg-black px-5 py-3 text-sm font-medium text-white">
+            Ver Call Logs
+          </a>
+        </div>
+
+        <div className="mt-10 grid gap-5 md:grid-cols-2 lg:grid-cols-4">
             {cards.map(([label, key, Icon]: any) => (
               <div key={key} className="rounded-[1.5rem] border border-[#E5E7EB] bg-white p-6">
                 <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl border border-[#E5E7EB] bg-[#F7F7F8]">
@@ -71,3 +77,4 @@ export default function AdminPage() {
     </main>
   );
 }
+

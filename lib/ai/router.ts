@@ -6,6 +6,7 @@ import { createTaskTool } from "@/lib/tools/tasks/createTaskTool";
 import { createNoteTool } from "@/lib/tools/notes/createNoteTool";
 import { createContactTool } from "@/lib/tools/crm/createContactTool";
 import { createInvoiceTool } from "@/lib/tools/invoices/createInvoiceTool";
+import { buildIntegrationContext } from "@/lib/ai/integrations/context";
 
 export async function askALMA(data:{ userId:string; message:string }) {
   if (!process.env.OPENAI_API_KEY) {
@@ -57,6 +58,7 @@ export async function askALMA(data:{ userId:string; message:string }) {
   } catch {}
 
   const memoryContext = await buildContext(data.userId);
+  const integrationContext = await buildIntegrationContext(data.userId);
   const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
   const response = await client.responses.create({
@@ -74,6 +76,9 @@ Puedes crear acciones con:
 "Agrega contacto: [nombre], [empresa], [email], [teléfono]"
 "Agrega factura: [cliente], [monto]"
 
+Integraciones conectadas:
+${integrationContext}
+
 Memoria:
 ${memoryContext || "Sin memoria guardada todavía."}
 
@@ -84,3 +89,4 @@ ${data.message}
 
   return response.output_text;
 }
+

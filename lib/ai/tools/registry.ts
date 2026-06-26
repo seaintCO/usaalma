@@ -5,53 +5,20 @@ import { createInvoiceTool } from "@/lib/tools/invoices/createInvoiceTool";
 import { createReceptionistTool } from "@/lib/tools/receptionist/createReceptionistTool";
 import { createDocumentTool } from "@/lib/tools/documents/createDocumentTool";
 import { createWorkspaceTool } from "@/lib/tools/workspaces/createWorkspaceTool";
+import { createWorkflowTool } from "@/lib/tools/workflows/createWorkflowTool";
 import { cleanNumber, cleanString } from "./utils";
 import { ToolRunRepository } from "@/lib/db/repositories/tools/toolRun.repository";
 import { getInstalledModuleKeys, userHasModule } from "@/lib/ai/modules/permissions";
 
 export const toolDefinitions = [
-  {
-    type: "function",
-    name: "create_task",
-    description: "Crear una tarea para el usuario.",
-    parameters: { type: "object", properties: { title: { type: "string" } }, required: ["title"], additionalProperties: false }
-  },
-  {
-    type: "function",
-    name: "create_note",
-    description: "Crear una nota para el usuario.",
-    parameters: { type: "object", properties: { title: { type: "string" }, content: { type: "string" } }, required: ["title", "content"], additionalProperties: false }
-  },
-  {
-    type: "function",
-    name: "create_contact",
-    description: "Crear un contacto en el CRM.",
-    parameters: { type: "object", properties: { name: { type: "string" }, company: { type: "string" }, email: { type: "string" }, phone: { type: "string" } }, required: ["name"], additionalProperties: false }
-  },
-  {
-    type: "function",
-    name: "create_invoice",
-    description: "Crear una factura para un cliente.",
-    parameters: { type: "object", properties: { clientName: { type: "string" }, amount: { type: "number" } }, required: ["clientName", "amount"], additionalProperties: false }
-  },
-  {
-    type: "function",
-    name: "create_receptionist",
-    description: "Crear una recepcionista IA para un negocio.",
-    parameters: { type: "object", properties: { businessName: { type: "string" }, businessType: { type: "string" }, phoneNumber: { type: "string" }, greeting: { type: "string" } }, required: ["businessName"], additionalProperties: false }
-  },
-  {
-    type: "function",
-    name: "create_document",
-    description: "Guardar un documento o conocimiento importante para ALMA.",
-    parameters: { type: "object", properties: { title: { type: "string" }, content: { type: "string" } }, required: ["title", "content"], additionalProperties: false }
-  },
-  {
-    type: "function",
-    name: "create_workspace",
-    description: "Crear un workspace para negocio, equipo, cliente o proyecto.",
-    parameters: { type: "object", properties: { name: { type: "string" }, type: { type: "string" } }, required: ["name"], additionalProperties: false }
-  }
+  { type:"function", name:"create_task", description:"Crear una tarea.", parameters:{ type:"object", properties:{ title:{ type:"string" } }, required:["title"], additionalProperties:false } },
+  { type:"function", name:"create_note", description:"Crear una nota.", parameters:{ type:"object", properties:{ title:{ type:"string" }, content:{ type:"string" } }, required:["title","content"], additionalProperties:false } },
+  { type:"function", name:"create_contact", description:"Crear contacto CRM.", parameters:{ type:"object", properties:{ name:{ type:"string" }, company:{ type:"string" }, email:{ type:"string" }, phone:{ type:"string" } }, required:["name"], additionalProperties:false } },
+  { type:"function", name:"create_invoice", description:"Crear factura.", parameters:{ type:"object", properties:{ clientName:{ type:"string" }, amount:{ type:"number" } }, required:["clientName","amount"], additionalProperties:false } },
+  { type:"function", name:"create_receptionist", description:"Crear recepcionista IA.", parameters:{ type:"object", properties:{ businessName:{ type:"string" }, businessType:{ type:"string" }, phoneNumber:{ type:"string" }, greeting:{ type:"string" } }, required:["businessName"], additionalProperties:false } },
+  { type:"function", name:"create_document", description:"Guardar documento o conocimiento.", parameters:{ type:"object", properties:{ title:{ type:"string" }, content:{ type:"string" } }, required:["title","content"], additionalProperties:false } },
+  { type:"function", name:"create_workspace", description:"Crear workspace.", parameters:{ type:"object", properties:{ name:{ type:"string" }, type:{ type:"string" } }, required:["name"], additionalProperties:false } },
+  { type:"function", name:"create_workflow", description:"Crear workflow de automatización.", parameters:{ type:"object", properties:{ name:{ type:"string" } }, required:["name"], additionalProperties:false } }
 ] as any[];
 
 async function logAndReturn(userId:string, name:string, args:any, result:any) {
@@ -117,6 +84,12 @@ export async function executeTool(userId:string, name:string, args:any) {
       const workspaceName = cleanString(args.name);
       if (!workspaceName) return { success:false, message:"Falta el nombre del workspace." };
       return await logAndReturn(userId, name, args, await createWorkspaceTool(userId, workspaceName, cleanString(args.type) || "business"));
+    }
+
+    if (name === "create_workflow") {
+      const workflowName = cleanString(args.name);
+      if (!workflowName) return { success:false, message:"Falta el nombre del workflow." };
+      return await logAndReturn(userId, name, args, await createWorkflowTool(userId, workflowName));
     }
 
     return { success:false, message:`Herramienta no encontrada: ${name}` };

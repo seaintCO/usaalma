@@ -65,38 +65,43 @@ export const toolDefinitions = [
   }
 ] as any[];
 
+async function logAndReturn(userId:string, name:string, args:any, result:any) {
+  await ToolRunRepository.create(userId, name, args, result);
+  return result;
+}
+
 export async function executeTool(userId:string, name:string, args:any) {
   try {
     if (name === "create_task") {
       const title = cleanString(args.title);
       if (!title) return { success:false, message:"Falta el título de la tarea." };
-      $result = await createTaskTool(userId, title);
-      await ToolRunRepository.create(userId, name, args, $result);
-      return $result;
+
+      const result = await createTaskTool(userId, title);
+      return await logAndReturn(userId, name, args, result);
     }
 
     if (name === "create_note") {
       const title = cleanString(args.title);
       const content = cleanString(args.content);
       if (!title) return { success:false, message:"Falta el título de la nota." };
-      $result = await createNoteTool(userId, title, content);
-      await ToolRunRepository.create(userId, name, args, $result);
-      return $result;
+
+      const result = await createNoteTool(userId, title, content);
+      return await logAndReturn(userId, name, args, result);
     }
 
     if (name === "create_contact") {
       const contactName = cleanString(args.name);
       if (!contactName) return { success:false, message:"Falta el nombre del contacto." };
 
-      $result = await createContactTool(
+      const result = await createContactTool(
         userId,
         contactName,
         cleanString(args.company),
         cleanString(args.email),
         cleanString(args.phone)
       );
-      await ToolRunRepository.create(userId, name, args, $result);
-      return $result;
+
+      return await logAndReturn(userId, name, args, result);
     }
 
     if (name === "create_invoice") {
@@ -106,9 +111,8 @@ export async function executeTool(userId:string, name:string, args:any) {
       if (!clientName) return { success:false, message:"Falta el nombre del cliente." };
       if (amount <= 0) return { success:false, message:"Falta un monto válido." };
 
-      $result = await createInvoiceTool(userId, clientName, amount);
-      await ToolRunRepository.create(userId, name, args, $result);
-      return $result;
+      const result = await createInvoiceTool(userId, clientName, amount);
+      return await logAndReturn(userId, name, args, result);
     }
 
     return {
@@ -122,4 +126,3 @@ export async function executeTool(userId:string, name:string, args:any) {
     };
   }
 }
-

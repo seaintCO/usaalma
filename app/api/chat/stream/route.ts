@@ -12,6 +12,7 @@ import { buildRelevantDocumentContext } from "@/lib/ai/documents/context";
 import { buildWorkspaceContext } from "@/lib/ai/workspaces/context";
 import { selectAgent } from "@/lib/ai/agents/selector";
 import { runPlannedExecution } from "@/lib/ai/planner/orchestrator";
+import { SubscriptionRepository } from "@/lib/db/repositories/billing/subscription.repository";
 
 export async function POST(req:Request) {
   const user = await getCurrentUser();
@@ -49,6 +50,11 @@ export async function POST(req:Request) {
   }
 
   if (!message) return new Response("Mensaje vacío", { status:400 });
+
+  const subscription = await SubscriptionRepository.get(user.id);
+  if (!subscription || !["active", "trialing"].includes(subscription.status)) {
+    return new Response("Tu suscripción no está activa. Ve a Billing para activar ALMA.", { status:402 });
+  }
   if (!process.env.OPENAI_API_KEY) return new Response("Falta OPENAI_API_KEY", { status:500 });
 
   if (!conversationId) {
@@ -251,6 +257,7 @@ ${memoryContext || "Sin memoria guardada todavía."}
     },
   });
 }
+
 
 
 

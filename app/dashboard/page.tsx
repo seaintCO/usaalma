@@ -141,10 +141,10 @@ export default function DashboardPage() {
         return;
       }
 
-      const billingRes = await fetch("/api/billing/status");
+      const billingRes = await fetch("/api/billing/required");
       const billing = await billingRes.json();
 
-      if (!["active", "trialing"].includes(billing.status)) {
+      if (billing.required) {
         window.location.href = "/billing";
         return;
       }
@@ -312,6 +312,7 @@ export default function DashboardPage() {
     </main>
   );
 }
+
 
 
 

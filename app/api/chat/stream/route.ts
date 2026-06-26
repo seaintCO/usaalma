@@ -6,6 +6,8 @@ import { ConversationRepository } from "@/lib/db/repositories/conversation.repos
 import { MessageRepository } from "@/lib/db/repositories/message.repository";
 import { extractMemory } from "@/lib/ai/extractors/memoryExtractor";
 import { saveExtractedMemory } from "@/lib/ai/memory/saveMemory";
+import { executeTool, toolDefinitions } from "@/lib/ai/tools/registry";
+import { safeJsonParse } from "@/lib/ai/tools/utils";
 
 export async function POST(req:Request) {
   const user = await getCurrentUser();
@@ -30,19 +32,14 @@ export async function POST(req:Request) {
   try {
     const extracted = await extractMemory(message);
     await saveExtractedMemory(user.id, extracted);
-  } catch {
-    // Memory extraction should not break streaming.
-  }
+  } catch {}
 
   const memoryContext = await buildContext(user.id);
   const integrationContext = await buildIntegrationContext(user.id);
 
   const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-  const stream = await client.responses.create({
-    model: process.env.ALMA_MODEL || "gpt-5.5",
-    stream: true,
-    input: `
+  const systemPrompt = `
 Eres ALMA, un asistente personal y empresarial creado por SEAINT.
 
 Idioma principal: español.
@@ -50,18 +47,100 @@ Idioma secundario: inglés.
 Nunca digas que eres ChatGPT.
 Sé clara, práctica, elegante y útil.
 
+Puedes usar herramientas reales para crear:
+- tareas
+- notas
+- contactos CRM
+- facturas
+
+Si el usuario pide una acción, usa la herramienta correcta.
+
 Integraciones conectadas:
 ${integrationContext}
 
 Memoria del usuario:
 ${memoryContext || "Sin memoria guardada todavía."}
+`;
 
-Usuario:
-${message}
-`
+  const firstResponse:any = await client.responses.create({
+    model: process.env.ALMA_MODEL || "gpt-5.5",
+    input: [
+      { role:"system", content:systemPrompt },
+      { role:"user", content:message }
+    ],
+    tools: toolDefinitions,
+    tool_choice: "auto"
   });
 
+  const toolCalls = (firstResponse.output || []).filter((item:any) => item.type === "function_call");
+
   const encoder = new TextEncoder();
+
+  if (toolCalls.length) {
+    const toolResults:any[] = [];
+
+    for (const call of toolCalls) {
+      const args = call.arguments ? safeJsonParse(call.arguments) : {};
+      const result = await executeTool(user.id, call.name, args);
+
+      toolResults.push({
+        type:"function_call_output",
+        call_id:call.call_id,
+        output:JSON.stringify(result)
+      });
+    }
+
+    const finalStream = await client.responses.create({
+      model: process.env.ALMA_MODEL || "gpt-5.5",
+      stream:true,
+      input:[
+        { role:"system", content:systemPrompt },
+        { role:"user", content:message },
+        ...toolCalls,
+        ...toolResults
+      ]
+    });
+
+    let fullReply = "";
+
+    const readable = new ReadableStream({
+      async start(controller) {
+        controller.enqueue(encoder.encode(`[CONVERSATION_ID:${conversationId}]\n`));
+
+        try {
+          for await (const event of finalStream as any) {
+            if (event.type === "response.output_text.delta") {
+              fullReply += event.delta;
+              controller.enqueue(encoder.encode(event.delta));
+            }
+          }
+
+          await MessageRepository.create(conversationId, user.id, "assistant", fullReply);
+        } catch {
+          controller.enqueue(encoder.encode("\n\nALMA tuvo un error ejecutando la herramienta."));
+        } finally {
+          controller.close();
+        }
+      }
+    });
+
+    return new Response(readable, {
+      headers:{
+        "Content-Type":"text/plain; charset=utf-8",
+        "Cache-Control":"no-cache",
+      },
+    });
+  }
+
+  const stream = await client.responses.create({
+    model: process.env.ALMA_MODEL || "gpt-5.5",
+    stream:true,
+    input:[
+      { role:"system", content:systemPrompt },
+      { role:"user", content:message }
+    ]
+  });
+
   let fullReply = "";
 
   const readable = new ReadableStream({
@@ -86,10 +165,9 @@ ${message}
   });
 
   return new Response(readable, {
-    headers: {
-      "Content-Type": "text/plain; charset=utf-8",
-      "Cache-Control": "no-cache",
+    headers:{
+      "Content-Type":"text/plain; charset=utf-8",
+      "Cache-Control":"no-cache",
     },
   });
 }
-

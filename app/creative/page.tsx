@@ -31,6 +31,9 @@ export default function CreativeStudioPage() {
   const [brandName, setBrandName] = useState("");
   const [industry, setIndustry] = useState("");
   const [style, setStyle] = useState("");
+  const [editFile, setEditFile] = useState<File | null>(null);
+  const [editAction, setEditAction] = useState("remove_background");
+  const [editPrompt, setEditPrompt] = useState("");
 
   async function loadAssets() {
     const res = await fetch("/api/creative/list");
@@ -57,6 +60,33 @@ export default function CreativeStudioPage() {
     if (!data.success) alert(data.error || data.message || "No se pudo generar.");
 
     setPrompt("");
+    setLoading(false);
+    loadAssets();
+  }
+
+  async function uploadEdit() {
+    if (!editFile) return;
+
+    setLoading(true);
+
+    const form = new FormData();
+    form.append("file", editFile);
+    form.append("action", editAction);
+    form.append("prompt", editPrompt);
+
+    const res = await fetch("/api/creative/upload-edit", {
+      method:"POST",
+      body:form,
+    });
+
+    const data = await res.json();
+
+    if (!data.success) {
+      alert(data.error || data.message || "No se pudo subir la imagen.");
+    }
+
+    setEditFile(null);
+    setEditPrompt("");
     setLoading(false);
     loadAssets();
   }
@@ -228,4 +258,6 @@ export default function CreativeStudioPage() {
     </main>
   );
 }
+
+
 

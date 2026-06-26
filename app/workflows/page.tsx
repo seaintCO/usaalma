@@ -6,6 +6,8 @@ import { useEffect, useState } from "react";
 export default function WorkflowsPage() {
   const [workflows, setWorkflows] = useState<any[]>([]);
   const [name, setName] = useState("");
+  const [stepLabel, setStepLabel] = useState("");
+  const [selectedWorkflow, setSelectedWorkflow] = useState("");
 
   async function loadWorkflows() {
     const res = await fetch("/api/workflows/list");
@@ -23,6 +25,23 @@ export default function WorkflowsPage() {
     });
 
     setName("");
+    loadWorkflows();
+  }
+
+  async function addStep() {
+    if (!selectedWorkflow || !stepLabel.trim()) return;
+
+    await fetch("/api/workflows/add-step", {
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body:JSON.stringify({
+        workflowId:selectedWorkflow,
+        type:"task",
+        label:stepLabel,
+      }),
+    });
+
+    setStepLabel("");
     loadWorkflows();
   }
 
@@ -47,19 +66,50 @@ export default function WorkflowsPage() {
           </p>
         </div>
 
-        <div className="mt-8 flex flex-col gap-3 rounded-[2rem] border border-[#E5E7EB] bg-white p-6 md:flex-row">
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Nombre del workflow"
-            className="flex-1 rounded-2xl border border-[#E5E7EB] bg-[#F7F7F8] px-4 py-3 outline-none"
-          />
-          <button onClick={createWorkflow} className="flex items-center justify-center gap-2 rounded-2xl bg-black px-5 py-3 text-sm font-medium text-white">
-            <Plus className="h-4 w-4" /> Crear workflow
-          </button>
+        <div className="mt-8 grid gap-5 md:grid-cols-2">
+          <div className="rounded-[2rem] border border-[#E5E7EB] bg-white p-6">
+            <h2 className="text-2xl font-medium">Crear workflow</h2>
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Nombre del workflow"
+              className="mt-5 w-full rounded-2xl border border-[#E5E7EB] bg-[#F7F7F8] px-4 py-3 outline-none"
+            />
+            <button onClick={createWorkflow} className="mt-4 flex items-center justify-center gap-2 rounded-2xl bg-black px-5 py-3 text-sm font-medium text-white">
+              <Plus className="h-4 w-4" /> Crear workflow
+            </button>
+          </div>
+
+          <div className="rounded-[2rem] border border-[#E5E7EB] bg-white p-6">
+            <h2 className="text-2xl font-medium">Agregar paso</h2>
+
+            <select
+              value={selectedWorkflow}
+              onChange={(e) => setSelectedWorkflow(e.target.value)}
+              className="mt-5 w-full rounded-2xl border border-[#E5E7EB] bg-[#F7F7F8] px-4 py-3 outline-none"
+            >
+              <option value="">Selecciona workflow</option>
+              {workflows.map((workflow) => (
+                <option key={workflow.id} value={workflow.id}>
+                  {workflow.name}
+                </option>
+              ))}
+            </select>
+
+            <input
+              value={stepLabel}
+              onChange={(e) => setStepLabel(e.target.value)}
+              placeholder="Ej: Crear tarea de seguimiento"
+              className="mt-3 w-full rounded-2xl border border-[#E5E7EB] bg-[#F7F7F8] px-4 py-3 outline-none"
+            />
+
+            <button onClick={addStep} className="mt-4 flex items-center justify-center gap-2 rounded-2xl bg-black px-5 py-3 text-sm font-medium text-white">
+              <Plus className="h-4 w-4" /> Agregar paso
+            </button>
+          </div>
         </div>
 
-        <div className="mt-8 grid gap-5 md:grid-cols-3">
+        <div className="mt-8 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
           {workflows.length === 0 ? (
             <div className="rounded-[1.5rem] border border-[#E5E7EB] bg-white p-6 text-sm text-[#6B7280]">
               No tienes workflows todavía.
@@ -70,8 +120,21 @@ export default function WorkflowsPage() {
                 <GitBranch className="mb-5 h-5 w-5 text-[#6B7280]" />
                 <h2 className="text-lg font-medium">{workflow.name}</h2>
                 <p className="mt-2 text-sm text-[#6B7280]">Trigger: {workflow.trigger_type}</p>
+
                 <div className="mt-4 inline-block rounded-full bg-yellow-50 px-3 py-1 text-xs font-medium text-yellow-700">
                   {workflow.status}
+                </div>
+
+                <div className="mt-5 space-y-2">
+                  {(workflow.steps || []).length === 0 ? (
+                    <p className="text-xs text-[#6B7280]">Sin pasos todavía.</p>
+                  ) : (
+                    (workflow.steps || []).map((step:any, index:number) => (
+                      <div key={step.id || index} className="rounded-xl bg-[#F7F7F8] p-3 text-sm">
+                        {index + 1}. {step.label}
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
             ))

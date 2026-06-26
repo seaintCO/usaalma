@@ -1,27 +1,11 @@
-import { ConversationRepository } from "@/lib/db/repositories/conversation.repository";
+﻿import { ConversationRepository } from "@/lib/db/repositories/conversation.repository";
 
-export class ConversationService{
+export class ConversationService {
+  static async newChat(userId: string) {
+    return await ConversationRepository.create(userId, "Nueva conversación");
+  }
 
-static async newChat(userId:string){
-
-return await ConversationRepository.create(
-
-userId,
-
-"Nueva conversaci�n"
-
-);
-
-}
-
-static async history(userId:string){
-
-return await ConversationRepository.list(
-
-userId
-
-);
-
-}
-
+  static async history(userId: string) {
+    return await ConversationRepository.list(userId);
+  }
 }

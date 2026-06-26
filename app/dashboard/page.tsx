@@ -39,6 +39,37 @@ export default function DashboardPage() {
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [history, setHistory] = useState<any[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingTitle, setEditingTitle] = useState("");
+
+  async function renameConversation(id:string) {
+    if (!editingTitle.trim()) return;
+
+    await fetch("/api/conversation/rename", {
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body:JSON.stringify({ conversationId:id, title:editingTitle }),
+    });
+
+    setEditingId(null);
+    setEditingTitle("");
+    loadHistory();
+  }
+
+  async function deleteConversation(id:string) {
+    await fetch("/api/conversation/delete", {
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body:JSON.stringify({ conversationId:id }),
+    });
+
+    if (conversationId === id) {
+      setMessages([]);
+      setConversationId(null);
+    }
+
+    loadHistory();
+  }
   const [installedModules, setInstalledModules] = useState<any[]>([]);
 
   async function loadInstalledModules() {
@@ -144,13 +175,44 @@ export default function DashboardPage() {
         <div className="flex-1 overflow-y-auto px-3 pb-4 text-sm">
           <h5 className="mb-2 px-2 text-xs font-medium text-[#6B7280]">HISTORIAL</h5>
           {history.map((chat) => (
-            <button
-              key={chat.id}
-              onClick={() => loadConversation(chat.id)}
-              className="block w-full truncate rounded-lg px-2 py-1.5 text-left text-[#6B7280] hover:bg-gray-200 hover:text-black"
-            >
-              {chat.title || "Nueva conversación"}
-            </button>
+            <div key={chat.id} className="group flex items-center gap-1 rounded-lg hover:bg-gray-200">
+              {editingId === chat.id ? (
+                <input
+                  autoFocus
+                  value={editingTitle}
+                  onChange={(e) => setEditingTitle(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") renameConversation(chat.id);
+                    if (e.key === "Escape") setEditingId(null);
+                  }}
+                  className="min-w-0 flex-1 bg-transparent px-2 py-1.5 text-sm outline-none"
+                />
+              ) : (
+                <button
+                  onClick={() => loadConversation(chat.id)}
+                  className="min-w-0 flex-1 truncate px-2 py-1.5 text-left text-[#6B7280] hover:text-black"
+                >
+                  {chat.title || "Nueva conversación"}
+                </button>
+              )}
+
+              <button
+                onClick={() => {
+                  setEditingId(chat.id);
+                  setEditingTitle(chat.title || "Nueva conversación");
+                }}
+                className="hidden px-1 text-xs text-[#6B7280] hover:text-black group-hover:block"
+              >
+                Editar
+              </button>
+
+              <button
+                onClick={() => deleteConversation(chat.id)}
+                className="hidden px-1 text-xs text-red-500 hover:text-red-700 group-hover:block"
+              >
+                Borrar
+              </button>
+            </div>
           ))}
 
           <div className="mx-2 my-6 h-px bg-[#E5E7EB]" />
@@ -317,6 +379,8 @@ export default function DashboardPage() {
     </main>
   );
 }
+
+
 
 
 

@@ -8,7 +8,7 @@ import { extractMemory } from "@/lib/ai/extractors/memoryExtractor";
 import { saveExtractedMemory } from "@/lib/ai/memory/saveMemory";
 import { executeTool, toolDefinitions } from "@/lib/ai/tools/registry";
 import { safeJsonParse } from "@/lib/ai/tools/utils";
-import { buildDocumentContext } from "@/lib/ai/documents/context";
+import { buildRelevantDocumentContext } from "@/lib/ai/documents/context";
 import { buildWorkspaceContext } from "@/lib/ai/workspaces/context";
 import { selectAgent } from "@/lib/ai/agents/selector";
 import { runPlannedExecution } from "@/lib/ai/planner/orchestrator";
@@ -98,7 +98,7 @@ ${planned.steps.map((s:any, i:number) => `${i + 1}. ${s.label} — ${s.result?.m
 
   const memoryContext = await buildContext(user.id);
   const integrationContext = await buildIntegrationContext(user.id);
-  const documentContext = await buildDocumentContext(user.id);
+  const documentContext = await buildRelevantDocumentContext(user.id, message);
   const workspaceContext = await buildWorkspaceContext(user.id);
 
   const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
@@ -251,6 +251,7 @@ ${memoryContext || "Sin memoria guardada todavía."}
     },
   });
 }
+
 
 
 

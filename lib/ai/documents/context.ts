@@ -1,14 +1,13 @@
-﻿import { DocumentRepository } from "@/lib/db/repositories/documents/document.repository";
+﻿import { searchDocuments } from "@/lib/ai/documents/search";
 
-export async function buildDocumentContext(userId:string) {
-  const documents = await DocumentRepository.list(userId);
+export async function buildRelevantDocumentContext(userId:string, query:string) {
+  const results = await searchDocuments(userId, query);
 
-  if (!documents.length) {
-    return "Sin documentos guardados todavía.";
+  if (!results.length) {
+    return "No se encontraron documentos relevantes.";
   }
 
-  return documents
-    .slice(0, 5)
-    .map((doc:any) => `Documento: ${doc.title}\n${doc.content}`)
+  return results
+    .map((doc:any) => `Documento: ${doc.title}\nRelevancia: ${Math.round((doc.similarity ?? 0) * 100)}%\n${doc.content}`)
     .join("\n\n---\n\n");
 }

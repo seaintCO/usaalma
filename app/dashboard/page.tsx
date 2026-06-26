@@ -80,27 +80,47 @@ export default function DashboardPage() {
 
   async function sendMessage() {
     if (!input.trim()) return;
-    const userMessage = input.trim();
 
+    const userMessage = input.trim();
     setInput("");
     setMessages((prev) => [...prev, { role:"user", content:userMessage }]);
     setLoading(true);
 
-    const res = await fetch("/api/chat", {
+    setMessages((prev) => [...prev, { role:"assistant", content:"" }]);
+
+    const res = await fetch("/api/chat/stream", {
       method:"POST",
       headers:{ "Content-Type":"application/json" },
       body:JSON.stringify({ message:userMessage, conversationId }),
     });
 
-    const data = await res.json();
-
-    if (data.conversationId) {
-      setConversationId(data.conversationId);
-      loadHistory();
+    if (!res.body) {
+      setLoading(false);
+      return;
     }
 
-    setMessages((prev) => [...prev, { role:"assistant", content:data.reply || data.error || "ALMA no pudo responder." }]);
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+
+    let fullReply = "";
+
+    while (true) {
+      const { value, done } = await reader.read();
+
+      if (done) break;
+
+      const chunk = decoder.decode(value);
+      fullReply += chunk;
+
+      setMessages((prev) => {
+        const updated = [...prev];
+        updated[updated.length - 1] = { role:"assistant", content:fullReply };
+        return updated;
+      });
+    }
+
     setLoading(false);
+    loadHistory();
   }
 
   useEffect(() => {
@@ -258,3 +278,4 @@ export default function DashboardPage() {
     </main>
   );
 }
+

@@ -5,6 +5,7 @@ import { saveExtractedMemory } from "@/lib/ai/memory/saveMemory";
 import { createTaskTool } from "@/lib/tools/tasks/createTaskTool";
 import { createNoteTool } from "@/lib/tools/notes/createNoteTool";
 import { createContactTool } from "@/lib/tools/crm/createContactTool";
+import { createInvoiceTool } from "@/lib/tools/invoices/createInvoiceTool";
 
 export async function askALMA(data:{ userId:string; message:string }) {
   if (!process.env.OPENAI_API_KEY) {
@@ -37,6 +38,19 @@ export async function askALMA(data:{ userId:string; message:string }) {
     }
   }
 
+  if (lower.startsWith("agrega factura") || lower.startsWith("crear factura") || lower.startsWith("nueva factura")) {
+    const raw = data.message.replace(/agrega factura:?/i, "").replace(/crear factura:?/i, "").replace(/nueva factura:?/i, "").trim();
+
+    if (raw) {
+      const parts = raw.split(",").map((p) => p.trim());
+      const clientName = parts[0];
+      const amountText = parts.find((p) => /\d/.test(p)) ?? "0";
+      const amount = Number(amountText.replace(/[^0-9.]/g, "") || 0);
+
+      return (await createInvoiceTool(data.userId, clientName, amount)).message;
+    }
+  }
+
   try {
     const extracted = await extractMemory(data.message);
     await saveExtractedMemory(data.userId, extracted);
@@ -58,6 +72,7 @@ Puedes crear acciones con:
 "Agrega tarea: [tarea]"
 "Agrega nota: [nota]"
 "Agrega contacto: [nombre], [empresa], [email], [teléfono]"
+"Agrega factura: [cliente], [monto]"
 
 Memoria:
 ${memoryContext || "Sin memoria guardada todavía."}

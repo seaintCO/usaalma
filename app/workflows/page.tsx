@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { GitBranch, Plus, Zap } from "lucide-react";
+import { GitBranch, Play, Plus, Zap } from "lucide-react";
 import { useEffect, useState } from "react";
 
 export default function WorkflowsPage() {
@@ -8,6 +8,7 @@ export default function WorkflowsPage() {
   const [name, setName] = useState("");
   const [stepLabel, setStepLabel] = useState("");
   const [selectedWorkflow, setSelectedWorkflow] = useState("");
+  const [runningId, setRunningId] = useState<string | null>(null);
 
   async function loadWorkflows() {
     const res = await fetch("/api/workflows/list");
@@ -42,6 +43,19 @@ export default function WorkflowsPage() {
     });
 
     setStepLabel("");
+    loadWorkflows();
+  }
+
+  async function runWorkflow(id:string) {
+    setRunningId(id);
+
+    await fetch("/api/workflows/run", {
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body:JSON.stringify({ workflowId:id }),
+    });
+
+    setRunningId(null);
     loadWorkflows();
   }
 
@@ -136,6 +150,15 @@ export default function WorkflowsPage() {
                     ))
                   )}
                 </div>
+
+                <button
+                  onClick={() => runWorkflow(workflow.id)}
+                  disabled={runningId === workflow.id || (workflow.steps || []).length === 0}
+                  className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl bg-black px-5 py-3 text-sm font-medium text-white disabled:opacity-40"
+                >
+                  <Play className="h-4 w-4" />
+                  {runningId === workflow.id ? "Ejecutando..." : "Ejecutar workflow"}
+                </button>
               </div>
             ))
           )}

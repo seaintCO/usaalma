@@ -1,6 +1,7 @@
 ﻿import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/auth/user";
+import { encryptSecret } from "@/lib/security/crypto";
 
 export async function POST(req:Request) {
   const user = await getCurrentUser();
@@ -19,10 +20,11 @@ export async function POST(req:Request) {
     user_id:user.id,
     provider:"twilio",
     account_sid:body.accountSid,
-    encrypted_secret:body.authToken,
+    encrypted_secret:encryptSecret(body.authToken),
     connected:true,
     metadata:{ status:"credentials_saved" },
   });
 
   return NextResponse.json({ success:true });
 }
+

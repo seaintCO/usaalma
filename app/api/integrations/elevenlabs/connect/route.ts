@@ -1,6 +1,7 @@
 ﻿import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/auth/user";
+import { encryptSecret } from "@/lib/security/crypto";
 
 export async function POST(req:Request) {
   const user = await getCurrentUser();
@@ -18,10 +19,11 @@ export async function POST(req:Request) {
   await supabase.from("oauth_connections").upsert({
     user_id:user.id,
     provider:"elevenlabs",
-    encrypted_secret:body.apiKey,
+    encrypted_secret:encryptSecret(body.apiKey),
     connected:true,
     metadata:{ status:"api_key_saved" },
   });
 
   return NextResponse.json({ success:true });
 }
+

@@ -21,6 +21,32 @@ export async function POST(req:Request) {
   const message = body.message;
   let conversationId = body.conversationId;
 
+  if (process.env.NEXT_PUBLIC_DEMO_MODE === "true") {
+    const encoder = new TextEncoder();
+
+    const demoReply = `Claro. Estoy en modo demo local. Puedo mostrarte cómo ALMA funcionará: chat en vivo, memoria, tareas, notas, CRM, facturación, documentos, workflows, marketplace y recepcionista IA. Cuando conectes Supabase, OpenAI y Stripe, estas acciones se guardarán y funcionarán en producción.`;
+
+    const readable = new ReadableStream({
+      async start(controller) {
+        controller.enqueue(encoder.encode(`[CONVERSATION_ID:demo-live]\n`));
+
+        for (const word of demoReply.split(" ")) {
+          controller.enqueue(encoder.encode(word + " "));
+          await new Promise((resolve) => setTimeout(resolve, 25));
+        }
+
+        controller.close();
+      }
+    });
+
+    return new Response(readable, {
+      headers:{
+        "Content-Type":"text/plain; charset=utf-8",
+        "Cache-Control":"no-cache",
+      },
+    });
+  }
+
   if (!message) return new Response("Mensaje vacío", { status:400 });
   if (!process.env.OPENAI_API_KEY) return new Response("Falta OPENAI_API_KEY", { status:500 });
 
@@ -192,6 +218,7 @@ ${memoryContext || "Sin memoria guardada todavía."}
     },
   });
 }
+
 
 
 

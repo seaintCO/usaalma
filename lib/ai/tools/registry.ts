@@ -4,6 +4,7 @@ import { createContactTool } from "@/lib/tools/crm/createContactTool";
 import { createInvoiceTool } from "@/lib/tools/invoices/createInvoiceTool";
 import { cleanNumber, cleanString } from "./utils";
 import { ToolRunRepository } from "@/lib/db/repositories/tools/toolRun.repository";
+import { getInstalledModuleKeys, userHasModule } from "@/lib/ai/modules/permissions";
 
 export const toolDefinitions = [
   {
@@ -12,9 +13,7 @@ export const toolDefinitions = [
     description: "Crear una tarea para el usuario.",
     parameters: {
       type: "object",
-      properties: {
-        title: { type: "string", description: "Título de la tarea" }
-      },
+      properties: { title: { type: "string" } },
       required: ["title"],
       additionalProperties: false
     }
@@ -70,9 +69,20 @@ async function logAndReturn(userId:string, name:string, args:any, result:any) {
   return result;
 }
 
+function blocked(moduleName:string) {
+  return {
+    success:false,
+    message:`Este módulo no está instalado todavía. Instala ${moduleName} desde Marketplace.`
+  };
+}
+
 export async function executeTool(userId:string, name:string, args:any) {
   try {
+    const installed = await getInstalledModuleKeys(userId);
+
     if (name === "create_task") {
+      if (!userHasModule(installed, "tasks")) return blocked("Tasks");
+
       const title = cleanString(args.title);
       if (!title) return { success:false, message:"Falta el título de la tarea." };
 
@@ -81,6 +91,8 @@ export async function executeTool(userId:string, name:string, args:any) {
     }
 
     if (name === "create_note") {
+      if (!userHasModule(installed, "notes")) return blocked("Notes");
+
       const title = cleanString(args.title);
       const content = cleanString(args.content);
       if (!title) return { success:false, message:"Falta el título de la nota." };
@@ -90,6 +102,8 @@ export async function executeTool(userId:string, name:string, args:any) {
     }
 
     if (name === "create_contact") {
+      if (!userHasModule(installed, "crm")) return blocked("CRM");
+
       const contactName = cleanString(args.name);
       if (!contactName) return { success:false, message:"Falta el nombre del contacto." };
 
@@ -105,6 +119,8 @@ export async function executeTool(userId:string, name:string, args:any) {
     }
 
     if (name === "create_invoice") {
+      if (!userHasModule(installed, "invoicing")) return blocked("Facturación");
+
       const clientName = cleanString(args.clientName);
       const amount = cleanNumber(args.amount);
 
@@ -115,14 +131,8 @@ export async function executeTool(userId:string, name:string, args:any) {
       return await logAndReturn(userId, name, args, result);
     }
 
-    return {
-      success:false,
-      message:`Herramienta no encontrada: ${name}`
-    };
+    return { success:false, message:`Herramienta no encontrada: ${name}` };
   } catch {
-    return {
-      success:false,
-      message:"La herramienta falló al ejecutarse."
-    };
+    return { success:false, message:"La herramienta falló al ejecutarse." };
   }
 }

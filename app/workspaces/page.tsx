@@ -1,11 +1,13 @@
 ﻿"use client";
 
-import { Building2, Plus, Users } from "lucide-react";
+import { Building2, Mail, Plus, Users } from "lucide-react";
 import { useEffect, useState } from "react";
 
 export default function WorkspacesPage() {
   const [workspaces, setWorkspaces] = useState<any[]>([]);
   const [name, setName] = useState("");
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [selectedWorkspace, setSelectedWorkspace] = useState("");
 
   async function loadWorkspaces() {
     const res = await fetch("/api/workspaces/list");
@@ -24,6 +26,22 @@ export default function WorkspacesPage() {
 
     setName("");
     loadWorkspaces();
+  }
+
+  async function inviteMember() {
+    if (!selectedWorkspace || !inviteEmail.trim()) return;
+
+    await fetch("/api/workspaces/invite", {
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body:JSON.stringify({
+        workspaceId:selectedWorkspace,
+        email:inviteEmail,
+        role:"member",
+      }),
+    });
+
+    setInviteEmail("");
   }
 
   useEffect(() => {
@@ -57,6 +75,36 @@ export default function WorkspacesPage() {
           <button onClick={createWorkspace} className="flex items-center justify-center gap-2 rounded-2xl bg-black px-5 py-3 text-sm font-medium text-white">
             <Plus className="h-4 w-4" /> Crear workspace
           </button>
+        </div>
+
+        <div className="mt-8 rounded-[2rem] border border-[#E5E7EB] bg-white p-6">
+          <h2 className="text-2xl font-medium">Invitar miembro</h2>
+
+          <div className="mt-5 grid gap-3 md:grid-cols-3">
+            <select
+              value={selectedWorkspace}
+              onChange={(e) => setSelectedWorkspace(e.target.value)}
+              className="rounded-2xl border border-[#E5E7EB] bg-[#F7F7F8] px-4 py-3 outline-none"
+            >
+              <option value="">Selecciona workspace</option>
+              {workspaces.map((workspace) => (
+                <option key={workspace.id} value={workspace.id}>
+                  {workspace.name}
+                </option>
+              ))}
+            </select>
+
+            <input
+              value={inviteEmail}
+              onChange={(e) => setInviteEmail(e.target.value)}
+              placeholder="Email del miembro"
+              className="rounded-2xl border border-[#E5E7EB] bg-[#F7F7F8] px-4 py-3 outline-none"
+            />
+
+            <button onClick={inviteMember} className="flex items-center justify-center gap-2 rounded-2xl bg-black px-5 py-3 text-sm font-medium text-white">
+              <Mail className="h-4 w-4" /> Invitar
+            </button>
+          </div>
         </div>
 
         <div className="mt-8 grid gap-5 md:grid-cols-3">

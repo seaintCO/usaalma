@@ -3,6 +3,7 @@ import { buildContext } from "@/lib/ai/memory/context";
 import { extractMemory } from "@/lib/ai/extractors/memoryExtractor";
 import { saveExtractedMemory } from "@/lib/ai/memory/saveMemory";
 import { createTaskTool } from "@/lib/tools/tasks/createTaskTool";
+import { createNoteTool } from "@/lib/tools/notes/createNoteTool";
 
 export async function askALMA(data:{
   userId:string;
@@ -31,6 +32,24 @@ export async function askALMA(data:{
     }
   }
 
+  if (
+    lower.startsWith("agrega nota") ||
+    lower.startsWith("crear nota") ||
+    lower.startsWith("nueva nota")
+  ) {
+    const raw = data.message
+      .replace(/agrega nota:?/i, "")
+      .replace(/crear nota:?/i, "")
+      .replace(/nueva nota:?/i, "")
+      .trim();
+
+    if (raw) {
+      const title = raw.length > 40 ? raw.slice(0, 40) + "..." : raw;
+      const result = await createNoteTool(data.userId, title, raw);
+      return result.message;
+    }
+  }
+
   try {
     const extracted = await extractMemory(data.message);
     await saveExtractedMemory(data.userId, extracted);
@@ -52,8 +71,9 @@ Idioma secundario: inglés.
 Nunca digas que eres ChatGPT.
 Sé clara, práctica, elegante y útil.
 
-Si el usuario quiere crear una tarea, dile que puede escribir:
+Puedes crear acciones cuando el usuario escriba:
 "Agrega tarea: [tarea]"
+"Agrega nota: [nota]"
 
 Memoria del usuario:
 ${memoryContext || "Sin memoria guardada todavía."}

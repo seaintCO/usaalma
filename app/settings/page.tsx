@@ -111,7 +111,13 @@ export default function SettingsPage() {
                   </div>
 
                   <button
-                    onClick={() => connectProvider(provider.key)}
+                    onClick={() => {
+                      if (provider.key === "google") {
+                        window.location.href = "/api/oauth/google/start";
+                      } else {
+                        connectProvider(provider.key);
+                      }
+                    }}
                     disabled={connected || loading === provider.key}
                     className={
                       connected
@@ -149,3 +155,4 @@ export default function SettingsPage() {
     </main>
   );
 }
+

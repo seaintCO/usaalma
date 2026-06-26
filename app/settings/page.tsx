@@ -114,6 +114,8 @@ export default function SettingsPage() {
                     onClick={() => {
                       if (provider.key === "google") {
                         window.location.href = "/api/oauth/google/start";
+                      } else if (provider.key === "stripe") {
+                        window.location.href = "/api/oauth/stripe/start";
                       } else {
                         connectProvider(provider.key);
                       }
@@ -155,4 +157,5 @@ export default function SettingsPage() {
     </main>
   );
 }
+
 

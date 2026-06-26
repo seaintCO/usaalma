@@ -133,6 +133,50 @@ export default function CreativeStudioPage() {
         </div>
 
         <div className="mt-8 rounded-[2rem] border border-[#E5E7EB] bg-white p-6">
+          <h2 className="text-2xl font-medium">Image Editing</h2>
+          <p className="mt-2 text-sm text-[#6B7280]">
+            Upload an image for remove background, replace background, relighting, upscaling, object removal, or expand image.
+          </p>
+
+          <div className="mt-5 grid gap-3 md:grid-cols-3">
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) => setEditFile(e.target.files?.[0] || null)}
+              className="rounded-2xl border border-[#E5E7EB] bg-[#F7F7F8] px-4 py-3 text-sm outline-none"
+            />
+
+            <select
+              value={editAction}
+              onChange={(e) => setEditAction(e.target.value)}
+              className="rounded-2xl border border-[#E5E7EB] bg-[#F7F7F8] px-4 py-3 outline-none"
+            >
+              <option value="remove_background">Remove background</option>
+              <option value="replace_background">Replace background</option>
+              <option value="expand_image">Expand image</option>
+              <option value="object_removal">Object removal</option>
+              <option value="relighting">Relighting</option>
+              <option value="upscaling">Upscaling</option>
+            </select>
+
+            <button
+              onClick={uploadEdit}
+              disabled={loading || !editFile}
+              className="rounded-2xl bg-black px-5 py-3 text-sm font-medium text-white disabled:opacity-50"
+            >
+              Upload for edit
+            </button>
+          </div>
+
+          <textarea
+            value={editPrompt}
+            onChange={(e) => setEditPrompt(e.target.value)}
+            placeholder="Optional: describe what should change..."
+            className="mt-4 min-h-24 w-full rounded-2xl border border-[#E5E7EB] bg-[#F7F7F8] p-4 outline-none"
+          />
+        </div>
+
+        <div className="mt-8 rounded-[2rem] border border-[#E5E7EB] bg-white p-6">
           <h2 className="text-2xl font-medium">Create Asset</h2>
           <textarea
             value={prompt}
@@ -184,3 +228,4 @@ export default function CreativeStudioPage() {
     </main>
   );
 }
+

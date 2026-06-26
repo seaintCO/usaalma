@@ -16,6 +16,16 @@ export default function ReceptionistPage() {
     if (Array.isArray(data)) setItems(data);
   }
 
+  async function deployReceptionist(id:string) {
+    await fetch("/api/receptionist/deploy", {
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body:JSON.stringify({ id }),
+    });
+
+    loadReceptionists();
+  }
+
   async function createReceptionist() {
     if (!businessName.trim()) return;
 
@@ -88,6 +98,15 @@ export default function ReceptionistPage() {
               <div className="mt-4 rounded-full bg-yellow-50 px-3 py-1 text-xs font-medium text-yellow-700 inline-block">
                 {item.status}
               </div>
+
+              {item.status !== "ready" && (
+                <button
+                  onClick={() => deployReceptionist(item.id)}
+                  className="mt-4 block rounded-full bg-black px-4 py-2 text-xs font-medium text-white"
+                >
+                  Preparar para activar
+                </button>
+              )}
             </div>
           ))}
         </div>
@@ -95,3 +114,4 @@ export default function ReceptionistPage() {
     </main>
   );
 }
+

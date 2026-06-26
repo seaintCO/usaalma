@@ -246,6 +246,7 @@ export default function DashboardPage() {
                 <h1 className="mb-2 text-3xl font-normal tracking-tight md:text-4xl">Buenos días.</h1>
                 <h2 className="mb-4 text-3xl font-normal tracking-tight md:text-4xl">Soy ALMA.</h2>
                 <p className="text-lg text-[#6B7280]">¿Qué quieres lograr hoy?</p>
+                <p className="mt-3 text-xs uppercase tracking-[0.2em] text-[#9CA3AF]">Multi-Agent System Active</p>
               </div>
             ) : (
               <div className="space-y-5">
@@ -288,6 +289,7 @@ export default function DashboardPage() {
     </main>
   );
 }
+
 
 
 

@@ -8,6 +8,7 @@ import { extractMemory } from "@/lib/ai/extractors/memoryExtractor";
 import { saveExtractedMemory } from "@/lib/ai/memory/saveMemory";
 import { executeTool, toolDefinitions } from "@/lib/ai/tools/registry";
 import { safeJsonParse } from "@/lib/ai/tools/utils";
+import { selectAgent } from "@/lib/ai/agents/selector";
 
 export async function POST(req:Request) {
   const user = await getCurrentUser();
@@ -39,7 +40,17 @@ export async function POST(req:Request) {
 
   const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
+  const selectedAgent = selectAgent(message);
+
   const systemPrompt = `
+${selectedAgent.system}
+
+Active Agent:
+${selectedAgent.name}
+
+Agent Description:
+${selectedAgent.description}
+
 Eres ALMA, un asistente personal y empresarial creado por SEAINT.
 
 Idioma principal: español.
@@ -171,3 +182,4 @@ ${memoryContext || "Sin memoria guardada todavía."}
     },
   });
 }
+

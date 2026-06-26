@@ -4,6 +4,7 @@ import { extractMemory } from "@/lib/ai/extractors/memoryExtractor";
 import { saveExtractedMemory } from "@/lib/ai/memory/saveMemory";
 import { buildIntegrationContext } from "@/lib/ai/integrations/context";
 import { executeTool, toolDefinitions } from "@/lib/ai/tools/registry";
+import { safeJsonParse } from "@/lib/ai/tools/utils";
 
 export async function askALMA(data:{ userId:string; message:string }) {
   if (!process.env.OPENAI_API_KEY) {
@@ -68,7 +69,7 @@ ${memoryContext || "Sin memoria guardada todavía."}
   const toolResults:any[] = [];
 
   for (const call of toolCalls) {
-    const args = call.arguments ? JSON.parse(call.arguments) : {};
+    const args = call.arguments ? safeJsonParse(call.arguments) : {};
     const result = await executeTool(data.userId, call.name, args);
 
     toolResults.push({
@@ -90,3 +91,4 @@ ${memoryContext || "Sin memoria guardada todavía."}
 
   return finalResponse.output_text || "Listo.";
 }
+

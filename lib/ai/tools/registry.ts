@@ -2,6 +2,7 @@
 import { createNoteTool } from "@/lib/tools/notes/createNoteTool";
 import { createContactTool } from "@/lib/tools/crm/createContactTool";
 import { createInvoiceTool } from "@/lib/tools/invoices/createInvoiceTool";
+import { cleanNumber, cleanString } from "./utils";
 
 export const toolDefinitions = [
   {
@@ -64,24 +65,51 @@ export const toolDefinitions = [
 ] as any[];
 
 export async function executeTool(userId:string, name:string, args:any) {
-  if (name === "create_task") {
-    return await createTaskTool(userId, args.title);
-  }
+  try {
+    if (name === "create_task") {
+      const title = cleanString(args.title);
+      if (!title) return { success:false, message:"Falta el título de la tarea." };
+      return await createTaskTool(userId, title);
+    }
 
-  if (name === "create_note") {
-    return await createNoteTool(userId, args.title, args.content);
-  }
+    if (name === "create_note") {
+      const title = cleanString(args.title);
+      const content = cleanString(args.content);
+      if (!title) return { success:false, message:"Falta el título de la nota." };
+      return await createNoteTool(userId, title, content);
+    }
 
-  if (name === "create_contact") {
-    return await createContactTool(userId, args.name, args.company, args.email, args.phone);
-  }
+    if (name === "create_contact") {
+      const contactName = cleanString(args.name);
+      if (!contactName) return { success:false, message:"Falta el nombre del contacto." };
 
-  if (name === "create_invoice") {
-    return await createInvoiceTool(userId, args.clientName, Number(args.amount));
-  }
+      return await createContactTool(
+        userId,
+        contactName,
+        cleanString(args.company),
+        cleanString(args.email),
+        cleanString(args.phone)
+      );
+    }
 
-  return {
-    success:false,
-    message:`Herramienta no encontrada: ${name}`
-  };
+    if (name === "create_invoice") {
+      const clientName = cleanString(args.clientName);
+      const amount = cleanNumber(args.amount);
+
+      if (!clientName) return { success:false, message:"Falta el nombre del cliente." };
+      if (amount <= 0) return { success:false, message:"Falta un monto válido." };
+
+      return await createInvoiceTool(userId, clientName, amount);
+    }
+
+    return {
+      success:false,
+      message:`Herramienta no encontrada: ${name}`
+    };
+  } catch {
+    return {
+      success:false,
+      message:"La herramienta falló al ejecutarse."
+    };
+  }
 }

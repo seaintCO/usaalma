@@ -184,6 +184,10 @@ export default function DashboardPage() {
             <Settings className="h-4 w-4" />
             Settings
           </a>
+          <a href="/tools" className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[#6B7280] hover:bg-gray-200 hover:text-black">
+            <Settings className="h-4 w-4" />
+            Acciones
+          </a>
           <a href="/billing" className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[#6B7280] hover:bg-gray-200 hover:text-black">
             <CreditCard className="h-4 w-4" />
             Billing
@@ -313,5 +317,6 @@ export default function DashboardPage() {
     </main>
   );
 }
+
 
 

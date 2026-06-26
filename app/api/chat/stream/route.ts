@@ -11,6 +11,7 @@ import { safeJsonParse } from "@/lib/ai/tools/utils";
 import { buildDocumentContext } from "@/lib/ai/documents/context";
 import { buildWorkspaceContext } from "@/lib/ai/workspaces/context";
 import { selectAgent } from "@/lib/ai/agents/selector";
+import { runPlannedExecution } from "@/lib/ai/planner/orchestrator";
 
 export async function POST(req:Request) {
   const user = await getCurrentUser();
@@ -62,6 +63,38 @@ export async function POST(req:Request) {
     const extracted = await extractMemory(message);
     await saveExtractedMemory(user.id, extracted);
   } catch {}
+
+  const planned = await runPlannedExecution(user.id, message);
+
+  if (planned) {
+    const encoder = new TextEncoder();
+
+    const reply = `Listo. Creé un plan para: ${planned.goal}
+
+Acciones ejecutadas:
+${planned.steps.map((s:any, i:number) => `${i + 1}. ${s.label} — ${s.result?.message || "Completado"}`).join("\n")}`;
+
+    const readable = new ReadableStream({
+      async start(controller) {
+        controller.enqueue(encoder.encode(`[CONVERSATION_ID:${conversationId}]\n`));
+
+        for (const word of reply.split(" ")) {
+          controller.enqueue(encoder.encode(word + " "));
+          await new Promise((resolve) => setTimeout(resolve, 15));
+        }
+
+        await MessageRepository.create(conversationId, user.id, "assistant", reply);
+        controller.close();
+      }
+    });
+
+    return new Response(readable, {
+      headers:{
+        "Content-Type":"text/plain; charset=utf-8",
+        "Cache-Control":"no-cache",
+      },
+    });
+  }
 
   const memoryContext = await buildContext(user.id);
   const integrationContext = await buildIntegrationContext(user.id);
@@ -218,6 +251,7 @@ ${memoryContext || "Sin memoria guardada todavía."}
     },
   });
 }
+
 
 
 

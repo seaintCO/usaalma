@@ -4,6 +4,8 @@ import { buildContext } from "@/lib/ai/memory/context";
 import { buildIntegrationContext } from "@/lib/ai/integrations/context";
 import { ConversationRepository } from "@/lib/db/repositories/conversation.repository";
 import { MessageRepository } from "@/lib/db/repositories/message.repository";
+import { extractMemory } from "@/lib/ai/extractors/memoryExtractor";
+import { saveExtractedMemory } from "@/lib/ai/memory/saveMemory";
 
 export async function POST(req:Request) {
   const user = await getCurrentUser();
@@ -24,6 +26,13 @@ export async function POST(req:Request) {
   }
 
   await MessageRepository.create(conversationId, user.id, "user", message);
+
+  try {
+    const extracted = await extractMemory(message);
+    await saveExtractedMemory(user.id, extracted);
+  } catch {
+    // Memory extraction should not break streaming.
+  }
 
   const memoryContext = await buildContext(user.id);
   const integrationContext = await buildIntegrationContext(user.id);
@@ -83,3 +92,4 @@ ${message}
     },
   });
 }
+

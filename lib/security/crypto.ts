@@ -1,9 +1,10 @@
 ﻿import crypto from "crypto";
+import { requireEnv } from "@/lib/config/env";
 
 const algorithm = "aes-256-gcm";
 
 function getKey() {
-  const secret = process.env.APP_ENCRYPTION_KEY || "";
+  const secret = requireEnv("APP_ENCRYPTION_KEY");
   return crypto.createHash("sha256").update(secret).digest();
 }
 
@@ -39,3 +40,4 @@ export function decryptSecret(value:string) {
 
   return decrypted.toString("utf8");
 }
+

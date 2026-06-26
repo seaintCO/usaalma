@@ -14,100 +14,43 @@ export const toolDefinitions = [
     type: "function",
     name: "create_task",
     description: "Crear una tarea para el usuario.",
-    parameters: {
-      type: "object",
-      properties: { title: { type: "string" } },
-      required: ["title"],
-      additionalProperties: false
-    }
+    parameters: { type: "object", properties: { title: { type: "string" } }, required: ["title"], additionalProperties: false }
   },
   {
     type: "function",
     name: "create_note",
     description: "Crear una nota para el usuario.",
-    parameters: {
-      type: "object",
-      properties: {
-        title: { type: "string" },
-        content: { type: "string" }
-      },
-      required: ["title", "content"],
-      additionalProperties: false
-    }
+    parameters: { type: "object", properties: { title: { type: "string" }, content: { type: "string" } }, required: ["title", "content"], additionalProperties: false }
   },
   {
     type: "function",
     name: "create_contact",
     description: "Crear un contacto en el CRM.",
-    parameters: {
-      type: "object",
-      properties: {
-        name: { type: "string" },
-        company: { type: "string" },
-        email: { type: "string" },
-        phone: { type: "string" }
-      },
-      required: ["name"],
-      additionalProperties: false
-    }
+    parameters: { type: "object", properties: { name: { type: "string" }, company: { type: "string" }, email: { type: "string" }, phone: { type: "string" } }, required: ["name"], additionalProperties: false }
   },
   {
     type: "function",
     name: "create_invoice",
     description: "Crear una factura para un cliente.",
-    parameters: {
-      type: "object",
-      properties: {
-        clientName: { type: "string" },
-        amount: { type: "number" }
-      },
-      required: ["clientName", "amount"],
-      additionalProperties: false
-    }
+    parameters: { type: "object", properties: { clientName: { type: "string" }, amount: { type: "number" } }, required: ["clientName", "amount"], additionalProperties: false }
   },
   {
     type: "function",
     name: "create_receptionist",
     description: "Crear una recepcionista IA para un negocio.",
-    parameters: {
-      type: "object",
-      properties: {
-        businessName: { type: "string" },
-        businessType: { type: "string" },
-        phoneNumber: { type: "string" },
-        greeting: { type: "string" }
-      },
-      required: ["businessName"],
-      additionalProperties: false
-    }
+    parameters: { type: "object", properties: { businessName: { type: "string" }, businessType: { type: "string" }, phoneNumber: { type: "string" }, greeting: { type: "string" } }, required: ["businessName"], additionalProperties: false }
   },
   {
     type: "function",
     name: "create_document",
     description: "Guardar un documento o conocimiento importante para ALMA.",
-    parameters: {
-      type: "object",
-      properties: {
-        title: { type: "string" },
-        content: { type: "string" }
-      },
-      required: ["title", "content"],
-      additionalProperties: false
-    }
-  }
+    parameters: { type: "object", properties: { title: { type: "string" }, content: { type: "string" } }, required: ["title", "content"], additionalProperties: false }
+  },
   {
     type: "function",
     name: "create_workspace",
     description: "Crear un workspace para negocio, equipo, cliente o proyecto.",
-    parameters: {
-      type: "object",
-      properties: {
-        name: { type: "string" },
-        type: { type: "string" }
-      },
-      required: ["name"],
-      additionalProperties: false
-    }
+    parameters: { type: "object", properties: { name: { type: "string" }, type: { type: "string" } }, required: ["name"], additionalProperties: false }
   }
 ] as any[];
 
@@ -117,10 +60,7 @@ async function logAndReturn(userId:string, name:string, args:any, result:any) {
 }
 
 function blocked(moduleName:string) {
-  return {
-    success:false,
-    message:`Este módulo no está instalado todavía. Instala ${moduleName} desde Marketplace.`
-  };
+  return { success:false, message:`Este módulo no está instalado todavía. Instala ${moduleName} desde Marketplace.` };
 }
 
 export async function executeTool(userId:string, name:string, args:any) {
@@ -146,13 +86,7 @@ export async function executeTool(userId:string, name:string, args:any) {
       if (!userHasModule(installed, "crm")) return blocked("CRM");
       const contactName = cleanString(args.name);
       if (!contactName) return { success:false, message:"Falta el nombre del contacto." };
-      return await logAndReturn(userId, name, args, await createContactTool(
-        userId,
-        contactName,
-        cleanString(args.company),
-        cleanString(args.email),
-        cleanString(args.phone)
-      ));
+      return await logAndReturn(userId, name, args, await createContactTool(userId, contactName, cleanString(args.company), cleanString(args.email), cleanString(args.phone)));
     }
 
     if (name === "create_invoice") {
@@ -168,13 +102,7 @@ export async function executeTool(userId:string, name:string, args:any) {
       if (!userHasModule(installed, "ai_receptionist")) return blocked("Recepcionista IA");
       const businessName = cleanString(args.businessName);
       if (!businessName) return { success:false, message:"Falta el nombre del negocio." };
-      return await logAndReturn(userId, name, args, await createReceptionistTool(
-        userId,
-        businessName,
-        cleanString(args.businessType),
-        cleanString(args.phoneNumber),
-        cleanString(args.greeting)
-      ));
+      return await logAndReturn(userId, name, args, await createReceptionistTool(userId, businessName, cleanString(args.businessType), cleanString(args.phoneNumber), cleanString(args.greeting)));
     }
 
     if (name === "create_document") {
@@ -188,11 +116,7 @@ export async function executeTool(userId:string, name:string, args:any) {
     if (name === "create_workspace") {
       const workspaceName = cleanString(args.name);
       if (!workspaceName) return { success:false, message:"Falta el nombre del workspace." };
-      return await logAndReturn(userId, name, args, await createWorkspaceTool(
-        userId,
-        workspaceName,
-        cleanString(args.type) || "business"
-      ));
+      return await logAndReturn(userId, name, args, await createWorkspaceTool(userId, workspaceName, cleanString(args.type) || "business"));
     }
 
     return { success:false, message:`Herramienta no encontrada: ${name}` };
@@ -200,4 +124,3 @@ export async function executeTool(userId:string, name:string, args:any) {
     return { success:false, message:"La herramienta falló al ejecutarse." };
   }
 }
-

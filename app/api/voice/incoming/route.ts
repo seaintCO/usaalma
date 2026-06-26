@@ -1,8 +1,18 @@
-﻿export async function POST(req:Request) {
+﻿import { CallLogRepository } from "@/lib/db/repositories/calls/callLog.repository";
+
+export async function POST(req:Request) {
   const formData = await req.formData();
 
   const from = formData.get("From")?.toString() || "";
   const to = formData.get("To")?.toString() || "";
+  const callSid = formData.get("CallSid")?.toString() || "";
+
+  await CallLogRepository.create({
+    from,
+    to,
+    callSid,
+    status:"incoming"
+  });
 
   const response = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
@@ -25,3 +35,4 @@
     },
   });
 }
+

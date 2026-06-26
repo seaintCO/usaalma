@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+﻿import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth/user";
 import { ConversationService } from "@/lib/services/conversation/conversation.service";
 
@@ -16,12 +16,17 @@ error:"Unauthorized"
 
 }
 
-const history=await ConversationService.history(
+if (process.env.NEXT_PUBLIC_DEMO_MODE === "true") {
+  return NextResponse.json([
+    { id:"demo-1", title:"Bienvenido a ALMA", created_at:new Date().toISOString() },
+    { id:"demo-2", title:"Demo: crear factura", created_at:new Date().toISOString() },
+    { id:"demo-3", title:"Demo: recepcionista IA", created_at:new Date().toISOString() },
+  ]);
+}
 
-user.id
-
-);
+const history=await ConversationService.history(user.id);
 
 return NextResponse.json(history);
 
 }
+

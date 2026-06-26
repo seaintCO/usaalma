@@ -12,6 +12,13 @@ if(!user){
 
 const body=await req.json();
 
+if (process.env.NEXT_PUBLIC_DEMO_MODE === "true") {
+  return NextResponse.json([
+    { role:"user", content:"Hola ALMA, ¿qué puedes hacer?" },
+    { role:"assistant", content:"Puedo ayudarte con tareas, notas, CRM, facturación, documentos, workflows y recepcionistas IA para negocios." }
+  ]);
+}
+
 if(!body.conversationId){
   return NextResponse.json({error:"Missing conversationId"},{status:400});
 }
@@ -26,3 +33,4 @@ const cleanMessages=messages.map((m:any)=>({
 return NextResponse.json(cleanMessages);
 
 }
+

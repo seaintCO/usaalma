@@ -1,4 +1,5 @@
 ﻿import { createClient } from "@/lib/supabase/server";
+import { createEmbedding } from "@/lib/ai/embeddings/createEmbedding";
 
 export class DocumentRepository {
   static async list(userId:string) {
@@ -16,6 +17,8 @@ export class DocumentRepository {
   static async create(userId:string, title:string, content:string) {
     const supabase = await createClient();
 
+    const embedding = await createEmbedding(`${title}\n${content}`);
+
     const { data, error } = await supabase
       .from("documents")
       .insert({
@@ -23,6 +26,7 @@ export class DocumentRepository {
         title,
         content,
         source_type:"manual",
+        embedding,
       })
       .select()
       .single();
@@ -32,3 +36,4 @@ export class DocumentRepository {
     return data;
   }
 }
+

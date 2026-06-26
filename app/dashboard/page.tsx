@@ -110,7 +110,15 @@ export default function DashboardPage() {
       if (done) break;
 
       const chunk = decoder.decode(value);
-      fullReply += chunk;
+
+      const match = chunk.match(/\[CONVERSATION_ID:(.*?)\]\n/);
+      const cleanChunk = chunk.replace(/\[CONVERSATION_ID:.*?\]\n/, "");
+
+      if (match?.[1]) {
+        setConversationId(match[1]);
+      }
+
+      fullReply += cleanChunk;
 
       setMessages((prev) => {
         const updated = [...prev];
@@ -278,4 +286,5 @@ export default function DashboardPage() {
     </main>
   );
 }
+
 

@@ -3,6 +3,7 @@ import { createNoteTool } from "@/lib/tools/notes/createNoteTool";
 import { createContactTool } from "@/lib/tools/crm/createContactTool";
 import { createInvoiceTool } from "@/lib/tools/invoices/createInvoiceTool";
 import { createReceptionistTool } from "@/lib/tools/receptionist/createReceptionistTool";
+import { createDocumentTool } from "@/lib/tools/documents/createDocumentTool";
 import { cleanNumber, cleanString } from "./utils";
 import { ToolRunRepository } from "@/lib/db/repositories/tools/toolRun.repository";
 import { getInstalledModuleKeys, userHasModule } from "@/lib/ai/modules/permissions";
@@ -78,6 +79,20 @@ export const toolDefinitions = [
       required: ["businessName"],
       additionalProperties: false
     }
+  },
+  {
+    type: "function",
+    name: "create_document",
+    description: "Guardar un documento o conocimiento importante para ALMA.",
+    parameters: {
+      type: "object",
+      properties: {
+        title: { type: "string" },
+        content: { type: "string" }
+      },
+      required: ["title", "content"],
+      additionalProperties: false
+    }
   }
 ] as any[];
 
@@ -116,18 +131,13 @@ export async function executeTool(userId:string, name:string, args:any) {
       if (!userHasModule(installed, "crm")) return blocked("CRM");
       const contactName = cleanString(args.name);
       if (!contactName) return { success:false, message:"Falta el nombre del contacto." };
-      return await logAndReturn(
+      return await logAndReturn(userId, name, args, await createContactTool(
         userId,
-        name,
-        args,
-        await createContactTool(
-          userId,
-          contactName,
-          cleanString(args.company),
-          cleanString(args.email),
-          cleanString(args.phone)
-        )
-      );
+        contactName,
+        cleanString(args.company),
+        cleanString(args.email),
+        cleanString(args.phone)
+      ));
     }
 
     if (name === "create_invoice") {
@@ -141,22 +151,23 @@ export async function executeTool(userId:string, name:string, args:any) {
 
     if (name === "create_receptionist") {
       if (!userHasModule(installed, "ai_receptionist")) return blocked("Recepcionista IA");
-
       const businessName = cleanString(args.businessName);
       if (!businessName) return { success:false, message:"Falta el nombre del negocio." };
-
-      return await logAndReturn(
+      return await logAndReturn(userId, name, args, await createReceptionistTool(
         userId,
-        name,
-        args,
-        await createReceptionistTool(
-          userId,
-          businessName,
-          cleanString(args.businessType),
-          cleanString(args.phoneNumber),
-          cleanString(args.greeting)
-        )
-      );
+        businessName,
+        cleanString(args.businessType),
+        cleanString(args.phoneNumber),
+        cleanString(args.greeting)
+      ));
+    }
+
+    if (name === "create_document") {
+      if (!userHasModule(installed, "documents")) return blocked("Documentos");
+      const title = cleanString(args.title);
+      const content = cleanString(args.content);
+      if (!title) return { success:false, message:"Falta el título del documento." };
+      return await logAndReturn(userId, name, args, await createDocumentTool(userId, title, content));
     }
 
     return { success:false, message:`Herramienta no encontrada: ${name}` };

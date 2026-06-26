@@ -132,8 +132,20 @@ export default function DashboardPage() {
   }
 
   useEffect(() => {
-    loadHistory();
-    loadInstalledModules();
+    async function checkOnboarding() {
+      const res = await fetch("/api/onboarding/status");
+      const data = await res.json();
+
+      if (data && data.completed === false) {
+        window.location.href = "/onboarding";
+        return;
+      }
+
+      loadHistory();
+      loadInstalledModules();
+    }
+
+    checkOnboarding();
   }, []);
 
   function Sidebar() {
@@ -292,6 +304,7 @@ export default function DashboardPage() {
     </main>
   );
 }
+
 
 
 

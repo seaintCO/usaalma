@@ -7,6 +7,7 @@ import { createDocumentTool } from "@/lib/tools/documents/createDocumentTool";
 import { createWorkspaceTool } from "@/lib/tools/workspaces/createWorkspaceTool";
 import { createWorkflowTool } from "@/lib/tools/workflows/createWorkflowTool";
 import { addWorkflowStepTool, runWorkflowTool } from "@/lib/tools/workflows/workflowActionsTool";
+import { generateImageTool } from "@/lib/tools/images/generateImageTool";
 import { cleanNumber, cleanString } from "./utils";
 import { ToolRunRepository } from "@/lib/db/repositories/tools/toolRun.repository";
 import { getInstalledModuleKeys, userHasModule } from "@/lib/ai/modules/permissions";
@@ -20,8 +21,9 @@ export const toolDefinitions = [
   { type:"function", name:"create_document", description:"Guardar documento o conocimiento.", parameters:{ type:"object", properties:{ title:{ type:"string" }, content:{ type:"string" } }, required:["title","content"], additionalProperties:false } },
   { type:"function", name:"create_workspace", description:"Crear workspace.", parameters:{ type:"object", properties:{ name:{ type:"string" }, type:{ type:"string" } }, required:["name"], additionalProperties:false } },
   { type:"function", name:"create_workflow", description:"Crear workflow de automatización.", parameters:{ type:"object", properties:{ name:{ type:"string" } }, required:["name"], additionalProperties:false } },
-  { type:"function", name:"add_workflow_step", description:"Agregar un paso a un workflow existente.", parameters:{ type:"object", properties:{ workflowId:{ type:"string" }, label:{ type:"string" }, type:{ type:"string" } }, required:["workflowId","label"], additionalProperties:false } },
-  { type:"function", name:"run_workflow", description:"Ejecutar un workflow existente.", parameters:{ type:"object", properties:{ workflowId:{ type:"string" } }, required:["workflowId"], additionalProperties:false } }
+  { type:"function", name:"add_workflow_step", description:"Agregar paso a un workflow.", parameters:{ type:"object", properties:{ workflowId:{ type:"string" }, label:{ type:"string" }, type:{ type:"string" } }, required:["workflowId","label"], additionalProperties:false } },
+  { type:"function", name:"run_workflow", description:"Ejecutar workflow.", parameters:{ type:"object", properties:{ workflowId:{ type:"string" } }, required:["workflowId"], additionalProperties:false } },
+  { type:"function", name:"generate_image", description:"Generar una imagen usando IA.", parameters:{ type:"object", properties:{ prompt:{ type:"string" } }, required:["prompt"], additionalProperties:false } }
 ] as any[];
 
 async function logAndReturn(userId:string, name:string, args:any, result:any) {
@@ -109,9 +111,15 @@ export async function executeTool(userId:string, name:string, args:any) {
       return await logAndReturn(userId, name, args, await runWorkflowTool(userId, workflowId));
     }
 
+    if (name === "generate_image") {
+      if (!userHasModule(installed, "image_generator")) return blocked("Image Generator");
+      const prompt = cleanString(args.prompt);
+      if (!prompt) return { success:false, message:"Falta el prompt de la imagen." };
+      return await logAndReturn(userId, name, args, await generateImageTool(userId, prompt));
+    }
+
     return { success:false, message:`Herramienta no encontrada: ${name}` };
   } catch {
     return { success:false, message:"La herramienta falló al ejecutarse." };
   }
 }
-

@@ -5,6 +5,7 @@
       "tasks",
       "notes",
       "documents",
+      "image_generator",
       "crm",
       "invoicing",
       "workflows",
@@ -14,6 +15,7 @@
       "email_marketing",
       "sms",
       "website_builder",
+      "image_generator",
     ];
   }
 
@@ -23,6 +25,7 @@
       "tasks",
       "notes",
       "documents",
+      "image_generator",
       "workspaces",
     ];
   }
@@ -33,3 +36,4 @@
 export function moduleAllowed(plan:string, moduleKey:string) {
   return allowedModulesForPlan(plan).includes(moduleKey);
 }
+

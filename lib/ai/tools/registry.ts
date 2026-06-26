@@ -4,6 +4,7 @@ import { createContactTool } from "@/lib/tools/crm/createContactTool";
 import { createInvoiceTool } from "@/lib/tools/invoices/createInvoiceTool";
 import { createReceptionistTool } from "@/lib/tools/receptionist/createReceptionistTool";
 import { createDocumentTool } from "@/lib/tools/documents/createDocumentTool";
+import { createWorkspaceTool } from "@/lib/tools/workspaces/createWorkspaceTool";
 import { cleanNumber, cleanString } from "./utils";
 import { ToolRunRepository } from "@/lib/db/repositories/tools/toolRun.repository";
 import { getInstalledModuleKeys, userHasModule } from "@/lib/ai/modules/permissions";
@@ -94,6 +95,20 @@ export const toolDefinitions = [
       additionalProperties: false
     }
   }
+  {
+    type: "function",
+    name: "create_workspace",
+    description: "Crear un workspace para negocio, equipo, cliente o proyecto.",
+    parameters: {
+      type: "object",
+      properties: {
+        name: { type: "string" },
+        type: { type: "string" }
+      },
+      required: ["name"],
+      additionalProperties: false
+    }
+  }
 ] as any[];
 
 async function logAndReturn(userId:string, name:string, args:any, result:any) {
@@ -170,8 +185,19 @@ export async function executeTool(userId:string, name:string, args:any) {
       return await logAndReturn(userId, name, args, await createDocumentTool(userId, title, content));
     }
 
+    if (name === "create_workspace") {
+      const workspaceName = cleanString(args.name);
+      if (!workspaceName) return { success:false, message:"Falta el nombre del workspace." };
+      return await logAndReturn(userId, name, args, await createWorkspaceTool(
+        userId,
+        workspaceName,
+        cleanString(args.type) || "business"
+      ));
+    }
+
     return { success:false, message:`Herramienta no encontrada: ${name}` };
   } catch {
     return { success:false, message:"La herramienta falló al ejecutarse." };
   }
 }
+

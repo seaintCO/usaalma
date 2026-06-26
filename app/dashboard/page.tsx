@@ -39,6 +39,15 @@ export default function DashboardPage() {
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [history, setHistory] = useState<any[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [installedModules, setInstalledModules] = useState<any[]>([]);
+
+  async function loadInstalledModules() {
+    const res = await fetch("/api/modules/list");
+    const data = await res.json();
+    if (Array.isArray(data)) {
+      setInstalledModules(data.filter((m:any) => m.installed));
+    }
+  }
 
   async function loadConversation(id:string) {
     const res = await fetch("/api/conversation/load", {
@@ -64,6 +73,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     loadHistory();
+    loadInstalledModules();
   }, []);
 
   async function sendMessage() {
@@ -85,6 +95,7 @@ export default function DashboardPage() {
     if (data.conversationId) {
       setConversationId(data.conversationId);
       loadHistory();
+    loadInstalledModules();
     }
 
     setMessages((prev) => [
@@ -145,7 +156,14 @@ export default function DashboardPage() {
           <div className="mx-2 my-6 h-px bg-[#E5E7EB]" />
 
           <h5 className="mb-2 px-2 text-xs font-medium text-[#6B7280]">MÓDULOS</h5>
-          {modules.map(([name, Icon, href]: any) => (
+          {installedModules.length === 0 ? (
+            <p className="px-2 py-2 text-xs text-[#6B7280]">Instala módulos desde Marketplace.</p>
+          ) : installedModules.map((module:any) => {
+            const found = modules.find(([,, href]:any) => href.includes(module.module_key));
+            const Icon:any = found?.[1] || Store;
+            const href = found?.[2] || "/marketplace";
+            const name = module.name;
+            return (
             <a
               key={name}
               href={href}
@@ -295,4 +313,5 @@ export default function DashboardPage() {
     </main>
   );
 }
+
 

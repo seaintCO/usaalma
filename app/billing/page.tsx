@@ -29,6 +29,16 @@ const addons = [
 ];
 
 export default function BillingPage() {
+  async function openPortal() {
+    const res = await fetch("/api/billing/portal", {
+      method:"POST",
+    });
+
+    const data = await res.json();
+
+    if (data.url) window.location.href = data.url;
+    else alert(data.error || "No se pudo abrir el portal.");
+  }
   async function checkout(plan:string) {
     const res = await fetch("/api/billing/checkout", {
       method:"POST",
@@ -65,6 +75,15 @@ export default function BillingPage() {
           <p className="mt-4 max-w-2xl text-lg text-[#6B7280]">
             Cobraremos por acceso base y módulos premium según el uso del negocio.
           </p>
+        </div>
+
+        <div className="mt-8">
+          <button
+            onClick={openPortal}
+            className="rounded-full border border-[#E5E7EB] bg-white px-5 py-3 text-sm font-medium hover:bg-[#F7F7F8]"
+          >
+            Administrar suscripción
+          </button>
         </div>
 
         <div className="mt-12 grid gap-6 md:grid-cols-2">
@@ -137,3 +156,4 @@ export default function BillingPage() {
     </main>
   );
 }
+

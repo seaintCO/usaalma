@@ -1,6 +1,7 @@
 ﻿import { NextResponse } from "next/server";
 import { requirePaidUser } from "@/lib/api/requirePaidUser";
 import { generateCreativeAsset } from "@/lib/creative/generateCreativeAsset";
+import { buildCreativeTemplatePrompt } from "@/lib/creative/templates/templates";
 
 export async function POST(req:Request) {
   const { user, error } = await requirePaidUser();
@@ -9,7 +10,15 @@ export async function POST(req:Request) {
 
   const body = await req.json();
 
-  const result = await generateCreativeAsset(user.id, body);
+  const templateInput = body.templateKey
+    ? buildCreativeTemplatePrompt(body.templateKey, body.prompt)
+    : body;
+
+  const result = await generateCreativeAsset(user.id, {
+    ...body,
+    ...templateInput,
+  });
 
   return NextResponse.json(result);
 }
+

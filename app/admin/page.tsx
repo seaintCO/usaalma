@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { Activity, BarChart3, Bot, FileText, MessageSquare, ReceiptText, Store, Users } from "lucide-react";
+import { Activity, BarChart3, Bot, FileText, MessageSquare, PhoneCall, ReceiptText, Store, Users } from "lucide-react";
 import { useEffect, useState } from "react";
 
 const cards = [
@@ -42,12 +42,17 @@ export default function AdminPage() {
         </a>
 
         <div className="mt-8">
-          <h1 className="text-4xl font-medium tracking-tight md:text-5xl">
-            ALMA Admin
-          </h1>
+          <h1 className="text-4xl font-medium tracking-tight md:text-5xl">ALMA Admin</h1>
           <p className="mt-4 max-w-2xl text-lg text-[#6B7280]">
             Panel interno para monitorear actividad, módulos y acciones.
           </p>
+        </div>
+
+        <div className="mt-8">
+          <a href="/admin/calls" className="inline-flex items-center gap-2 rounded-full bg-black px-5 py-3 text-sm font-medium text-white">
+            <PhoneCall className="h-4 w-4" />
+            Ver Call Logs
+          </a>
         </div>
 
         {error ? (
@@ -55,13 +60,7 @@ export default function AdminPage() {
             {error}
           </div>
         ) : (
-          <div className="mt-8">
-          <a href="/admin/calls" className="inline-flex rounded-full bg-black px-5 py-3 text-sm font-medium text-white">
-            Ver Call Logs
-          </a>
-        </div>
-
-        <div className="mt-10 grid gap-5 md:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-10 grid gap-5 md:grid-cols-2 lg:grid-cols-4">
             {cards.map(([label, key, Icon]: any) => (
               <div key={key} className="rounded-[1.5rem] border border-[#E5E7EB] bg-white p-6">
                 <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl border border-[#E5E7EB] bg-[#F7F7F8]">
@@ -77,4 +76,3 @@ export default function AdminPage() {
     </main>
   );
 }
-

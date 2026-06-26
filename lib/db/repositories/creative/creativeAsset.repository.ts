@@ -25,6 +25,7 @@ export class CreativeAssetRepository {
         title:asset.title ?? "Untitled Creation",
         prompt:asset.prompt,
         optimized_prompt:asset.optimizedPrompt ?? asset.prompt,
+        input_base64:asset.inputBase64 ?? null,
         output_base64:asset.outputBase64 ?? null,
         output_url:asset.outputUrl ?? null,
         provider:asset.provider ?? "openai",

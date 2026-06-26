@@ -2,12 +2,21 @@
 import { getCurrentUser } from "@/lib/auth/user";
 import { SubscriptionRepository } from "@/lib/db/repositories/billing/subscription.repository";
 
-export async function GET() {
-  const user = await getCurrentUser();
+export async function GET(){
 
-  if (!user) return NextResponse.json({ error:"Unauthorized" }, { status:401 });
+    const user = await getCurrentUser();
 
-  const subscription = await SubscriptionRepository.get(user.id);
+    if(!user)
+        return NextResponse.json({error:"Unauthorized"},{status:401});
 
-  return NextResponse.json(subscription ?? { plan:"free", status:"inactive" });
+    const subscription =
+        await SubscriptionRepository.get(user.id);
+
+    return NextResponse.json(
+        subscription ?? {
+            plan:"free",
+            status:"inactive"
+        }
+    );
+
 }

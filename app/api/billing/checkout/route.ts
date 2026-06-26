@@ -5,27 +5,30 @@ import { getStripe } from "@/lib/stripe/server";
 export async function POST(req:Request) {
   const user = await getCurrentUser();
 
-  if (!user) return NextResponse.json({ error:"Unauthorized" }, { status:401 });
+  if (!user) {
+    return NextResponse.json({ error:"Unauthorized" }, { status:401 });
+  }
 
   const body = await req.json();
-  const plan = body.plan;
+  const plan = body.plan === "business" ? "business" : "personal";
 
-  const price =
+  const priceId =
     plan === "business"
       ? process.env.STRIPE_PRICE_BUSINESS
       : process.env.STRIPE_PRICE_PERSONAL;
 
-  if (!price) return NextResponse.json({ error:"Missing Stripe price" }, { status:500 });
+  if (!priceId) {
+    return NextResponse.json({ error:"Missing Stripe price ID" }, { status:500 });
+  }
 
   const stripe = getStripe();
 
   const session = await stripe.checkout.sessions.create({
     mode:"subscription",
-    payment_method_types:["card"],
     customer_email:user.email ?? undefined,
     line_items:[
       {
-        price,
+        price:priceId,
         quantity:1,
       },
     ],

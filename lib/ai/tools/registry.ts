@@ -2,6 +2,7 @@
 import { createNoteTool } from "@/lib/tools/notes/createNoteTool";
 import { createContactTool } from "@/lib/tools/crm/createContactTool";
 import { createInvoiceTool } from "@/lib/tools/invoices/createInvoiceTool";
+import { createReceptionistTool } from "@/lib/tools/receptionist/createReceptionistTool";
 import { cleanNumber, cleanString } from "./utils";
 import { ToolRunRepository } from "@/lib/db/repositories/tools/toolRun.repository";
 import { getInstalledModuleKeys, userHasModule } from "@/lib/ai/modules/permissions";
@@ -61,6 +62,22 @@ export const toolDefinitions = [
       required: ["clientName", "amount"],
       additionalProperties: false
     }
+  },
+  {
+    type: "function",
+    name: "create_receptionist",
+    description: "Crear una recepcionista IA para un negocio.",
+    parameters: {
+      type: "object",
+      properties: {
+        businessName: { type: "string" },
+        businessType: { type: "string" },
+        phoneNumber: { type: "string" },
+        greeting: { type: "string" }
+      },
+      required: ["businessName"],
+      additionalProperties: false
+    }
   }
 ] as any[];
 
@@ -82,53 +99,64 @@ export async function executeTool(userId:string, name:string, args:any) {
 
     if (name === "create_task") {
       if (!userHasModule(installed, "tasks")) return blocked("Tasks");
-
       const title = cleanString(args.title);
       if (!title) return { success:false, message:"Falta el título de la tarea." };
-
-      const result = await createTaskTool(userId, title);
-      return await logAndReturn(userId, name, args, result);
+      return await logAndReturn(userId, name, args, await createTaskTool(userId, title));
     }
 
     if (name === "create_note") {
       if (!userHasModule(installed, "notes")) return blocked("Notes");
-
       const title = cleanString(args.title);
       const content = cleanString(args.content);
       if (!title) return { success:false, message:"Falta el título de la nota." };
-
-      const result = await createNoteTool(userId, title, content);
-      return await logAndReturn(userId, name, args, result);
+      return await logAndReturn(userId, name, args, await createNoteTool(userId, title, content));
     }
 
     if (name === "create_contact") {
       if (!userHasModule(installed, "crm")) return blocked("CRM");
-
       const contactName = cleanString(args.name);
       if (!contactName) return { success:false, message:"Falta el nombre del contacto." };
-
-      const result = await createContactTool(
+      return await logAndReturn(
         userId,
-        contactName,
-        cleanString(args.company),
-        cleanString(args.email),
-        cleanString(args.phone)
+        name,
+        args,
+        await createContactTool(
+          userId,
+          contactName,
+          cleanString(args.company),
+          cleanString(args.email),
+          cleanString(args.phone)
+        )
       );
-
-      return await logAndReturn(userId, name, args, result);
     }
 
     if (name === "create_invoice") {
       if (!userHasModule(installed, "invoicing")) return blocked("Facturación");
-
       const clientName = cleanString(args.clientName);
       const amount = cleanNumber(args.amount);
-
       if (!clientName) return { success:false, message:"Falta el nombre del cliente." };
       if (amount <= 0) return { success:false, message:"Falta un monto válido." };
+      return await logAndReturn(userId, name, args, await createInvoiceTool(userId, clientName, amount));
+    }
 
-      const result = await createInvoiceTool(userId, clientName, amount);
-      return await logAndReturn(userId, name, args, result);
+    if (name === "create_receptionist") {
+      if (!userHasModule(installed, "ai_receptionist")) return blocked("Recepcionista IA");
+
+      const businessName = cleanString(args.businessName);
+      if (!businessName) return { success:false, message:"Falta el nombre del negocio." };
+
+      return await logAndReturn(
+        userId,
+        name,
+        args,
+        await createReceptionistTool(
+          userId,
+          businessName,
+          cleanString(args.businessType),
+          cleanString(args.phoneNumber),
+          cleanString(args.greeting)
+        )
+      );
     }
 
     return { success:false, message:`Herramienta no encontrada: ${name}` };

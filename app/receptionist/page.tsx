@@ -92,7 +92,7 @@ export default function ReceptionistPage() {
               <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-[#F7F7F8]">
                 <Phone className="h-5 w-5" />
               </div>
-              <h3 className="text-lg font-medium">{item.business_name}</h3>
+              <a href={`/receptionist/${item.id}`} className="text-lg font-medium hover:underline">{item.business_name}</a>
               <p className="mt-2 text-sm text-[#6B7280]">{item.business_type || "Sin tipo"}</p>
               <p className="mt-2 text-sm text-[#6B7280]">{item.phone_number || "Sin número"}</p>
               <div className="mt-4 rounded-full bg-yellow-50 px-3 py-1 text-xs font-medium text-yellow-700 inline-block">
@@ -114,4 +114,5 @@ export default function ReceptionistPage() {
     </main>
   );
 }
+
 

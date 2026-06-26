@@ -24,7 +24,33 @@ const addOns = [
   ["SMS", "Uso Twilio"],
 ];
 
+"use client";
+
+"use client";
+
 export default function BillingPage() {
+  async function checkout(plan:string) {
+    const res = await fetch("/api/billing/checkout", {
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body:JSON.stringify({ plan }),
+    });
+
+    const data = await res.json();
+
+    if (data.url) window.location.href = data.url;
+  }
+  async function checkout(plan:string) {
+    const res = await fetch("/api/billing/checkout", {
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body:JSON.stringify({ plan }),
+    });
+
+    const data = await res.json();
+
+    if (data.url) window.location.href = data.url;
+  }
   return (
     <main className="min-h-screen bg-[#F7F7F8] px-6 py-10 text-[#111111]">
       <div className="mx-auto max-w-6xl">
@@ -81,7 +107,10 @@ export default function BillingPage() {
                 ))}
               </ul>
 
-              <button className={plan.featured ? "mt-8 w-full rounded-2xl bg-[#2563EB] py-4 font-medium text-white" : "mt-8 w-full rounded-2xl bg-black py-4 font-medium text-white"}>
+              <button
+                onClick={() => checkout(plan.featured ? "business" : "personal")}
+                className={plan.featured ? "mt-8 w-full rounded-2xl bg-[#2563EB] py-4 font-medium text-white" : "mt-8 w-full rounded-2xl bg-black py-4 font-medium text-white"}
+              >
                 Elegir plan
               </button>
             </div>
@@ -107,3 +136,5 @@ export default function BillingPage() {
     </main>
   );
 }
+
+

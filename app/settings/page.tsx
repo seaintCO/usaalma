@@ -1,47 +1,54 @@
-﻿import { Bot, Globe2, KeyRound, Languages, Settings, Shield, User } from "lucide-react";
+﻿"use client";
 
-const settings = [
-  {
-    title: "Perfil",
-    desc: "Nombre, correo, foto y datos básicos de tu cuenta.",
-    icon: User,
-  },
-  {
-    title: "Idioma",
-    desc: "ALMA empieza en español. Puedes activar English cuando quieras.",
-    icon: Languages,
-  },
-  {
-    title: "Memoria",
-    desc: "Controla lo que ALMA recuerda sobre ti, tus metas y tu negocio.",
-    icon: Bot,
-  },
-  {
-    title: "Conexiones",
-    desc: "Google Calendar, Gmail, Stripe, Twilio, ElevenLabs y más.",
-    icon: Globe2,
-  },
-  {
-    title: "Seguridad",
-    desc: "Contraseña, sesiones, permisos y privacidad.",
-    icon: Shield,
-  },
-  {
-    title: "API Keys",
-    desc: "Conecta servicios externos sin compartir contraseñas.",
-    icon: KeyRound,
-  },
+import { Bot, Calendar, CreditCard, Globe2, KeyRound, Languages, Phone, Settings, Shield, User } from "lucide-react";
+import { useEffect, useState } from "react";
+
+const providers = [
+  { key: "google", name: "Google Calendar / Gmail", icon: Calendar },
+  { key: "stripe", name: "Stripe", icon: CreditCard },
+  { key: "twilio", name: "Twilio", icon: Phone },
+  { key: "elevenlabs", name: "ElevenLabs", icon: Bot },
 ];
 
 export default function SettingsPage() {
+  const [connections, setConnections] = useState<any[]>([]);
+  const [loading, setLoading] = useState<string | null>(null);
+
+  async function loadConnections() {
+    const res = await fetch("/api/oauth/list");
+    const data = await res.json();
+    if (Array.isArray(data)) setConnections(data);
+  }
+
+  async function connectProvider(provider:string) {
+    setLoading(provider);
+
+    await fetch("/api/oauth/connect", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ provider }),
+    });
+
+    await loadConnections();
+    setLoading(null);
+  }
+
+  function isConnected(provider:string) {
+    return connections.some((c) => c.provider === provider && c.connected);
+  }
+
+  useEffect(() => {
+    loadConnections();
+  }, []);
+
   return (
-    <main className="min-h-screen bg-[#F7F7F8] px-6 py-10 text-[#111111]">
+    <main className="min-h-screen bg-[#F7F7F8] px-4 py-8 text-[#111111] md:px-6 md:py-10">
       <div className="mx-auto max-w-6xl">
         <a href="/dashboard" className="text-sm text-[#6B7280] hover:text-black">
           ← Volver a ALMA
         </a>
 
-        <div className="mt-10">
+        <div className="mt-8">
           <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl border border-[#E5E7EB] bg-white">
             <Settings className="h-5 w-5" />
           </div>
@@ -56,28 +63,71 @@ export default function SettingsPage() {
 
           <p className="mt-4 max-w-2xl text-lg text-[#6B7280]">
             Controla idioma, memoria, conexiones, privacidad y preferencias.
-            ALMA es tuya, no genérica.
           </p>
         </div>
 
-        <div className="mt-12 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-          {settings.map((item) => (
-            <div key={item.title} className="rounded-[1.5rem] border border-[#E5E7EB] bg-white p-6 shadow-sm shadow-black/5">
+        <div className="mt-10 grid gap-5 md:grid-cols-3">
+          {[
+            ["Perfil", "Nombre, correo y datos básicos.", User],
+            ["Idioma", "Español primero, English secundario.", Languages],
+            ["Memoria", "Controla lo que ALMA recuerda.", Bot],
+            ["Seguridad", "Sesiones, permisos y privacidad.", Shield],
+            ["API Keys", "Conecta servicios externos.", KeyRound],
+            ["Conexiones", "Apps conectadas a ALMA.", Globe2],
+          ].map(([title, desc, Icon]: any) => (
+            <div key={title} className="rounded-[1.5rem] border border-[#E5E7EB] bg-white p-6">
               <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl border border-[#E5E7EB] bg-[#F7F7F8]">
-                <item.icon className="h-5 w-5" />
+                <Icon className="h-5 w-5" />
               </div>
-
-              <h2 className="text-lg font-medium tracking-tight">{item.title}</h2>
-              <p className="mt-2 text-sm leading-6 text-[#6B7280]">{item.desc}</p>
-
-              <button className="mt-6 rounded-2xl bg-[#F7F7F8] px-4 py-2 text-sm font-medium hover:bg-gray-200">
-                Configurar
-              </button>
+              <h2 className="text-lg font-medium">{title}</h2>
+              <p className="mt-2 text-sm leading-6 text-[#6B7280]">{desc}</p>
             </div>
           ))}
         </div>
 
-        <div className="mt-10 rounded-[2rem] border border-[#E5E7EB] bg-white p-8">
+        <div className="mt-10 rounded-[2rem] border border-[#E5E7EB] bg-white p-6 md:p-8">
+          <h2 className="text-2xl font-medium tracking-tight">Conexiones</h2>
+          <p className="mt-2 text-sm text-[#6B7280]">
+            Conecta herramientas externas. Por ahora esto registra una conexión de prueba; luego cambiaremos cada una a OAuth real.
+          </p>
+
+          <div className="mt-6 grid gap-4 md:grid-cols-2">
+            {providers.map((provider) => {
+              const Icon = provider.icon;
+              const connected = isConnected(provider.key);
+
+              return (
+                <div key={provider.key} className="flex items-center justify-between rounded-2xl border border-[#E5E7EB] bg-[#F7F7F8] p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white">
+                      <Icon className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <div className="font-medium">{provider.name}</div>
+                      <div className="text-xs text-[#6B7280]">
+                        {connected ? "Conectado" : "No conectado"}
+                      </div>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => connectProvider(provider.key)}
+                    disabled={connected || loading === provider.key}
+                    className={
+                      connected
+                        ? "rounded-full bg-green-50 px-4 py-2 text-xs font-medium text-green-700"
+                        : "rounded-full bg-black px-4 py-2 text-xs font-medium text-white"
+                    }
+                  >
+                    {loading === provider.key ? "Conectando..." : connected ? "Conectado" : "Conectar"}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="mt-10 rounded-[2rem] border border-[#E5E7EB] bg-white p-6 md:p-8">
           <h2 className="text-2xl font-medium tracking-tight">Preferencia de idioma</h2>
           <p className="mt-2 text-sm text-[#6B7280]">
             El idioma principal de ALMA será español. English estará disponible como traducción secundaria.

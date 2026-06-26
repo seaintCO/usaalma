@@ -1,5 +1,6 @@
 ﻿import OpenAI from "openai";
 import { ImageRepository } from "@/lib/db/repositories/images/image.repository";
+import { optimizeImagePrompt } from "@/lib/ai/images/optimizeImagePrompt";
 
 export async function generateImageTool(userId:string, prompt:string) {
   if (!process.env.OPENAI_API_KEY) {
@@ -13,9 +14,11 @@ export async function generateImageTool(userId:string, prompt:string) {
     apiKey: process.env.OPENAI_API_KEY,
   });
 
+  const optimizedPrompt = await optimizeImagePrompt(prompt);
+
   const result:any = await client.images.generate({
     model:"gpt-image-1",
-    prompt,
+    prompt: optimizedPrompt,
     size:"1024x1024",
   });
 
@@ -28,7 +31,7 @@ export async function generateImageTool(userId:string, prompt:string) {
     };
   }
 
-  const saved = await ImageRepository.create(userId, prompt, imageBase64);
+  const saved = await ImageRepository.create(userId, optimizedPrompt, imageBase64);
 
   return {
     success:true,
@@ -36,3 +39,4 @@ export async function generateImageTool(userId:string, prompt:string) {
     image:saved,
   };
 }
+

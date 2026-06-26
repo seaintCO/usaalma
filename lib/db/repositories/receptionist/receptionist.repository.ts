@@ -1,4 +1,5 @@
 ﻿import { createClient } from "@/lib/supabase/server";
+import { buildReceptionistPrompt } from "@/lib/receptionist/prompt";
 
 export class ReceptionistRepository {
   static async list(userId:string) {
@@ -16,6 +17,8 @@ export class ReceptionistRepository {
   static async create(userId:string, data:any) {
     const supabase = await createClient();
 
+    const systemPrompt = buildReceptionistPrompt(data);
+
     const { data: receptionist, error } = await supabase
       .from("receptionists")
       .insert({
@@ -27,6 +30,12 @@ export class ReceptionistRepository {
         greeting:data.greeting ?? "",
         language:data.language ?? "es",
         status:"draft",
+        system_prompt:systemPrompt,
+        instructions:{
+          language:data.language ?? "es",
+          businessType:data.businessType ?? "",
+          greeting:data.greeting ?? "",
+        },
       })
       .select()
       .single();
@@ -36,3 +45,4 @@ export class ReceptionistRepository {
     return receptionist;
   }
 }
+

@@ -71,6 +71,12 @@ export default function WorkflowsPage() {
         </a>
 
         <div className="mt-8">
+          <a href="/workflows/runs" className="inline-flex rounded-full bg-black px-5 py-3 text-sm font-medium text-white">
+            Ver ejecuciones
+          </a>
+        </div>
+
+        <div className="mt-8">
           <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl border border-[#E5E7EB] bg-white">
             <Zap className="h-5 w-5" />
           </div>
@@ -167,3 +173,4 @@ export default function WorkflowsPage() {
     </main>
   );
 }
+

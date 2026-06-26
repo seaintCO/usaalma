@@ -1,11 +1,11 @@
 ﻿import { NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/auth/user";
+import { requirePaidUser } from "@/lib/api/requirePaidUser";
 import { DocumentRepository } from "@/lib/db/repositories/documents/document.repository";
 
 export async function POST(req:Request) {
-  const user = await getCurrentUser();
+  const { user, error } = await requirePaidUser();
 
-  if (!user) return NextResponse.json({ error:"Unauthorized" }, { status:401 });
+  if (error) return error;
 
   const body = await req.json();
 
@@ -19,3 +19,4 @@ export async function POST(req:Request) {
 
   return NextResponse.json(document);
 }
+

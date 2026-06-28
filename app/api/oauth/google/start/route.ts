@@ -8,9 +8,14 @@ export async function GET() {
     access_type: "offline",
     prompt: "consent",
     scope: [
-      "https://www.googleapis.com/auth/calendar",
-      "https://www.googleapis.com/auth/gmail.send",
+      "openid",
+      "email",
+      "profile",
       "https://www.googleapis.com/auth/userinfo.email",
+      "https://www.googleapis.com/auth/gmail.readonly",
+      "https://www.googleapis.com/auth/gmail.compose",
+      "https://www.googleapis.com/auth/gmail.send",
+      "https://www.googleapis.com/auth/calendar",
     ].join(" "),
   });
 

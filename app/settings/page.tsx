@@ -1,20 +1,11 @@
 ﻿"use client";
 
-import { Bot, Calendar, CreditCard, Globe2, KeyRound, Languages, Phone, Settings, Shield, User } from "lucide-react";
+import { Mail, Plug, ShieldCheck, X } from "lucide-react";
 import { useEffect, useState } from "react";
-
-const providers = [
-  { key: "google", name: "Google Calendar / Gmail", icon: Calendar },
-  { key: "stripe", name: "Stripe", icon: CreditCard },
-  { key: "twilio", name: "Twilio", icon: Phone },
-  { key: "elevenlabs", name: "ElevenLabs", icon: Bot },
-];
 
 export default function SettingsPage() {
   const [connections, setConnections] = useState<any[]>([]);
-  const [twilioSid, setTwilioSid] = useState("");
-  const [twilioToken, setTwilioToken] = useState("");
-  const [elevenKey, setElevenKey] = useState("");
+  const [showGmailModal, setShowGmailModal] = useState(false);
 
   async function loadConnections() {
     const res = await fetch("/api/oauth/list");
@@ -22,129 +13,133 @@ export default function SettingsPage() {
     if (Array.isArray(data)) setConnections(data);
   }
 
-  async function connectProvider(provider:string) {
-    if (provider === "google") window.location.href = "/api/oauth/google/start";
-    else if (provider === "stripe") window.location.href = "/api/oauth/stripe/start";
-  }
-
-  async function connectTwilio() {
-    await fetch("/api/integrations/twilio/connect", {
-      method:"POST",
-      headers:{ "Content-Type":"application/json" },
-      body:JSON.stringify({ accountSid: twilioSid, authToken: twilioToken }),
-    });
-    setTwilioSid("");
-    setTwilioToken("");
-    loadConnections();
-  }
-
-  async function connectElevenLabs() {
-    await fetch("/api/integrations/elevenlabs/connect", {
-      method:"POST",
-      headers:{ "Content-Type":"application/json" },
-      body:JSON.stringify({ apiKey: elevenKey }),
-    });
-    setElevenKey("");
-    loadConnections();
-  }
-
-  function isConnected(provider:string) {
-    return connections.some((c) => c.provider === provider && c.connected);
+  function connectGoogle() {
+    setShowGmailModal(true);
   }
 
   useEffect(() => {
     loadConnections();
   }, []);
 
+  const googleConnected = connections.some(
+    (c) => c.provider === "google" && (c.connected || c.access_token)
+  );
+
   return (
     <main className="min-h-screen bg-[#F7F7F8] px-4 py-8 text-[#111111] md:px-6 md:py-10">
-      <div className="mx-auto max-w-6xl">
-        <a href="/dashboard" className="text-sm text-[#6B7280] hover:text-black">← Volver a ALMA</a>
+      <div className="mx-auto max-w-5xl">
+        <a href="/dashboard" className="text-sm text-[#6B7280] hover:text-black">
+          ← Volver a ALMA
+        </a>
 
         <div className="mt-8">
           <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl border border-[#E5E7EB] bg-white">
-            <Settings className="h-5 w-5" />
+            <Plug className="h-5 w-5" />
           </div>
-          <h1 className="text-4xl font-medium tracking-tight md:text-5xl">Configura tu ALMA.</h1>
+
+          <h1 className="text-4xl font-medium tracking-tight md:text-5xl">
+            Settings
+          </h1>
+
           <p className="mt-4 max-w-2xl text-lg text-[#6B7280]">
-            Controla idioma, memoria, conexiones, privacidad y preferencias.
+            Connect your tools so ALMA can help you across your business.
           </p>
         </div>
 
-        <div className="mt-10 grid gap-5 md:grid-cols-3">
-          {[
-            ["Perfil", "Nombre, correo y datos básicos.", User],
-            ["Idioma", "Español primero, English secundario.", Languages],
-            ["Memoria", "Controla lo que ALMA recuerda.", Bot],
-            ["Seguridad", "Sesiones, permisos y privacidad.", Shield],
-            ["API Keys", "Conecta servicios externos.", KeyRound],
-            ["Conexiones", "Apps conectadas a ALMA.", Globe2],
-          ].map(([title, desc, Icon]: any) => (
-            <div key={title} className="rounded-[1.5rem] border border-[#E5E7EB] bg-white p-6">
-              <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl border border-[#E5E7EB] bg-[#F7F7F8]">
-                <Icon className="h-5 w-5" />
-              </div>
-              <h2 className="text-lg font-medium">{title}</h2>
-              <p className="mt-2 text-sm leading-6 text-[#6B7280]">{desc}</p>
-            </div>
-          ))}
-        </div>
+        <div className="mt-10 rounded-[2rem] border border-[#E5E7EB] bg-white p-6">
+          <h2 className="text-2xl font-medium">Integrations</h2>
 
-        <div className="mt-10 rounded-[2rem] border border-[#E5E7EB] bg-white p-6 md:p-8">
-          <h2 className="text-2xl font-medium tracking-tight">Conexiones</h2>
-          <p className="mt-2 text-sm text-[#6B7280]">
-            Conecta las herramientas que ALMA puede usar para trabajar por ti.
-          </p>
-
-          <div className="mt-6 grid gap-4 md:grid-cols-2">
-            {providers.map((provider) => {
-              const Icon = provider.icon;
-              const connected = isConnected(provider.key);
-
-              return (
-                <div key={provider.key} className="rounded-2xl border border-[#E5E7EB] bg-[#F7F7F8] p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white">
-                        <Icon className="h-5 w-5" />
-                      </div>
-                      <div>
-                        <div className="font-medium">{provider.name}</div>
-                        <div className="text-xs text-[#6B7280]">{connected ? "Conectado" : "No conectado"}</div>
-                      </div>
-                    </div>
-
-                    {provider.key === "google" || provider.key === "stripe" ? (
-                      <button
-                        onClick={() => connectProvider(provider.key)}
-                        disabled={connected}
-                        className={connected ? "rounded-full bg-green-50 px-4 py-2 text-xs font-medium text-green-700" : "rounded-full bg-black px-4 py-2 text-xs font-medium text-white"}
-                      >
-                        {connected ? "Conectado" : "Conectar"}
-                      </button>
-                    ) : null}
-                  </div>
-
-                  {provider.key === "twilio" && !connected && (
-                    <div className="mt-4 grid gap-3">
-                      <input value={twilioSid} onChange={(e) => setTwilioSid(e.target.value)} placeholder="Twilio Account SID" className="rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 text-sm outline-none" />
-                      <input value={twilioToken} onChange={(e) => setTwilioToken(e.target.value)} placeholder="Twilio Auth Token" type="password" className="rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 text-sm outline-none" />
-                      <button onClick={connectTwilio} className="rounded-xl bg-black px-4 py-3 text-sm font-medium text-white">Guardar Twilio</button>
-                    </div>
-                  )}
-
-                  {provider.key === "elevenlabs" && !connected && (
-                    <div className="mt-4 grid gap-3">
-                      <input value={elevenKey} onChange={(e) => setElevenKey(e.target.value)} placeholder="ElevenLabs API Key" type="password" className="rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 text-sm outline-none" />
-                      <button onClick={connectElevenLabs} className="rounded-xl bg-black px-4 py-3 text-sm font-medium text-white">Guardar ElevenLabs</button>
-                    </div>
-                  )}
+          <div className="mt-6 grid gap-4">
+            <div className="flex flex-col gap-4 rounded-2xl border border-[#E5E7EB] bg-[#F7F7F8] p-5 md:flex-row md:items-center md:justify-between">
+              <div className="flex items-center gap-4">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white">
+                  <Mail className="h-5 w-5" />
                 </div>
-              );
-            })}
+
+                <div>
+                  <div className="font-medium">Gmail</div>
+                  <div className="text-sm text-[#6B7280]">
+                    Summarize emails, create drafts, and send messages.
+                  </div>
+                </div>
+              </div>
+
+              <button
+                onClick={connectGoogle}
+                className={
+                  googleConnected
+                    ? "rounded-full bg-green-50 px-5 py-3 text-sm font-medium text-green-700"
+                    : "rounded-full bg-black px-5 py-3 text-sm font-medium text-white"
+                }
+              >
+                {googleConnected ? "Connected" : "Connect Gmail"}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-8 rounded-[2rem] border border-[#E5E7EB] bg-white p-6">
+          <h2 className="text-2xl font-medium">Privacy</h2>
+          <div className="mt-4 flex gap-3 text-sm leading-6 text-[#6B7280]">
+            <ShieldCheck className="mt-1 h-5 w-5 shrink-0 text-green-600" />
+            <p>
+              ALMA only uses connected account data to complete actions you request,
+              like summarizing Gmail or drafting replies.
+            </p>
           </div>
         </div>
       </div>
+
+      {showGmailModal && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-4 md:items-center">
+          <div className="w-full max-w-xl rounded-[2rem] bg-[#1f1f1f] p-6 text-white shadow-2xl">
+            <button
+              onClick={() => setShowGmailModal(false)}
+              className="ml-auto flex h-10 w-10 items-center justify-center rounded-full bg-white/10"
+            >
+              <X className="h-5 w-5" />
+            </button>
+
+            <div className="mt-4 text-center">
+              <div className="mx-auto mb-6 flex items-center justify-center gap-4">
+                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-black text-3xl font-bold">
+                  A
+                </div>
+                <div className="text-2xl text-white/50">•••</div>
+                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white text-3xl font-bold text-black">
+                  G
+                </div>
+              </div>
+
+              <h2 className="text-3xl font-semibold">Connect Gmail</h2>
+
+              <div className="mt-8 rounded-2xl border border-white/20 p-5 text-left text-sm leading-6 text-white/70">
+                <p>
+                  <strong className="text-white">This page will redirect to Google.</strong>{" "}
+                  You will sign in and confirm permissions on Google’s page.
+                </p>
+
+                <p className="mt-4">
+                  <strong className="text-white">Private and secure.</strong>{" "}
+                  ALMA uses Gmail access only to summarize, draft, and send emails you request.
+                </p>
+
+                <p className="mt-4">
+                  <strong className="text-white">You are in control.</strong>{" "}
+                  You can disconnect Gmail anytime from Settings or your Google account.
+                </p>
+              </div>
+
+              <button
+                onClick={() => (window.location.href = "/api/oauth/google/start")}
+                className="mt-8 w-full rounded-full bg-white py-4 text-lg font-semibold text-black"
+              >
+                Continue to Google
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

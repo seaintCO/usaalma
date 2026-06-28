@@ -8,6 +8,7 @@ import { createWorkspaceTool } from "@/lib/tools/workspaces/createWorkspaceTool"
 import { createWorkflowTool } from "@/lib/tools/workflows/createWorkflowTool";
 import { addWorkflowStepTool, runWorkflowTool } from "@/lib/tools/workflows/workflowActionsTool";
 import { generateImageTool } from "@/lib/tools/images/generateImageTool";
+import { summarizeGmailTool, draftGmailTool, sendGmailTool } from "@/lib/tools/gmail/gmailTools";
 import { cleanNumber, cleanString } from "./utils";
 import { ToolRunRepository } from "@/lib/db/repositories/tools/toolRun.repository";
 import { getInstalledModuleKeys, userHasModule } from "@/lib/ai/modules/permissions";
@@ -23,7 +24,10 @@ export const toolDefinitions = [
   { type:"function", name:"create_workflow", description:"Crear workflow de automatización.", parameters:{ type:"object", properties:{ name:{ type:"string" } }, required:["name"], additionalProperties:false } },
   { type:"function", name:"add_workflow_step", description:"Agregar paso a un workflow.", parameters:{ type:"object", properties:{ workflowId:{ type:"string" }, label:{ type:"string" }, type:{ type:"string" } }, required:["workflowId","label"], additionalProperties:false } },
   { type:"function", name:"run_workflow", description:"Ejecutar workflow.", parameters:{ type:"object", properties:{ workflowId:{ type:"string" } }, required:["workflowId"], additionalProperties:false } },
-  { type:"function", name:"generate_image", description:"Generar una imagen usando IA.", parameters:{ type:"object", properties:{ prompt:{ type:"string" } }, required:["prompt"], additionalProperties:false } }
+  { type:"function", name:"generate_image", description:"Generar una imagen usando IA.", parameters:{ type:"object", properties:{ prompt:{ type:"string" } }, required:["prompt"], additionalProperties:false } },
+  { type:"function", name:"summarize_gmail", description:"Leer y resumir Gmail del usuario.", parameters:{ type:"object", properties:{ query:{ type:"string" } }, required:[], additionalProperties:false } },
+  { type:"function", name:"draft_gmail", description:"Crear un borrador en Gmail.", parameters:{ type:"object", properties:{ to:{ type:"string" }, subject:{ type:"string" }, body:{ type:"string" } }, required:["to","subject","body"], additionalProperties:false } },
+  { type:"function", name:"send_gmail", description:"Enviar un email desde Gmail.", parameters:{ type:"object", properties:{ to:{ type:"string" }, subject:{ type:"string" }, body:{ type:"string" } }, required:["to","subject","body"], additionalProperties:false } }
 ] as any[];
 
 async function logAndReturn(userId:string, name:string, args:any, result:any) {
@@ -118,8 +122,28 @@ export async function executeTool(userId:string, name:string, args:any) {
       return await logAndReturn(userId, name, args, await generateImageTool(userId, prompt));
     }
 
+    if (name === "summarize_gmail") {
+      return await logAndReturn(userId, name, args, await summarizeGmailTool(userId, cleanString(args.query) || "in:inbox newer_than:7d"));
+    }
+
+    if (name === "draft_gmail") {
+      const to = cleanString(args.to);
+      const subject = cleanString(args.subject);
+      const body = cleanString(args.body);
+      if (!to || !subject || !body) return { success:false, message:"Faltan campos para crear el borrador." };
+      return await logAndReturn(userId, name, args, await draftGmailTool(userId, to, subject, body));
+    }
+
+    if (name === "send_gmail") {
+      const to = cleanString(args.to);
+      const subject = cleanString(args.subject);
+      const body = cleanString(args.body);
+      if (!to || !subject || !body) return { success:false, message:"Faltan campos para enviar el correo." };
+      return await logAndReturn(userId, name, args, await sendGmailTool(userId, to, subject, body));
+    }
+
     return { success:false, message:`Herramienta no encontrada: ${name}` };
   } catch {
-    return { success:false, message:"La herramienta falló al ejecutarse." };
+    return { success:false, message:"La herramienta falló al ejecutarse. Si es Gmail, reconecta Gmail en Settings." };
   }
 }

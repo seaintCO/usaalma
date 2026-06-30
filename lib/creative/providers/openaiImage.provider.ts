@@ -14,6 +14,7 @@ export async function generateOpenAIImage(prompt:string) {
       model:"gpt-image-1",
       prompt,
       size:"1024x1024",
+      quality:"high",
     });
 
     const imageBase64 = result.data?.[0]?.b64_json;

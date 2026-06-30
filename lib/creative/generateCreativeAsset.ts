@@ -1,10 +1,12 @@
 ﻿import { CreativeAssetRepository } from "@/lib/db/repositories/creative/creativeAsset.repository";
 import { optimizeCreativePrompt } from "./promptOptimizer";
 import { generateOpenAIImage } from "./providers/openaiImage.provider";
+import { buildImagePrompt, detectImageCategory } from "@/lib/ai/images/imagePromptRouter";
 
 export async function generateCreativeAsset(userId:string, input:any) {
   const type = input.type ?? "image";
-  const category = input.category ?? "general";
+  const detectedCategory = detectImageCategory(input.prompt || "");
+  const category = input.category && input.category !== "general" ? input.category : detectedCategory;
   const prompt = input.prompt;
 
   if (!prompt) {
@@ -31,8 +33,10 @@ export async function generateCreativeAsset(userId:string, input:any) {
     };
   }
 
+  const routedPrompt = buildImagePrompt(prompt);
+
   const optimizedPrompt = await optimizeCreativePrompt({
-    prompt,
+    prompt:routedPrompt,
     category,
     type,
   });

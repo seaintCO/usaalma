@@ -3,7 +3,7 @@
 import {
   ArrowUp, Calendar, CheckCircle2, CreditCard, FileText, FolderOpen,
   Menu, Mic, Paperclip, PenSquare, PlusCircle, ReceiptText,
-  Search, Settings, Store, Users
+  Search, Settings, Store, Users, ImageIcon
 } from "lucide-react";
 import { useEffect, useState } from "react";
 
@@ -15,6 +15,27 @@ const moduleMap:any = {
   invoicing: ["Facturación", ReceiptText, "/invoicing"],
   documents: ["Documentos", FolderOpen, "/documents"],
 };
+
+function renderMessage(content:string) {
+  const imageMatch = content.match(/\[ALMA_IMAGE:(.*?)\]/);
+
+  if (imageMatch?.[1]) {
+    return (
+      <div className="space-y-3">
+        <img
+          src={`data:image/png;base64,${imageMatch[1]}`}
+          className="w-full rounded-2xl border border-[#E5E7EB] object-cover shadow-sm"
+          alt="ALMA generated image"
+        />
+        <p className="text-[#6B7280]">
+          Imagen generada. Puedes pedirme cambios como: “hazlo más realista”, “en 16:9”, “fondo negro”, o “estilo anuncio premium”.
+        </p>
+      </div>
+    );
+  }
+
+  return <div className="whitespace-pre-wrap">{content}</div>;
+}
 
 export default function DashboardPage() {
   const [input, setInput] = useState("");
@@ -79,13 +100,12 @@ export default function DashboardPage() {
   }
 
   async function sendMessage() {
-    if (!input.trim()) return;
+    if (!input.trim() || loading) return;
 
     const userMessage = input.trim();
     setInput("");
     setMessages((prev) => [...prev, { role:"user", content:userMessage }]);
     setLoading(true);
-
     setMessages((prev) => [...prev, { role:"assistant", content:"" }]);
 
     const res = await fetch("/api/chat/stream", {
@@ -101,22 +121,17 @@ export default function DashboardPage() {
 
     const reader = res.body.getReader();
     const decoder = new TextDecoder();
-
     let fullReply = "";
 
     while (true) {
       const { value, done } = await reader.read();
-
       if (done) break;
 
       const chunk = decoder.decode(value);
-
       const match = chunk.match(/\[CONVERSATION_ID:(.*?)\]\n/);
       const cleanChunk = chunk.replace(/\[CONVERSATION_ID:.*?\]\n/, "");
 
-      if (match?.[1]) {
-        setConversationId(match[1]);
-      }
+      if (match?.[1]) setConversationId(match[1]);
 
       fullReply += cleanChunk;
 
@@ -174,7 +189,7 @@ export default function DashboardPage() {
 
           <div className="relative mb-4">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#6B7280]" />
-            <input placeholder="Buscar..." className="w-full rounded-lg border border-[#E5E7EB] bg-transparent py-1.5 pl-9 pr-3 text-sm outline-none focus:border-[#2563EB]" />
+            <input placeholder="Buscar..." className="w-full rounded-lg border border-[#E5E7EB] bg-transparent py-1.5 pl-9 pr-3 text-sm outline-none focus:border-black" />
           </div>
         </div>
 
@@ -230,16 +245,9 @@ export default function DashboardPage() {
 
           <div className="mx-2 my-6 h-px bg-[#E5E7EB]" />
 
-          <a href="/receptionist" className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[#6B7280] hover:bg-gray-200 hover:text-black"><Mic className="h-4 w-4" />Recepcionista IA</a>
-          <a href="/marketplace" className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[#6B7280] hover:bg-gray-200 hover:text-black"><Store className="h-4 w-4" />Marketplace</a>
+          <a href="/images" className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[#6B7280] hover:bg-gray-200 hover:text-black"><ImageIcon className="h-4 w-4" />Images</a>
           <a href="/creative" className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[#6B7280] hover:bg-gray-200 hover:text-black"><Settings className="h-4 w-4" />Creative Studio</a>
-          <a href="/images" className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[#6B7280] hover:bg-gray-200 hover:text-black"><Settings className="h-4 w-4" />Images</a>
-          <a href="/workflows" className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[#6B7280] hover:bg-gray-200 hover:text-black"><Settings className="h-4 w-4" />Workflows</a>
-          <a href="/workspaces" className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[#6B7280] hover:bg-gray-200 hover:text-black"><Settings className="h-4 w-4" />Workspaces</a>
-          <a href="/agents" className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[#6B7280] hover:bg-gray-200 hover:text-black"><Settings className="h-4 w-4" />Agents</a>
-          <a href="/tools" className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[#6B7280] hover:bg-gray-200 hover:text-black"><Settings className="h-4 w-4" />Acciones</a>
-          <a href="/admin" className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[#6B7280] hover:bg-gray-200 hover:text-black"><Settings className="h-4 w-4" />Admin</a>
-          <a href="/settings" className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[#6B7280] hover:bg-gray-200 hover:text-black"><Settings className="h-4 w-4" />Settings</a>
+          <a href="/marketplace" className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[#6B7280] hover:bg-gray-200 hover:text-black"><Store className="h-4 w-4" />Marketplace</a>
           <a href="/billing" className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[#6B7280] hover:bg-gray-200 hover:text-black"><CreditCard className="h-4 w-4" />Billing</a>
         </div>
       </aside>
@@ -270,17 +278,16 @@ export default function DashboardPage() {
               <div className="mt-24 text-center md:mt-32">
                 <h1 className="mb-2 text-3xl font-normal tracking-tight md:text-4xl">Buenos días.</h1>
                 <h2 className="mb-4 text-3xl font-normal tracking-tight md:text-4xl">Soy ALMA.</h2>
-                <p className="text-lg text-[#6B7280]">¿Qué quieres lograr hoy?</p>
-                <p className="mt-3 text-xs uppercase tracking-[0.2em] text-[#9CA3AF]">Multi-Agent System Active</p>
+                <p className="text-lg text-[#6B7280]">Chat, imágenes, documentos, código y automatización en un solo lugar.</p>
               </div>
             ) : (
               <div className="space-y-5">
                 {messages.map((msg, index) => (
-                  <div key={index} className={msg.role === "user" ? "ml-auto max-w-[90%] rounded-2xl bg-[#2563EB] p-4 text-sm text-white md:max-w-[80%]" : "max-w-[90%] rounded-2xl border border-[#E5E7EB] bg-[#F7F7F8] p-4 text-sm leading-6 md:max-w-[80%]"}>
-                    {msg.content}
+                  <div key={index} className={msg.role === "user" ? "ml-auto max-w-[90%] rounded-2xl bg-black p-4 text-sm text-white md:max-w-[80%]" : "max-w-[90%] rounded-2xl border border-[#E5E7EB] bg-[#F7F7F8] p-4 text-sm leading-6 md:max-w-[80%]"}>
+                    {renderMessage(msg.content || "")}
                   </div>
                 ))}
-                {loading && <div className="max-w-[90%] rounded-2xl border border-[#E5E7EB] bg-[#F7F7F8] p-4 text-sm text-[#6B7280] md:max-w-[80%]">ALMA está pensando...</div>}
+                {loading && <div className="max-w-[90%] rounded-2xl border border-[#E5E7EB] bg-[#F7F7F8] p-4 text-sm text-[#6B7280] md:max-w-[80%]">ALMA está trabajando...</div>}
               </div>
             )}
           </div>
@@ -289,7 +296,7 @@ export default function DashboardPage() {
         <div className="absolute bottom-0 w-full bg-gradient-to-t from-white via-white to-transparent px-3 pb-4 pt-10 md:px-8 md:pb-6">
           <div className="mx-auto flex w-full max-w-3xl flex-col gap-3">
             <div className="flex gap-2 overflow-x-auto pb-1 md:flex-wrap">
-              {["Planear mi día", "Crear factura", "Agregar tarea", "Construir recepcionista IA"].map((label) => (
+              {["Crea una imagen premium", "Haz un logo", "Genera un anuncio 16:9", "Escribe código"].map((label) => (
                 <button key={label} onClick={() => setInput(label)} className="shrink-0 rounded-full border border-[#E5E7EB] bg-[#F7F7F8] px-3 py-1.5 text-xs font-medium text-[#6B7280] hover:text-black">
                   {label}
                 </button>
@@ -297,33 +304,20 @@ export default function DashboardPage() {
             </div>
 
             <div className="relative flex flex-col overflow-hidden rounded-2xl border border-[#E5E7EB] bg-[#F7F7F8] shadow-sm">
-              <textarea value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } }} rows={1} placeholder="Pregúntale cualquier cosa..." className="max-h-32 w-full resize-none bg-transparent p-4 pb-12 text-base outline-none placeholder:text-gray-400" />
+              <textarea value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } }} rows={1} placeholder="Pídele a ALMA crear, editar, escribir o construir..." className="max-h-32 w-full resize-none bg-transparent p-4 pb-12 text-base outline-none placeholder:text-gray-400" />
 
               <div className="absolute bottom-3 left-4 flex items-center gap-2">
                 <button className="rounded-md p-1 text-[#6B7280] hover:bg-gray-200 hover:text-black"><Paperclip className="h-5 w-5" /></button>
                 <button className="rounded-md p-1 text-[#6B7280] hover:bg-gray-200 hover:text-black"><Mic className="h-5 w-5" /></button>
               </div>
 
-              <button onClick={sendMessage} className="absolute bottom-3 right-4 rounded-lg bg-black p-1.5 text-white hover:bg-gray-800"><ArrowUp className="h-5 w-5" /></button>
+              <button onClick={sendMessage} disabled={loading} className="absolute bottom-3 right-4 rounded-lg bg-black p-1.5 text-white hover:bg-gray-800 disabled:opacity-40"><ArrowUp className="h-5 w-5" /></button>
             </div>
 
-            <p className="text-center text-[10px] text-gray-400">ALMA puede cometer errores. Verifica la información importante.</p>
+            <p className="text-center text-[10px] text-gray-400">ALMA puede cometer errores. Verifica información importante.</p>
           </div>
         </div>
       </section>
     </main>
   );
 }
-
-
-
-
-
-
-
-
-
-
-
-
-

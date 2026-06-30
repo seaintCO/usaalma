@@ -14,6 +14,8 @@ import { selectAgent } from "@/lib/ai/agents/selector";
 import { almaSystemPrompt } from "@/lib/ai/prompts/almaSystemPrompt";
 import { runPlannedExecution } from "@/lib/ai/planner/orchestrator";
 import { SubscriptionRepository } from "@/lib/db/repositories/billing/subscription.repository";
+import { detectAlmaIntent } from "@/lib/ai/orchestrator/intent";
+import { generateImageTool } from "@/lib/tools/images/generateImageTool";
 
 export async function POST(req:Request) {
   const user = await getCurrentUser();
@@ -103,6 +105,66 @@ ${planned.steps.map((s:any, i:number) => `${i + 1}. ${s.label} — ${s.result?.m
     });
   }
 
+  const detectedIntent = detectAlmaIntent(message);
+
+  if (detectedIntent === "image_generate") {
+    const encoder = new TextEncoder();
+
+    const readable = new ReadableStream({
+      async start(controller) {
+        controller.enqueue(encoder.encode(`[CONVERSATION_ID:${conversationId}]\n`));
+        controller.enqueue(encoder.encode("Generando imagen premium...\n\n"));
+
+        try {
+          const result:any = await generateImageTool(user.id, message);
+
+          if (result?.success && result?.image?.outputBase64) {
+            const reply = `[ALMA_IMAGE:${result.image.outputBase64}]`;
+            await MessageRepository.create(conversationId, user.id, "assistant", reply);
+            controller.enqueue(encoder.encode(reply));
+          } else {
+            const reply = result?.message || "No se pudo generar la imagen.";
+            await MessageRepository.create(conversationId, user.id, "assistant", reply);
+            controller.enqueue(encoder.encode(reply));
+          }
+        } catch {
+          const reply = "ALMA tuvo un error generando la imagen.";
+          await MessageRepository.create(conversationId, user.id, "assistant", reply);
+          controller.enqueue(encoder.encode(reply));
+        } finally {
+          controller.close();
+        }
+      }
+    });
+
+    return new Response(readable, {
+      headers:{
+        "Content-Type":"text/plain; charset=utf-8",
+        "Cache-Control":"no-cache",
+      },
+    });
+  }
+
+  if (detectedIntent === "image_edit") {
+    const reply = "Sube la imagen que quieres editar o dime cuál imagen de tu galería quieres cambiar. Luego puedo hacer cambios como fondo, estilo, color, realismo, formato 16:9 o 9:16.";
+    const encoder = new TextEncoder();
+
+    const readable = new ReadableStream({
+      async start(controller) {
+        controller.enqueue(encoder.encode(`[CONVERSATION_ID:${conversationId}]\n`));
+        controller.enqueue(encoder.encode(reply));
+        await MessageRepository.create(conversationId, user.id, "assistant", reply);
+        controller.close();
+      }
+    });
+
+    return new Response(readable, {
+      headers:{
+        "Content-Type":"text/plain; charset=utf-8",
+        "Cache-Control":"no-cache",
+      },
+    });
+  }
   const memoryContext = await buildContext(user.id);
   const integrationContext = await buildIntegrationContext(user.id);
   const documentContext = await buildRelevantDocumentContext(user.id, message);
@@ -260,6 +322,7 @@ ${memoryContext || "Sin memoria guardada todavía."}
     },
   });
 }
+
 
 
 

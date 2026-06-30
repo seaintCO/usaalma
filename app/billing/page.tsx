@@ -40,6 +40,11 @@ export default function BillingPage() {
 
     const data = await res.json();
 
+    if (res.status === 401) {
+      window.location.href = "/login?redirect=/billing";
+      return;
+    }
+
     if (data.url) window.location.href = data.url;
     else alert(data.error || "No se pudo iniciar checkout.");
   }
@@ -61,7 +66,7 @@ export default function BillingPage() {
   return (
     <main className="min-h-screen bg-[#F7F7F8] px-4 py-8 text-[#111111] md:px-6 md:py-10">
       <div className="mx-auto max-w-7xl">
-        <a href="/dashboard" className="text-sm text-[#6B7280] hover:text-black">
+        <a href="/" className="text-sm text-[#6B7280] hover:text-black">
           ← Volver a ALMA
         </a>
 
@@ -139,3 +144,4 @@ export default function BillingPage() {
     </main>
   );
 }
+

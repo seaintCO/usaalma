@@ -11,6 +11,7 @@ import { safeJsonParse } from "@/lib/ai/tools/utils";
 import { buildRelevantDocumentContext } from "@/lib/ai/documents/context";
 import { buildWorkspaceContext } from "@/lib/ai/workspaces/context";
 import { selectAgent } from "@/lib/ai/agents/selector";
+import { almaSystemPrompt } from "@/lib/ai/prompts/almaSystemPrompt";
 import { runPlannedExecution } from "@/lib/ai/planner/orchestrator";
 import { SubscriptionRepository } from "@/lib/db/repositories/billing/subscription.repository";
 
@@ -257,6 +258,7 @@ ${memoryContext || "Sin memoria guardada todavía."}
     },
   });
 }
+
 
 
 

@@ -5,7 +5,7 @@ import {
   Menu, Mic, Paperclip, PenSquare, PlusCircle, ReceiptText,
   Search, Settings, Store, Users, ImageIcon
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const moduleMap:any = {
   planner: ["Planner", Calendar, "/planner"],
@@ -41,6 +41,7 @@ export default function DashboardPage() {
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [history, setHistory] = useState<any[]>([]);
   const [installedModules, setInstalledModules] = useState<any[]>([]);
@@ -97,6 +98,29 @@ export default function DashboardPage() {
       setConversationId(null);
     }
     loadHistory();
+  }
+
+  async function analyzeFile(file:File) {
+    setMessages((prev) => [...prev, { role:"user", content:`Analyze uploaded file: ${file.name}` }]);
+    setLoading(true);
+
+    const form = new FormData();
+    form.append("file", file);
+    form.append("question", "Analyze this like ChatGPT. If it is an image, describe it and give useful insights. If it is a document, summarize it and extract important action items.");
+
+    const res = await fetch("/api/files/analyze", {
+      method:"POST",
+      body:form,
+    });
+
+    const data = await res.json();
+
+    setMessages((prev) => [...prev, {
+      role:"assistant",
+      content:data.answer || data.error || "I could not analyze this file."
+    }]);
+
+    setLoading(false);
   }
 
   async function sendMessage() {
@@ -245,6 +269,7 @@ export default function DashboardPage() {
 
           <div className="mx-2 my-6 h-px bg-[#E5E7EB]" />
 
+          <a href="/finance" className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[#6B7280] hover:bg-gray-200 hover:text-black"><CreditCard className="h-4 w-4" />Finance</a>
           <a href="/images" className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[#6B7280] hover:bg-gray-200 hover:text-black"><ImageIcon className="h-4 w-4" />Images</a>
           <a href="/creative" className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[#6B7280] hover:bg-gray-200 hover:text-black"><Settings className="h-4 w-4" />Creative Studio</a>
           <a href="/marketplace" className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[#6B7280] hover:bg-gray-200 hover:text-black"><Store className="h-4 w-4" />Marketplace</a>
@@ -307,7 +332,8 @@ export default function DashboardPage() {
               <textarea value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } }} rows={1} placeholder="Pídele a ALMA crear, editar, escribir o construir..." className="max-h-32 w-full resize-none bg-transparent p-4 pb-12 text-base outline-none placeholder:text-gray-400" />
 
               <div className="absolute bottom-3 left-4 flex items-center gap-2">
-                <button className="rounded-md p-1 text-[#6B7280] hover:bg-gray-200 hover:text-black"><Paperclip className="h-5 w-5" /></button>
+                <input ref={fileInputRef} type="file" className="hidden" accept="image/*,.pdf,.docx,.txt,.csv,.xlsx,.xls" onChange={(e) => { const file = e.target.files?.[0]; if (file) analyzeFile(file); }} />
+                <button onClick={() => fileInputRef.current?.click()} className="rounded-md p-1 text-[#6B7280] hover:bg-gray-200 hover:text-black"><Paperclip className="h-5 w-5" /></button>
                 <button className="rounded-md p-1 text-[#6B7280] hover:bg-gray-200 hover:text-black"><Mic className="h-5 w-5" /></button>
               </div>
 
@@ -321,3 +347,4 @@ export default function DashboardPage() {
     </main>
   );
 }
+

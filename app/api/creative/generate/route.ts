@@ -8,17 +8,35 @@ export async function POST(req:Request) {
 
   if (error) return error;
 
-  const body = await req.json();
+  try {
+    const body = await req.json();
 
-  const templateInput = body.templateKey
-    ? buildCreativeTemplatePrompt(body.templateKey, body.prompt)
-    : body;
+    if (!body.prompt) {
+      return NextResponse.json({
+        success:false,
+        message:"Missing prompt.",
+      }, { status:400 });
+    }
 
-  const result = await generateCreativeAsset(user.id, {
-    ...body,
-    ...templateInput,
-  });
+    const templateInput = body.templateKey
+      ? buildCreativeTemplatePrompt(body.templateKey, body.prompt)
+      : body;
 
-  return NextResponse.json(result);
+    const result = await generateCreativeAsset(user.id, {
+      ...body,
+      ...templateInput,
+    });
+
+    return NextResponse.json(result);
+  } catch (error:any) {
+    console.error("CREATIVE_GENERATE_ERROR", {
+      message:error?.message,
+      stack:error?.stack,
+    });
+
+    return NextResponse.json({
+      success:false,
+      message:error?.message || "Creative generation failed.",
+    }, { status:500 });
+  }
 }
-

@@ -4,15 +4,8 @@ import { requirePaidUser } from "@/lib/api/requirePaidUser";
 
 async function extractText(file:File, buffer:Buffer) {
   const name = file.name.toLowerCase();
-  const type = file.type;
 
-  if (type.startsWith("text/") || name.endsWith(".csv")) {
-    return buffer.toString("utf8").slice(0, 30000);
-  }
-
-  if (name.endsWith(".pdf")) {
-    return "PDF uploaded. PDF text extraction needs pdfjs worker setup. For now, summarize images, DOCX, TXT, CSV, and XLSX.";
-  }
+  if (file.type.startsWith("text/") || name.endsWith(".csv")) return buffer.toString("utf8").slice(0, 30000);
 
   if (name.endsWith(".docx")) {
     const mammoth = await import("mammoth");
@@ -29,39 +22,34 @@ async function extractText(file:File, buffer:Buffer) {
     }).join("\n\n").slice(0, 30000);
   }
 
+  if (name.endsWith(".pdf")) return "PDF uploaded. PDF extraction will be upgraded next.";
+
   return "";
 }
 
 export async function POST(req:Request) {
-  const { user, error } = await requirePaidUser();
+  const { error } = await requirePaidUser();
   if (error) return error;
-
-  if (!process.env.OPENAI_API_KEY) {
-    return NextResponse.json({ error:"Missing OPENAI_API_KEY" }, { status:500 });
-  }
 
   const form = await req.formData();
   const file = form.get("file") as File | null;
-  const question = String(form.get("question") || "Analyze this file and explain the important details clearly.");
+  const question = String(form.get("question") || "Analyze this file clearly.");
 
-  if (!file) {
-    return NextResponse.json({ error:"Missing file" }, { status:400 });
-  }
+  if (!file) return NextResponse.json({ error:"Missing file" }, { status:400 });
+  if (!process.env.OPENAI_API_KEY) return NextResponse.json({ error:"Missing OPENAI_API_KEY" }, { status:500 });
 
-  const arrayBuffer = await file.arrayBuffer();
-  const buffer = Buffer.from(arrayBuffer);
+  const buffer = Buffer.from(await file.arrayBuffer());
   const client = new OpenAI({ apiKey:process.env.OPENAI_API_KEY });
 
   if (file.type.startsWith("image/")) {
-    const base64 = buffer.toString("base64");
-    const dataUrl = `data:${file.type};base64,${base64}`;
+    const dataUrl = `data:${file.type};base64,${buffer.toString("base64")}`;
 
     const result:any = await client.responses.create({
       model:process.env.ALMA_MODEL || "gpt-5.5",
       input:[{
         role:"user",
         content:[
-          { type:"input_text", text:`${question}\n\nBe practical, detailed, and clear.` },
+          { type:"input_text", text:`${question}\nBe practical and detailed.` },
           { type:"input_image", image_url:dataUrl, detail:"high" }
         ]
       }]
@@ -72,25 +60,10 @@ export async function POST(req:Request) {
 
   const text = await extractText(file, buffer);
 
-  if (!text) {
-    return NextResponse.json({
-      success:false,
-      error:"This file type is not supported yet. Use images, PDF, DOCX, TXT, CSV, or XLSX."
-    }, { status:400 });
-  }
-
   const result:any = await client.responses.create({
     model:process.env.ALMA_MODEL || "gpt-5.5",
-    input:`${question}
-
-File name: ${file.name}
-
-File content:
-${text}`
+    input:`${question}\n\nFile: ${file.name}\n\n${text}`
   });
 
   return NextResponse.json({ success:true, answer:result.output_text });
 }
-
-
-

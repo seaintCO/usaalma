@@ -3,7 +3,7 @@
 import {
   ArrowUp, Calendar, CheckCircle2, CreditCard, FileText, FolderOpen,
   Menu, Mic, Paperclip, PenSquare, PlusCircle, ReceiptText,
-  Search, Settings, Store, Users, ImageIcon
+  Search, Settings, Store, Users, ImageIcon, Camera, ImageIcon
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
@@ -50,6 +50,8 @@ export default function DashboardPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState("");
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const cameraInputRef = useRef<HTMLInputElement | null>(null);
 
   async function loadHistory() {
     const res = await fetch("/api/conversation/list");
@@ -363,6 +365,7 @@ export default function DashboardPage() {
     </main>
   );
 }
+
 
 
 

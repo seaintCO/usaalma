@@ -1,6 +1,6 @@
 ﻿import OpenAI from "openai";
 import { ImageRepository } from "@/lib/db/repositories/images/image.repository";
-import { buildImagePrompt, detectImageCategory, normalizeImageSize } from "@/lib/ai/images/imagePromptRouter";
+import { buildImagePrompt, normalizeImageSize } from "@/lib/ai/images/imagePromptRouter";
 
 export async function generateImageTool(userId:string, prompt:string, size?:string) {
   if (!process.env.OPENAI_API_KEY) {
@@ -9,12 +9,9 @@ export async function generateImageTool(userId:string, prompt:string, size?:stri
 
   const client = new OpenAI({ apiKey:process.env.OPENAI_API_KEY });
 
-  const category = detectImageCategory(prompt);
-  const finalPrompt = buildImagePrompt(prompt, category);
-
   const result:any = await client.images.generate({
     model:process.env.ALMA_IMAGE_MODEL || "gpt-image-1",
-    prompt:finalPrompt,
+    prompt:buildImagePrompt(prompt),
     size:normalizeImageSize(size),
     quality:"high",
   });
@@ -34,8 +31,6 @@ export async function generateImageTool(userId:string, prompt:string, size?:stri
       ...saved,
       outputBase64:imageBase64,
       prompt,
-      category,
-      size:normalizeImageSize(size),
     },
   };
 }

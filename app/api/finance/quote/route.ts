@@ -8,13 +8,8 @@ export async function GET(req:Request) {
   const { searchParams } = new URL(req.url);
   const symbols = searchParams.get("symbols") || "SPY,QQQ,AAPL,NVDA,TSLA,BTC-USD";
 
-  const url = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(symbols)}`;
-
-  const res = await fetch(url, { cache:"no-store" });
+  const res = await fetch(`https://query1.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(symbols)}`, { cache:"no-store" });
   const data = await res.json();
 
-  return NextResponse.json({
-    success:true,
-    quotes:data?.quoteResponse?.result || []
-  });
+  return NextResponse.json({ success:true, quotes:data?.quoteResponse?.result || [] });
 }

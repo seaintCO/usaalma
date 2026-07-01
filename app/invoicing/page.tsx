@@ -110,38 +110,25 @@ export default function InvoicingPage() {
     pdf.save(`${invoiceNumber || "invoice"}.pdf`);
   }
 
-  function openEmailDraft() {
+  async function openEmailDraft() {
     if (!clientEmail) {
       alert("Add the client email first.");
       return;
     }
 
+    await downloadPDF();
+
     const body = `
 Hi ${clientName || ""},
 
-Please see invoice ${invoiceNumber} below.
+Please see the attached invoice ${invoiceNumber}.
 
 Invoice: ${invoiceTitle}
 Due Date: ${dueDate || "Due upon receipt"}
-
-Items:
-${items.map((item) => `- ${item.description}: ${item.quantity} x ${Number(item.rate || 0).toLocaleString()} = ${(Number(item.quantity || 0) * Number(item.rate || 0)).toLocaleString()}`).join("\n")}
-
-Subtotal: ${subtotal.toLocaleString()}
-Tax (${taxRate}%): ${tax.toLocaleString()}
-Extra Fees: ${Number(extraFees || 0).toLocaleString()}
 Total: ${total.toLocaleString()}
-
-Notes:
-${notes}
-
-Terms:
-${terms}
 
 Thank you,
 ${businessName}
-${businessEmail}
-${businessAddress}
 `;
 
     const subject = `${invoiceTitle} ${invoiceNumber}`;
@@ -332,5 +319,6 @@ ${businessAddress}
     </main>
   );
 }
+
 
 

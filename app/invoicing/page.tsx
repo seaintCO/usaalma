@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import { useMemo, useState } from "react";
-import { FileText, Plus, Sparkles, Trash2, Printer, Send, Download } from "lucide-react";
+import { FileText, Plus, Sparkles, Trash2, Printer, Mail, Download } from "lucide-react";
 
 type Item = {
   description: string;
@@ -110,43 +110,44 @@ export default function InvoicingPage() {
     pdf.save(`${invoiceNumber || "invoice"}.pdf`);
   }
 
-  async function sendInvoice() {
+  function openEmailDraft() {
     if (!clientEmail) {
       alert("Add the client email first.");
       return;
     }
 
-    const res = await fetch("/api/invoicing/send", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        businessName,
-        businessEmail,
-        businessAddress,
-        clientName,
-        clientEmail,
-        clientAddress,
-        invoiceTitle,
-        invoiceNumber,
-        dueDate,
-        items,
-        subtotal,
-        tax,
-        taxRate,
-        extraFees,
-        total,
-        notes,
-        terms,
-      })
-    });
+    const body = `
+Hi ${clientName || ""},
 
-    const data = await res.json();
+Please see invoice ${invoiceNumber} below.
 
-    if (data.success) {
-      alert("Invoice sent successfully.");
-    } else {
-      alert(data.error || "Could not send invoice.");
-    }
+Invoice: ${invoiceTitle}
+Due Date: ${dueDate || "Due upon receipt"}
+
+Items:
+${items.map((item) => `- ${item.description}: ${item.quantity} x ${Number(item.rate || 0).toLocaleString()} = ${(Number(item.quantity || 0) * Number(item.rate || 0)).toLocaleString()}`).join("\n")}
+
+Subtotal: ${subtotal.toLocaleString()}
+Tax (${taxRate}%): ${tax.toLocaleString()}
+Extra Fees: ${Number(extraFees || 0).toLocaleString()}
+Total: ${total.toLocaleString()}
+
+Notes:
+${notes}
+
+Terms:
+${terms}
+
+Thank you,
+${businessName}
+${businessEmail}
+${businessAddress}
+`;
+
+    const subject = `${invoiceTitle} ${invoiceNumber}`;
+    const mailto = `mailto:${encodeURIComponent(clientEmail)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+
+    window.location.href = mailto;
   }
 
   function printInvoice() {
@@ -172,9 +173,9 @@ export default function InvoicingPage() {
           </div>
 
           <div className="flex flex-wrap gap-2">
-            <button onClick={sendInvoice} className="flex items-center justify-center gap-2 rounded-full bg-black px-5 py-3 text-sm font-medium text-white">
-              <Send className="h-4 w-4" />
-              Enviar por email
+            <button onClick={openEmailDraft} className="flex items-center justify-center gap-2 rounded-full bg-black px-5 py-3 text-sm font-medium text-white">
+              <Mail className="h-4 w-4" />
+              Crear email
             </button>
 
             <button onClick={downloadPDF} className="flex items-center justify-center gap-2 rounded-full border border-[#E5E7EB] bg-white px-5 py-3 text-sm font-medium">
@@ -331,4 +332,5 @@ export default function InvoicingPage() {
     </main>
   );
 }
+
 

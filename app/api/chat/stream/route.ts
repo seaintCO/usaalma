@@ -16,6 +16,7 @@ import { runPlannedExecution } from "@/lib/ai/planner/orchestrator";
 import { SubscriptionRepository } from "@/lib/db/repositories/billing/subscription.repository";
 import { detectAlmaIntent } from "@/lib/ai/orchestrator/intent";
 import { generateImageTool } from "@/lib/tools/images/generateImageTool";
+import { buildMarketAnalysisPrompt } from "@/lib/ai/finance/marketPrompt";
 
 export async function POST(req:Request) {
   const user = await getCurrentUser();
@@ -107,6 +108,41 @@ ${planned.steps.map((s:any, i:number) => `${i + 1}. ${s.label} — ${s.result?.m
 
   const detectedIntent = detectAlmaIntent(message);
 
+  if (detectedIntent === "finance_analysis") {
+    const encoder = new TextEncoder();
+
+    const readable = new ReadableStream({
+      async start(controller) {
+        controller.enqueue(encoder.encode(`[CONVERSATION_ID:${conversationId}]\n`));
+        controller.enqueue(encoder.encode("Preparing market analysis...\n\n"));
+
+        try {
+          const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+          const result:any = await client.responses.create({
+            model: process.env.ALMA_MODEL || "gpt-5.5",
+            input: buildMarketAnalysisPrompt("Chart / Market", message)
+          });
+
+          const reply = result.output_text || "No market analysis available.";
+          await MessageRepository.create(conversationId, user.id, "assistant", reply);
+          controller.enqueue(encoder.encode(reply));
+        } catch {
+          const reply = "ALMA could not generate market analysis right now.";
+          await MessageRepository.create(conversationId, user.id, "assistant", reply);
+          controller.enqueue(encoder.encode(reply));
+        }
+
+        controller.close();
+      }
+    });
+
+    return new Response(readable, {
+      headers:{
+        "Content-Type":"text/plain; charset=utf-8",
+        "Cache-Control":"no-cache",
+      },
+    });
+  }
   if (detectedIntent === "image_generate") {
     const encoder = new TextEncoder();
 
@@ -322,6 +358,8 @@ ${memoryContext || "Sin memoria guardada todavía."}
     },
   });
 }
+
+
 
 
 

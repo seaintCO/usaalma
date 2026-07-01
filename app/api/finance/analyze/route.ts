@@ -1,6 +1,7 @@
 ﻿import { NextResponse } from "next/server";
 import OpenAI from "openai";
 import { requirePaidUser } from "@/lib/api/requirePaidUser";
+import { buildMarketAnalysisPrompt } from "@/lib/ai/finance/marketPrompt";
 
 export async function POST(req: Request) {
   const { error } = await requirePaidUser();
@@ -16,24 +17,7 @@ export async function POST(req: Request) {
 
   const result:any = await client.responses.create({
     model: process.env.ALMA_MODEL || "gpt-5.5",
-    input: `
-You are ALMA Finance, an elite market analyst.
-
-Analyze this symbol: ${symbol}
-
-User request:
-${question}
-
-Give:
-1. Market bias
-2. Key levels
-3. Bullish scenario
-4. Bearish scenario
-5. What to watch
-6. Risk warning
-
-Do not claim certainty. Do not give guaranteed financial advice.
-`
+    input: buildMarketAnalysisPrompt(symbol || "Market", question || "Give me daily market analysis and key levels.")
   });
 
   return NextResponse.json({ success: true, answer: result.output_text });

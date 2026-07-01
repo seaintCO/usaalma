@@ -16,6 +16,15 @@ const moduleMap:any = {
   documents: ["Documentos", FolderOpen, "/documents"],
 };
 
+function cleanAIText(text:string) {
+  return text
+    .replace(/^#{1,6}\s?/gm, "")
+    .replace(/\*\*/g, "")
+    .replace(/\*/g, "")
+    .replace(/---/g, "")
+    .trim();
+}
+
 function renderMessage(content:string) {
   const imageMatch = content.match(/\[ALMA_IMAGE:(.*?)\]/);
 
@@ -34,7 +43,7 @@ function renderMessage(content:string) {
     );
   }
 
-  return <div className="whitespace-pre-wrap">{content}</div>;
+  return <div className="whitespace-pre-wrap leading-7">{cleanAIText(content)}</div>;
 }
 
 export default function DashboardPage() {
@@ -363,6 +372,7 @@ export default function DashboardPage() {
     </main>
   );
 }
+
 
 
 

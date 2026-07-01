@@ -1,7 +1,18 @@
-﻿export type AlmaIntent = "chat" | "image_generate" | "image_edit" | "video" | "code" | "document";
+﻿export type AlmaIntent =
+  | "chat"
+  | "image_generate"
+  | "image_edit"
+  | "finance_analysis"
+  | "video"
+  | "code"
+  | "document";
 
 export function detectAlmaIntent(message:string):AlmaIntent {
   const p = message.toLowerCase();
+
+  if (/(spy|spx|qqq|nq|es|aapl|tsla|nvda|meta|msft|amzn|btc|crypto|stock|market|trading|calls|puts|chart|vwap|ema|resistance|support|liquidity|analysis|analisis)/.test(p)) {
+    return "finance_analysis";
+  }
 
   if (/(edit|change|remove|replace|make it|fix|enhance|upscale|background|editar|cambiar|remover|quita|arregla)/.test(p) && /(image|photo|picture|logo|design|imagen|foto)/.test(p)) {
     return "image_edit";

@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import { useMemo, useState } from "react";
-import { FileText, Plus, Sparkles, Trash2, Printer } from "lucide-react";
+import { FileText, Plus, Sparkles, Trash2, Printer, Send, Download } from "lucide-react";
 
 type Item = {
   description: string;
@@ -30,6 +30,7 @@ export default function InvoicingPage() {
   ]);
 
   const [taxRate, setTaxRate] = useState(0);
+  const [extraFees, setExtraFees] = useState(0);
   const [notes, setNotes] = useState("Thank you for your business.");
   const [terms, setTerms] = useState("Payment is due by the due date listed above.");
 
@@ -38,7 +39,7 @@ export default function InvoicingPage() {
   }, [items]);
 
   const tax = subtotal * (Number(taxRate || 0) / 100);
-  const total = subtotal + tax;
+  const total = subtotal + tax + Number(extraFees || 0);
 
   function updateItem(index:number, key:keyof Item, value:any) {
     setItems((prev) => prev.map((item, i) => i === index ? { ...item, [key]: value } : item));
@@ -91,6 +92,63 @@ export default function InvoicingPage() {
     setLoading(false);
   }
 
+  async function downloadPDF() {
+    const html2canvas = (await import("html2canvas")).default;
+    const jsPDF = (await import("jspdf")).default;
+
+    const element = document.getElementById("invoice-preview");
+    if (!element) return;
+
+    const canvas = await html2canvas(element, { scale: 2 });
+    const imgData = canvas.toDataURL("image/png");
+
+    const pdf = new jsPDF("p", "mm", "a4");
+    const width = pdf.internal.pageSize.getWidth();
+    const height = (canvas.height * width) / canvas.width;
+
+    pdf.addImage(imgData, "PNG", 0, 0, width, height);
+    pdf.save(`${invoiceNumber || "invoice"}.pdf`);
+  }
+
+  async function sendInvoice() {
+    if (!clientEmail) {
+      alert("Add the client email first.");
+      return;
+    }
+
+    const res = await fetch("/api/invoicing/send", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        businessName,
+        businessEmail,
+        businessAddress,
+        clientName,
+        clientEmail,
+        clientAddress,
+        invoiceTitle,
+        invoiceNumber,
+        dueDate,
+        items,
+        subtotal,
+        tax,
+        taxRate,
+        extraFees,
+        total,
+        notes,
+        terms,
+      })
+    });
+
+    const data = await res.json();
+
+    if (data.success) {
+      alert("Invoice sent successfully.");
+    } else {
+      alert(data.error || "Could not send invoice.");
+    }
+  }
+
   function printInvoice() {
     window.print();
   }
@@ -113,10 +171,22 @@ export default function InvoicingPage() {
             </p>
           </div>
 
-          <button onClick={printInvoice} className="flex items-center justify-center gap-2 rounded-full bg-black px-5 py-3 text-sm font-medium text-white">
-            <Printer className="h-4 w-4" />
-            Descargar / Imprimir
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <button onClick={sendInvoice} className="flex items-center justify-center gap-2 rounded-full bg-black px-5 py-3 text-sm font-medium text-white">
+              <Send className="h-4 w-4" />
+              Enviar por email
+            </button>
+
+            <button onClick={downloadPDF} className="flex items-center justify-center gap-2 rounded-full border border-[#E5E7EB] bg-white px-5 py-3 text-sm font-medium">
+              <Download className="h-4 w-4" />
+              Descargar PDF
+            </button>
+
+            <button onClick={printInvoice} className="flex items-center justify-center gap-2 rounded-full border border-[#E5E7EB] bg-white px-5 py-3 text-sm font-medium">
+              <Printer className="h-4 w-4" />
+              Imprimir
+            </button>
+          </div>
         </div>
 
         <section className="print:hidden mt-8 rounded-[2rem] border border-[#E5E7EB] bg-white p-5 shadow-sm">
@@ -157,6 +227,7 @@ export default function InvoicingPage() {
             <input value={invoiceNumber} onChange={(e) => setInvoiceNumber(e.target.value)} placeholder="Número de factura" className="w-full rounded-2xl bg-[#F7F7F8] p-4 outline-none" />
             <input value={dueDate} onChange={(e) => setDueDate(e.target.value)} placeholder="Fecha de vencimiento" className="w-full rounded-2xl bg-[#F7F7F8] p-4 outline-none" />
             <input type="number" value={taxRate} onChange={(e) => setTaxRate(Number(e.target.value))} placeholder="Tax %" className="w-full rounded-2xl bg-[#F7F7F8] p-4 outline-none" />
+            <input type="number" value={extraFees} onChange={(e) => setExtraFees(Number(e.target.value))} placeholder="Extra fees / processing fee" className="w-full rounded-2xl bg-[#F7F7F8] p-4 outline-none" />
 
             <textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Notas" className="w-full rounded-2xl bg-[#F7F7F8] p-4 outline-none" />
             <textarea value={terms} onChange={(e) => setTerms(e.target.value)} placeholder="Términos" className="w-full rounded-2xl bg-[#F7F7F8] p-4 outline-none" />
@@ -232,6 +303,11 @@ export default function InvoicingPage() {
                 <span>${tax.toLocaleString()}</span>
               </div>
 
+              <div className="flex justify-between text-sm">
+                <span className="text-[#6B7280]">Extra Fees</span>
+                <span>${Number(extraFees || 0).toLocaleString()}</span>
+              </div>
+
               <div className="flex justify-between border-t border-[#E5E7EB] pt-4 text-2xl font-medium">
                 <span>Total</span>
                 <span>${total.toLocaleString()}</span>
@@ -255,3 +331,4 @@ export default function InvoicingPage() {
     </main>
   );
 }
+

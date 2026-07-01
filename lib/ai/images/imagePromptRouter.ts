@@ -3,7 +3,7 @@
 export function detectImageCategory(prompt:string):ImageCategory {
   const p = prompt.toLowerCase();
 
-  if (/(logo|brand|icon|emblem)/.test(p)) return "logo";
+  if (/(logo|brand|icon|emblem|mark)/.test(p)) return "logo";
   if (/(product|bottle|package|ecommerce|commercial|advertisement|ad shot)/.test(p)) return "product";
   if (/(instagram|post|story|thumbnail|banner|flyer|social)/.test(p)) return "social";
   if (/(house|building|interior|exterior|room|architecture|remodel)/.test(p)) return "architecture";
@@ -20,21 +20,69 @@ export function normalizeImageSize(size?:string) {
 export function buildImagePrompt(prompt:string, category?:ImageCategory) {
   const selected = category || detectImageCategory(prompt);
 
+  const base = `
+Ultra premium image generation.
+No AI artifacts.
+No distorted anatomy.
+No extra fingers.
+No fake text unless requested.
+Natural texture.
+Realistic lighting.
+Professional composition.
+High resolution.
+`;
+
   if (selected === "logo") {
-    return `Create a premium modern logo. Clean vector style, luxury brand identity, minimal, memorable, no photo background. User request: ${prompt}`;
+    return `${base}
+Create a luxury modern logo.
+Clean vector style.
+Memorable brand mark.
+Minimal.
+Balanced.
+Professional.
+No mockup.
+No photo background.
+
+User request:
+${prompt}`;
   }
 
   if (selected === "product") {
-    return `Create a premium commercial product image. Ultra realistic studio lighting, luxury advertising quality, sharp details, realistic shadows, no AI artifacts. User request: ${prompt}`;
-  }
+    return `${base}
+Create a premium commercial product advertisement.
+Studio lighting.
+Sharp reflections.
+Luxury campaign quality.
+Realistic shadows.
+High-end ecommerce/product photography.
 
-  if (selected === "social") {
-    return `Create a premium social media creative. Modern layout, clean spacing, luxury editorial design, strong focal point. User request: ${prompt}`;
+User request:
+${prompt}`;
   }
 
   if (selected === "architecture") {
-    return `Create a premium architectural visualization. Ultra realistic, natural light, luxury materials, realistic scale. User request: ${prompt}`;
+    return `${base}
+Create premium architectural visualization.
+Realistic scale.
+Natural light.
+Luxury materials.
+Editorial real estate photography.
+
+User request:
+${prompt}`;
   }
 
-  return `Create an ultra photorealistic image. Sony A7R V quality, cinematic lighting, natural depth of field, realistic textures, accurate shadows, premium editorial photography, no AI look, no cartoon, no vector. User request: ${prompt}`;
+  return `${base}
+Create an ultra photorealistic image.
+Sony A7R V camera quality.
+Cinematic lighting.
+Natural depth of field.
+Realistic textures.
+Premium editorial photography.
+No cartoon.
+No vector.
+No logo style.
+
+User request:
+${prompt}`;
 }

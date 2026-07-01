@@ -41,7 +41,9 @@ export default function DashboardPage() {
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [authReady, setAuthReady] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const cameraInputRef = useRef<HTMLInputElement | null>(null);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [history, setHistory] = useState<any[]>([]);
   const [installedModules, setInstalledModules] = useState<any[]>([]);
@@ -190,6 +192,7 @@ export default function DashboardPage() {
 
       loadHistory();
       loadInstalledModules();
+      setAuthReady(true);
     }
 
     checkOnboarding();
@@ -279,6 +282,17 @@ export default function DashboardPage() {
     );
   }
 
+  if (!authReady) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-white text-black">
+        <div className="text-center">
+          <div className="text-3xl font-medium tracking-tight">ALMA</div>
+          <div className="mt-2 text-sm text-[#6B7280]">Loading your workspace...</div>
+        </div>
+      </main>
+    );
+  }
+
   return (
     <main className="flex h-[100dvh] w-full overflow-hidden bg-white text-[#111111]">
       <div className="hidden md:block"><Sidebar /></div>
@@ -333,7 +347,9 @@ export default function DashboardPage() {
 
               <div className="absolute bottom-3 left-4 flex items-center gap-2">
                 <input ref={fileInputRef} type="file" className="hidden" accept="image/*,.pdf,.docx,.txt,.csv,.xlsx,.xls" onChange={(e) => { const file = e.target.files?.[0]; if (file) analyzeFile(file); }} />
-                <button onClick={() => fileInputRef.current?.click()} className="rounded-md p-1 text-[#6B7280] hover:bg-gray-200 hover:text-black"><Paperclip className="h-5 w-5" /></button>
+                <input ref={cameraInputRef} type="file" className="hidden" accept="image/*" capture="environment" onChange={(e) => { const file = e.target.files?.[0]; if (file) analyzeFile(file); }} />
+                <button onClick={() => fileInputRef.current?.click()} className="rounded-md p-1 text-[#6B7280] hover:bg-gray-200 hover:text-black" title="Upload file"><Paperclip className="h-5 w-5" /></button>
+                <button onClick={() => cameraInputRef.current?.click()} className="rounded-md p-1 text-[#6B7280] hover:bg-gray-200 hover:text-black" title="Take photo">📷</button>
                 <button className="rounded-md p-1 text-[#6B7280] hover:bg-gray-200 hover:text-black"><Mic className="h-5 w-5" /></button>
               </div>
 
@@ -347,4 +363,6 @@ export default function DashboardPage() {
     </main>
   );
 }
+
+
 

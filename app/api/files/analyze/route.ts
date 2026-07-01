@@ -11,9 +11,7 @@ async function extractText(file:File, buffer:Buffer) {
   }
 
   if (name.endsWith(".pdf")) {
-    const pdfParse = (await import("pdf-parse")).default;
-    const parsed = await pdfParse(buffer);
-    return parsed.text.slice(0, 30000);
+    return "PDF uploaded. PDF text extraction needs pdfjs worker setup. For now, summarize images, DOCX, TXT, CSV, and XLSX.";
   }
 
   if (name.endsWith(".docx")) {
@@ -64,7 +62,7 @@ export async function POST(req:Request) {
         role:"user",
         content:[
           { type:"input_text", text:`${question}\n\nBe practical, detailed, and clear.` },
-          { type:"input_image", image_url:dataUrl }
+          { type:"input_image", image_url:dataUrl, detail:"high" }
         ]
       }]
     });
@@ -93,3 +91,6 @@ ${text}`
 
   return NextResponse.json({ success:true, answer:result.output_text });
 }
+
+
+

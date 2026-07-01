@@ -3,7 +3,7 @@
 import {
   ArrowUp, Calendar, CheckCircle2, CreditCard, FileText, FolderOpen,
   Menu, Mic, Paperclip, PenSquare, PlusCircle, ReceiptText,
-  Search, Settings, Store, Users, ImageIcon, Camera
+  Search, Settings, Store, Users, ImageIcon, Camera, Activity
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
@@ -281,6 +281,7 @@ export default function DashboardPage() {
 
           <div className="mx-2 my-6 h-px bg-[#E5E7EB]" />
 
+          <a href="/fitness" className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[#6B7280] hover:bg-gray-200 hover:text-black"><Activity className="h-4 w-4" />Fitness</a>
           <a href="/finance" className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[#6B7280] hover:bg-gray-200 hover:text-black"><CreditCard className="h-4 w-4" />Finance</a>
           <a href="/images" className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[#6B7280] hover:bg-gray-200 hover:text-black"><ImageIcon className="h-4 w-4" />Images</a>
           <a href="/creative" className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[#6B7280] hover:bg-gray-200 hover:text-black"><Settings className="h-4 w-4" />Creative Studio</a>
@@ -372,6 +373,7 @@ export default function DashboardPage() {
     </main>
   );
 }
+
 
 
 

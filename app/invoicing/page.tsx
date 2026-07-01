@@ -1,108 +1,255 @@
 ﻿"use client";
 
-import { Plus, ReceiptText, Send } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
+import { FileText, Plus, Sparkles, Trash2, Printer } from "lucide-react";
+
+type Item = {
+  description: string;
+  quantity: number;
+  rate: number;
+};
 
 export default function InvoicingPage() {
-  const [invoices, setInvoices] = useState<any[]>([]);
-  const [clientName, setClientName] = useState("");
-  const [amount, setAmount] = useState("");
+  const [aiPrompt, setAiPrompt] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  async function loadInvoices() {
-    const res = await fetch("/api/invoices/list");
-    const data = await res.json();
-    if (Array.isArray(data)) setInvoices(data);
+  const [businessName, setBusinessName] = useState("SEAINT Enterprise");
+  const [businessEmail, setBusinessEmail] = useState("");
+  const [businessAddress, setBusinessAddress] = useState("");
+
+  const [clientName, setClientName] = useState("");
+  const [clientEmail, setClientEmail] = useState("");
+  const [clientAddress, setClientAddress] = useState("");
+
+  const [invoiceTitle, setInvoiceTitle] = useState("Professional Invoice");
+  const [invoiceNumber, setInvoiceNumber] = useState(`INV-${Date.now().toString().slice(-6)}`);
+  const [dueDate, setDueDate] = useState("");
+
+  const [items, setItems] = useState<Item[]>([
+    { description: "Website + AI service", quantity: 1, rate: 500 }
+  ]);
+
+  const [taxRate, setTaxRate] = useState(0);
+  const [notes, setNotes] = useState("Thank you for your business.");
+  const [terms, setTerms] = useState("Payment is due by the due date listed above.");
+
+  const subtotal = useMemo(() => {
+    return items.reduce((sum, item) => sum + Number(item.quantity || 0) * Number(item.rate || 0), 0);
+  }, [items]);
+
+  const tax = subtotal * (Number(taxRate || 0) / 100);
+  const total = subtotal + tax;
+
+  function updateItem(index:number, key:keyof Item, value:any) {
+    setItems((prev) => prev.map((item, i) => i === index ? { ...item, [key]: value } : item));
   }
 
-  async function createInvoice() {
-    if (!clientName.trim()) return;
+  function addItem() {
+    setItems((prev) => [...prev, { description: "", quantity: 1, rate: 0 }]);
+  }
 
-    await fetch("/api/invoices/create", {
+  function removeItem(index:number) {
+    setItems((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  async function generateWithAI() {
+    if (!aiPrompt.trim()) return;
+
+    setLoading(true);
+
+    const res = await fetch("/api/invoicing/ai-generate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ clientName, amount: Number(amount || 0) }),
+      body: JSON.stringify({ prompt: aiPrompt })
     });
 
-    setClientName("");
-    setAmount("");
-    loadInvoices();
+    const data = await res.json();
+
+    if (data.invoice) {
+      const inv = data.invoice;
+
+      setBusinessName(inv.businessName || businessName);
+      setBusinessEmail(inv.businessEmail || businessEmail);
+      setBusinessAddress(inv.businessAddress || businessAddress);
+
+      setClientName(inv.clientName || "");
+      setClientEmail(inv.clientEmail || "");
+      setClientAddress(inv.clientAddress || "");
+
+      setInvoiceTitle(inv.invoiceTitle || "Professional Invoice");
+      setInvoiceNumber(inv.invoiceNumber || `INV-${Date.now().toString().slice(-6)}`);
+      setDueDate(inv.dueDate || "");
+
+      setItems(Array.isArray(inv.items) && inv.items.length ? inv.items : items);
+      setTaxRate(Number(inv.taxRate || 0));
+      setNotes(inv.notes || notes);
+      setTerms(inv.terms || terms);
+    } else {
+      alert(data.error || "Could not generate invoice.");
+    }
+
+    setLoading(false);
   }
 
-  useEffect(() => {
-    loadInvoices();
-  }, []);
-
-  const total = invoices.reduce((sum, invoice) => sum + Number(invoice.amount || 0), 0);
-  const pending = invoices
-    .filter((invoice) => invoice.status !== "pagado")
-    .reduce((sum, invoice) => sum + Number(invoice.amount || 0), 0);
+  function printInvoice() {
+    window.print();
+  }
 
   return (
-    <main className="min-h-screen bg-[#F7F7F8] px-4 py-8 text-[#111111] md:px-6 md:py-10">
-      <div className="mx-auto max-w-6xl">
-        <a href="/dashboard" className="text-sm text-[#6B7280] hover:text-black">
+    <main className="min-h-screen bg-[#F7F7F8] px-4 py-8 text-[#111111] md:px-8">
+      <div className="mx-auto max-w-7xl">
+        <a href="/dashboard" className="print:hidden text-sm text-[#6B7280] hover:text-black">
           ← Volver a ALMA
         </a>
 
-        <div className="mt-8">
-          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl border border-[#E5E7EB] bg-white">
-            <ReceiptText className="h-5 w-5" />
+        <div className="print:hidden mt-8 flex flex-col justify-between gap-6 md:flex-row md:items-end">
+          <div>
+            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl border border-[#E5E7EB] bg-white">
+              <FileText className="h-5 w-5" />
+            </div>
+            <h1 className="text-4xl font-medium tracking-tight md:text-5xl">Facturación</h1>
+            <p className="mt-3 text-[#6B7280]">
+              Genera facturas profesionales con ALMA.
+            </p>
           </div>
-          <h1 className="text-4xl font-medium tracking-tight">Facturación</h1>
-          <p className="mt-4 text-[#6B7280]">Crea facturas, rastrea pagos y organiza ingresos.</p>
-        </div>
 
-        <div className="mt-8 grid gap-3 rounded-[2rem] border border-[#E5E7EB] bg-white p-6 md:grid-cols-3">
-          <input
-            value={clientName}
-            onChange={(e) => setClientName(e.target.value)}
-            placeholder="Cliente"
-            className="rounded-2xl border border-[#E5E7EB] bg-[#F7F7F8] px-4 py-3 outline-none"
-          />
-          <input
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            placeholder="Monto"
-            type="number"
-            className="rounded-2xl border border-[#E5E7EB] bg-[#F7F7F8] px-4 py-3 outline-none"
-          />
-          <button onClick={createInvoice} className="flex items-center justify-center gap-2 rounded-2xl bg-black px-5 py-3 text-sm font-medium text-white">
-            <Plus className="h-4 w-4" /> Nueva factura
+          <button onClick={printInvoice} className="flex items-center justify-center gap-2 rounded-full bg-black px-5 py-3 text-sm font-medium text-white">
+            <Printer className="h-4 w-4" />
+            Descargar / Imprimir
           </button>
         </div>
 
-        <div className="mt-8 grid gap-5 md:grid-cols-3">
-          <div className="rounded-[1.5rem] border border-[#E5E7EB] bg-white p-6">
-            <div className="text-sm text-[#6B7280]">Ingresos registrados</div>
-            <div className="mt-2 text-3xl font-medium">${total.toLocaleString()}</div>
+        <section className="print:hidden mt-8 rounded-[2rem] border border-[#E5E7EB] bg-white p-5 shadow-sm">
+          <div className="mb-3 flex items-center gap-2 font-medium">
+            <Sparkles className="h-4 w-4" />
+            Crear factura con ALMA
           </div>
-          <div className="rounded-[1.5rem] border border-[#E5E7EB] bg-white p-6">
-            <div className="text-sm text-[#6B7280]">Pendiente</div>
-            <div className="mt-2 text-3xl font-medium">${pending.toLocaleString()}</div>
-          </div>
-          <div className="rounded-[1.5rem] border border-[#E5E7EB] bg-white p-6">
-            <div className="text-sm text-[#6B7280]">Facturas</div>
-            <div className="mt-2 text-3xl font-medium">{invoices.length}</div>
-          </div>
-        </div>
 
-        <div className="mt-8 overflow-hidden rounded-[2rem] border border-[#E5E7EB] bg-white">
-          {invoices.length === 0 ? (
-            <div className="p-6 text-sm text-[#6B7280]">No tienes facturas todavía.</div>
-          ) : (
-            invoices.map((invoice) => (
-              <div key={invoice.id} className="grid gap-4 border-b border-[#E5E7EB] p-5 last:border-b-0 md:grid-cols-5">
-                <div className="font-medium">{invoice.client_name}</div>
-                <div className="text-sm text-[#6B7280] md:col-span-2">${Number(invoice.amount).toLocaleString()}</div>
-                <div className="text-sm text-[#6B7280]">{invoice.status}</div>
-                <div className="md:text-right">
-                  <button className="inline-flex items-center gap-2 rounded-full border border-[#E5E7EB] px-4 py-2 text-sm">
-                    <Send className="h-4 w-4" /> Enviar
-                  </button>
-                </div>
+          <textarea
+            value={aiPrompt}
+            onChange={(e) => setAiPrompt(e.target.value)}
+            placeholder="Ejemplo: Crea una factura para Alex Elojas por $6,009 por website, automatización y consultoría AI. Pago vence en 7 días."
+            className="min-h-24 w-full rounded-2xl bg-[#F7F7F8] p-4 text-sm outline-none"
+          />
+
+          <button onClick={generateWithAI} disabled={loading} className="mt-4 rounded-full bg-black px-5 py-3 text-sm font-medium text-white disabled:opacity-50">
+            {loading ? "Generando..." : "Generar factura"}
+          </button>
+        </section>
+
+        <div className="mt-8 grid gap-8 lg:grid-cols-[420px_1fr]">
+          <section className="print:hidden space-y-5 rounded-[2rem] border border-[#E5E7EB] bg-white p-5 shadow-sm">
+            <h2 className="font-medium">Datos de factura</h2>
+
+            <input value={businessName} onChange={(e) => setBusinessName(e.target.value)} placeholder="Tu empresa" className="w-full rounded-2xl bg-[#F7F7F8] p-4 outline-none" />
+            <input value={businessEmail} onChange={(e) => setBusinessEmail(e.target.value)} placeholder="Email de empresa" className="w-full rounded-2xl bg-[#F7F7F8] p-4 outline-none" />
+            <textarea value={businessAddress} onChange={(e) => setBusinessAddress(e.target.value)} placeholder="Dirección de empresa" className="w-full rounded-2xl bg-[#F7F7F8] p-4 outline-none" />
+
+            <div className="h-px bg-[#E5E7EB]" />
+
+            <input value={clientName} onChange={(e) => setClientName(e.target.value)} placeholder="Cliente" className="w-full rounded-2xl bg-[#F7F7F8] p-4 outline-none" />
+            <input value={clientEmail} onChange={(e) => setClientEmail(e.target.value)} placeholder="Email del cliente" className="w-full rounded-2xl bg-[#F7F7F8] p-4 outline-none" />
+            <textarea value={clientAddress} onChange={(e) => setClientAddress(e.target.value)} placeholder="Dirección del cliente" className="w-full rounded-2xl bg-[#F7F7F8] p-4 outline-none" />
+
+            <div className="h-px bg-[#E5E7EB]" />
+
+            <input value={invoiceTitle} onChange={(e) => setInvoiceTitle(e.target.value)} placeholder="Título" className="w-full rounded-2xl bg-[#F7F7F8] p-4 outline-none" />
+            <input value={invoiceNumber} onChange={(e) => setInvoiceNumber(e.target.value)} placeholder="Número de factura" className="w-full rounded-2xl bg-[#F7F7F8] p-4 outline-none" />
+            <input value={dueDate} onChange={(e) => setDueDate(e.target.value)} placeholder="Fecha de vencimiento" className="w-full rounded-2xl bg-[#F7F7F8] p-4 outline-none" />
+            <input type="number" value={taxRate} onChange={(e) => setTaxRate(Number(e.target.value))} placeholder="Tax %" className="w-full rounded-2xl bg-[#F7F7F8] p-4 outline-none" />
+
+            <textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Notas" className="w-full rounded-2xl bg-[#F7F7F8] p-4 outline-none" />
+            <textarea value={terms} onChange={(e) => setTerms(e.target.value)} placeholder="Términos" className="w-full rounded-2xl bg-[#F7F7F8] p-4 outline-none" />
+          </section>
+
+          <section id="invoice-preview" className="rounded-[2rem] border border-[#E5E7EB] bg-white p-8 shadow-sm print:rounded-none print:border-0 print:shadow-none">
+            <div className="flex flex-col justify-between gap-8 border-b border-[#E5E7EB] pb-8 md:flex-row">
+              <div>
+                <div className="text-sm uppercase tracking-[0.25em] text-[#6B7280]">Invoice</div>
+                <h2 className="mt-3 text-4xl font-medium tracking-tight">{invoiceTitle}</h2>
+                <p className="mt-2 text-sm text-[#6B7280]">#{invoiceNumber}</p>
               </div>
-            ))
-          )}
+
+              <div className="text-left md:text-right">
+                <div className="text-xl font-medium">{businessName}</div>
+                {businessEmail && <div className="mt-1 text-sm text-[#6B7280]">{businessEmail}</div>}
+                {businessAddress && <div className="mt-1 whitespace-pre-wrap text-sm text-[#6B7280]">{businessAddress}</div>}
+              </div>
+            </div>
+
+            <div className="grid gap-8 border-b border-[#E5E7EB] py-8 md:grid-cols-2">
+              <div>
+                <div className="mb-2 text-xs uppercase tracking-[0.2em] text-[#6B7280]">Bill To</div>
+                <div className="font-medium">{clientName || "Client Name"}</div>
+                {clientEmail && <div className="mt-1 text-sm text-[#6B7280]">{clientEmail}</div>}
+                {clientAddress && <div className="mt-1 whitespace-pre-wrap text-sm text-[#6B7280]">{clientAddress}</div>}
+              </div>
+
+              <div className="md:text-right">
+                <div className="mb-2 text-xs uppercase tracking-[0.2em] text-[#6B7280]">Due Date</div>
+                <div className="font-medium">{dueDate || "Due upon receipt"}</div>
+              </div>
+            </div>
+
+            <div className="py-8">
+              <div className="grid grid-cols-[1fr_80px_120px_120px] border-b border-[#E5E7EB] pb-3 text-xs uppercase tracking-[0.2em] text-[#6B7280]">
+                <div>Description</div>
+                <div>Qty</div>
+                <div>Rate</div>
+                <div className="text-right">Amount</div>
+              </div>
+
+              <div className="divide-y divide-[#E5E7EB]">
+                {items.map((item, index) => (
+                  <div key={index} className="grid grid-cols-[1fr_80px_120px_120px] items-center gap-2 py-4">
+                    <input value={item.description} onChange={(e) => updateItem(index, "description", e.target.value)} className="print:border-0 rounded-xl bg-[#F7F7F8] p-3 outline-none print:bg-white print:p-0" />
+                    <input type="number" value={item.quantity} onChange={(e) => updateItem(index, "quantity", Number(e.target.value))} className="print:border-0 rounded-xl bg-[#F7F7F8] p-3 outline-none print:bg-white print:p-0" />
+                    <input type="number" value={item.rate} onChange={(e) => updateItem(index, "rate", Number(e.target.value))} className="print:border-0 rounded-xl bg-[#F7F7F8] p-3 outline-none print:bg-white print:p-0" />
+                    <div className="flex items-center justify-end gap-3">
+                      <span>${(Number(item.quantity || 0) * Number(item.rate || 0)).toLocaleString()}</span>
+                      <button onClick={() => removeItem(index)} className="print:hidden text-[#6B7280] hover:text-red-500">
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <button onClick={addItem} className="print:hidden mt-4 flex items-center gap-2 rounded-full border border-[#E5E7EB] px-4 py-2 text-sm">
+                <Plus className="h-4 w-4" />
+                Add item
+              </button>
+            </div>
+
+            <div className="ml-auto max-w-sm space-y-3 border-t border-[#E5E7EB] pt-6">
+              <div className="flex justify-between text-sm">
+                <span className="text-[#6B7280]">Subtotal</span>
+                <span>${subtotal.toLocaleString()}</span>
+              </div>
+
+              <div className="flex justify-between text-sm">
+                <span className="text-[#6B7280]">Tax ({taxRate}%)</span>
+                <span>${tax.toLocaleString()}</span>
+              </div>
+
+              <div className="flex justify-between border-t border-[#E5E7EB] pt-4 text-2xl font-medium">
+                <span>Total</span>
+                <span>${total.toLocaleString()}</span>
+              </div>
+            </div>
+
+            <div className="mt-10 grid gap-6 border-t border-[#E5E7EB] pt-8 md:grid-cols-2">
+              <div>
+                <div className="mb-2 text-xs uppercase tracking-[0.2em] text-[#6B7280]">Notes</div>
+                <p className="whitespace-pre-wrap text-sm leading-6 text-[#6B7280]">{notes}</p>
+              </div>
+
+              <div>
+                <div className="mb-2 text-xs uppercase tracking-[0.2em] text-[#6B7280]">Terms</div>
+                <p className="whitespace-pre-wrap text-sm leading-6 text-[#6B7280]">{terms}</p>
+              </div>
+            </div>
+          </section>
         </div>
       </div>
     </main>

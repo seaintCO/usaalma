@@ -14,7 +14,7 @@ import { selectAgent } from "@/lib/ai/agents/selector";
 import { almaSystemPrompt } from "@/lib/ai/prompts/almaSystemPrompt";
 import { runPlannedExecution } from "@/lib/ai/planner/orchestrator";
 import { SubscriptionRepository } from "@/lib/db/repositories/billing/subscription.repository";
-import { detectAlmaIntent } from "@/lib/ai/orchestrator/intent";
+import { classifyAlmaRoute } from "@/lib/ai/router/classifyAlmaRoute";
 import { generateImageTool } from "@/lib/tools/images/generateImageTool";
 import { buildMarketAnalysisPrompt } from "@/lib/ai/finance/marketPrompt";
 
@@ -106,7 +106,7 @@ ${planned.steps.map((s:any, i:number) => `${i + 1}. ${s.label} — ${s.result?.m
     });
   }
 
-  const detectedIntent = detectAlmaIntent(message);
+  const detectedIntent = await classifyAlmaRoute(message);
 
   if (detectedIntent === "finance_analysis") {
     const encoder = new TextEncoder();
@@ -358,6 +358,7 @@ ${memoryContext || "Sin memoria guardada todavía."}
     },
   });
 }
+
 
 
 

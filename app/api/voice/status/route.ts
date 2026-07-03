@@ -1,4 +1,4 @@
-﻿import OpenAI from "openai";
+import OpenAI from "openai";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 function escapeXml(input:string) {
@@ -47,6 +47,25 @@ export async function POST(req:Request) {
 
     almaResponse = completion.choices[0]?.message?.content || almaResponse;
   }
+
+  const leadSummary = almaResponse;
+
+  const { data:lead } = await supabase
+    .from("receptionist_leads")
+    .insert({
+      user_id: connection?.user_id,
+      phone_from: from,
+      phone_to: to,
+      call_sid: callSid,
+      caller_name: "",
+      reason: speech,
+      urgency: /urgent|emergency|asap|today|now/i.test(speech) ? "urgent" : "normal",
+      preferred_callback_time: "",
+      summary: leadSummary,
+      status: "new",
+    })
+    .select()
+    .single();
 
   const { data:turn } = await supabase
     .from("receptionist_call_turns")

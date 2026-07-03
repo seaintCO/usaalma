@@ -1,4 +1,6 @@
-﻿import OpenAI from "openai";
+﻿import { detectIntent, detectImageSize, buildImageFollowupPrompt } from "@/lib/alma/brain";
+import { getAlmaContext, upsertAlmaContext, logAlmaBrainRun } from "@/lib/alma/context";
+import OpenAI from "openai";
 import { getCurrentUser } from "@/lib/auth/user";
 import { buildContext } from "@/lib/ai/memory/context";
 import { buildIntegrationContext } from "@/lib/ai/integrations/context";
@@ -429,6 +431,8 @@ ${memoryContext || "Sin memoria guardada todavía."}
     },
   });
 }
+
+
 
 
 

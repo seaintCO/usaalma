@@ -11,9 +11,13 @@ export function detectImageCategory(prompt:string):ImageCategory {
   return "photo";
 }
 
-export function normalizeImageSize(size?:string) {
-  if (size === "16:9") return "1536x864";
-  if (size === "9:16") return "864x1536";
+export function normalizeImageSize(size?: string) {
+  if (!size) return "1024x1024";
+
+  if (size === "1792x1024" || size === "16:9") return "1792x1024";
+  if (size === "1024x1792" || size === "9:16") return "1024x1792";
+  if (size === "1024x1024" || size === "1:1") return "1024x1024";
+
   return "1024x1024";
 }
 
@@ -86,3 +90,4 @@ No logo style.
 User request:
 ${prompt}`;
 }
+

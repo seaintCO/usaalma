@@ -74,6 +74,49 @@ export async function POST(req:Request) {
     await saveExtractedMemory(user.id, extracted);
   } catch {}
 
+
+  const directImageRequest =
+    /\b(generate|create|make|draw|render|photo|image|picture|logo|visual|ad|photoshoot)\b/i.test(message) &&
+    !/\b(analyze|analysis|explain|translate|respond|reply)\b/i.test(message);
+
+  if (directImageRequest) {
+    const encoder = new TextEncoder();
+
+    const readable = new ReadableStream({
+      async start(controller) {
+        controller.enqueue(encoder.encode(`[CONVERSATION_ID:${conversationId}]\n`));
+
+        try {
+          const result:any = await generateImageTool(user.id, message, body.size);
+
+          if (result?.success && result?.image?.outputBase64) {
+            const reply = `[ALMA_IMAGE:${result.image.outputBase64}]`;
+            await MessageRepository.create(conversationId, user.id, "assistant", reply);
+            controller.enqueue(encoder.encode(reply));
+          } else {
+            const reply = result?.message || result?.error || "No se pudo generar la imagen.";
+            await MessageRepository.create(conversationId, user.id, "assistant", reply);
+            controller.enqueue(encoder.encode(reply));
+          }
+        } catch (err:any) {
+          console.error("ALMA_IMAGE_ERROR", err);
+          const reply = `ALMA tuvo un error generando la imagen: ${err?.message || "error desconocido"}`;
+          await MessageRepository.create(conversationId, user.id, "assistant", reply);
+          controller.enqueue(encoder.encode(reply));
+        } finally {
+          controller.close();
+        }
+      }
+    });
+
+    return new Response(readable, {
+      headers:{
+        "Content-Type":"text/plain; charset=utf-8",
+        "Cache-Control":"no-cache",
+      },
+    });
+  }
+
   const planned = await runPlannedExecution(user.id, message);
 
   if (planned) {
@@ -358,6 +401,7 @@ ${memoryContext || "Sin memoria guardada todavía."}
     },
   });
 }
+
 
 
 

@@ -7,19 +7,23 @@ export async function requirePaidUser() {
 
   if (!user) {
     return {
-      user:null,
-      error:NextResponse.json({ error:"Unauthorized" }, { status:401 })
+      user: null,
+      error: NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     };
+  }
+
+  if (process.env.NEXT_PUBLIC_BETA_MODE === "true") {
+    return { user, error: null };
   }
 
   const subscription = await SubscriptionRepository.get(user.id);
 
   if (!subscription || !["active", "trialing"].includes(subscription.status)) {
     return {
-      user:null,
-      error:NextResponse.json({ error:"Subscription required" }, { status:402 })
+      user: null,
+      error: NextResponse.json({ error: "Subscription required" }, { status: 402 })
     };
   }
 
-  return { user, error:null };
+  return { user, error: null };
 }

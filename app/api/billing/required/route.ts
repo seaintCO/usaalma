@@ -9,11 +9,16 @@ export async function GET() {
     return NextResponse.json({ required:true, reason:"unauthorized" }, { status:401 });
   }
 
-  const subscription = await SubscriptionRepository.get(user.id);
+  if (process.env.NEXT_PUBLIC_BETA_MODE === "true") {
+    return NextResponse.json({
+      required:false,
+      plan:"beta",
+      status:"trialing",
+    });
+  }
 
-  const active =
-    subscription &&
-    ["active", "trialing"].includes(subscription.status);
+  const subscription = await SubscriptionRepository.get(user.id);
+  const active = subscription && ["active", "trialing"].includes(subscription.status);
 
   return NextResponse.json({
     required: !active,

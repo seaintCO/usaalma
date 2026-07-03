@@ -1,8 +1,9 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useState } from "react";
 
 export default function VoiceConnectionsPage() {
+  const [webhooks, setWebhooks] = useState<any>({ incomingWebhookUrl:"", statusWebhookUrl:"" });
   const [form, setForm] = useState<any>({
     twilio_account_sid:"",
     twilio_auth_token:"",
@@ -33,7 +34,7 @@ export default function VoiceConnectionsPage() {
     else alert("Voice connections saved.");
   }
 
-  useEffect(()=>{ load(); }, []);
+  useEffect(()=>{ load(); fetch("/api/integrations/voice/webhook-url").then(r=>r.json()).then(setWebhooks); }, []);
 
   return (
     <main className="min-h-screen bg-[#F7F7F8] px-4 py-8 text-[#111] md:px-6 md:py-10">
@@ -59,6 +60,13 @@ export default function VoiceConnectionsPage() {
             <button onClick={save} className="w-full rounded-2xl bg-black py-3 font-medium text-white">
               Save connections
             </button>
+
+            <div className="mt-6 rounded-2xl border border-[#E5E7EB] bg-[#F7F7F8] p-5 text-sm leading-6">
+              <div className="font-medium text-black">Twilio Setup</div>
+              <p className="mt-2 text-[#6B7280]">In Twilio, go to your phone number settings and set the Voice webhook to:</p>
+              <div className="mt-3 break-all rounded-xl bg-white p-3 font-mono text-xs">{webhooks.incomingWebhookUrl}</div>
+              <p className="mt-3 text-[#6B7280]">Method: POST</p>
+            </div>
           </div>
         </div>
       </div>

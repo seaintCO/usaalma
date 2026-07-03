@@ -75,29 +75,17 @@ export async function POST(req:Request) {
   } catch {}
 
 
-    const imageIntent =
-    /\b(generate|create|make|draw|render|photo|image|picture|logo|visual|ad|photoshoot|16:9|9:16|1:1|square|vertical|horizontal|landscape|portrait|más realista|more realistic|iphone|cinematic|remix|edit|change|modify)\b/i.test(message) &&
-    !/\b(analyze|analysis|explain|translate|respond|reply)\b/i.test(message);
-
-  const lastImageUserPrompt = messages
-    ?.slice()
-    ?.reverse()
-    ?.find((m:any) =>
-      m.role === "user" &&
-      /\b(generate|create|make|draw|render|photo|image|picture|logo|visual|ad|photoshoot)\b/i.test(m.content || "")
-    )?.content;
+      const almaContext = await getAlmaContext(user.id, conversationId);
+  const almaIntent = detectIntent(message, almaContext);
 
   const imagePrompt =
-    /\b(16:9|9:16|1:1|square|vertical|horizontal|landscape|portrait|más realista|more realistic|iphone|cinematic|remix|edit|change|modify)\b/i.test(message) && lastImageUserPrompt
-      ? `${lastImageUserPrompt}. Apply this change: ${message}`
+    almaIntent === "image_followup"
+      ? buildImageFollowupPrompt(message, almaContext)
       : message;
 
-  const imageSize =
-    /9:16|vertical|portrait/i.test(message) ? "1024x1792" :
-    /16:9|horizontal|landscape/i.test(message) ? "1792x1024" :
-    "1024x1024";
+  const imageSize = detectImageSize(message);
 
-  if (imageIntent) {
+  if (almaIntent === "image_generation" || almaIntent === "image_followup") {
     const encoder = new TextEncoder();
 
     const readable = new ReadableStream({
@@ -105,7 +93,29 @@ export async function POST(req:Request) {
         controller.enqueue(encoder.encode(`[CONVERSATION_ID:${conversationId}]\n`));
 
         try {
-          const result:any = await generateImageTool(user.id, imagePrompt, imageSize);
+                    const result:any = await generateImageTool(user.id, imagePrompt, imageSize);
+
+          await upsertAlmaContext(user.id, conversationId, {
+            last_intent: almaIntent,
+            last_image_prompt: imagePrompt,
+            last_image_size: imageSize,
+            last_prompt: message,
+            metadata: {
+              tool: "creative",
+              mode: almaIntent
+            }
+          });
+
+          await logAlmaBrainRun({
+            userId: user.id,
+            conversationId,
+            userMessage: message,
+            intent: almaIntent,
+            plan: { tool: "creative", imagePrompt, imageSize },
+            toolUsed: "generateImageTool",
+            result: { success: result?.success },
+            success: !!result?.success
+          });
 
           if (result?.success && result?.image?.outputBase64) {
             const reply = `[ALMA_IMAGE:${result.image.outputBase64}]`;
@@ -419,6 +429,7 @@ ${memoryContext || "Sin memoria guardada todavía."}
     },
   });
 }
+
 
 
 

@@ -1,4 +1,4 @@
-﻿import { detectIntent, detectImageSize, buildImageFollowupPrompt } from "@/lib/alma/brain";
+﻿import { planAlmaAction, detectImageSize, buildImageFollowupPrompt } from "@/lib/alma/brain";
 import { getAlmaContext, upsertAlmaContext, logAlmaExecution } from "@/lib/alma/context";
 import OpenAI from "openai";
 import { getCurrentUser } from "@/lib/auth/user";
@@ -78,7 +78,8 @@ export async function POST(req:Request) {
 
 
       const almaContext = await getAlmaContext(user.id, conversationId);
-  const almaIntent = detectIntent(message, almaContext);
+  const almaPlan = planAlmaAction(message, almaContext);
+  const almaIntent = almaPlan.intent;
 
   const imagePrompt =
     almaIntent === "image_followup"
@@ -113,7 +114,7 @@ export async function POST(req:Request) {
             conversationId,
             userMessage: message,
             intent: almaIntent,
-            plan: { tool: "creative", imagePrompt, imageSize },
+            plan: { ...almaPlan, imagePrompt, imageSize },
             toolUsed: "generateImageTool",
             result: { success: result?.success },
             success: !!result?.success
@@ -431,6 +432,9 @@ ${memoryContext || "Sin memoria guardada todavía."}
     },
   });
 }
+
+
+
 
 
 

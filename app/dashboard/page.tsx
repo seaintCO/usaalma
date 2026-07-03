@@ -141,7 +141,7 @@ export default function DashboardPage() {
     setInput("");
     setMessages((prev) => [...prev, { role:"user", content:userMessage }]);
     setLoading(true);
-    setMessages((prev) => [...prev, { role:"assistant", content:"" }]);
+    setMessages((prev) => [...prev, { role:"assistant", content:"✨ ALMA is thinking..." }]);
 
     const res = await fetch("/api/chat/stream", {
       method:"POST",
@@ -380,6 +380,7 @@ export default function DashboardPage() {
     </main>
   );
 }
+
 
 
 

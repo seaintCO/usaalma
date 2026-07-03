@@ -1,4 +1,4 @@
-﻿import { CallLogRepository } from "@/lib/db/repositories/calls/callLog.repository";
+﻿import { createAdminClient } from "@/lib/supabase/admin";
 
 export async function POST(req:Request) {
   const formData = await req.formData();
@@ -7,23 +7,31 @@ export async function POST(req:Request) {
   const to = formData.get("To")?.toString() || "";
   const callSid = formData.get("CallSid")?.toString() || "";
 
-  await CallLogRepository.create({
-    from,
-    to,
-    callSid,
-    status:"incoming"
-  });
+  const supabase = createAdminClient();
+
+  const greeting = "Hello, this is ALMA, the AI receptionist. Please tell me your name and how I can help you today.";
+
+  const { data:turn } = await supabase
+    .from("receptionist_call_turns")
+    .insert({
+      call_sid:callSid,
+      phone_from:from,
+      phone_to:to,
+      user_message:"incoming_call",
+      alma_response:greeting,
+    })
+    .select()
+    .single();
+
+  const base = process.env.NEXT_PUBLIC_APP_URL || "";
+  const audioUrl = `${base}/api/voice/audio?turnId=${turn?.id}`;
 
   const response = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
   <Gather input="speech" language="en-US" timeout="5" action="/api/voice/status" method="POST">
-    <Say language="en-US" voice="alice">
-      Hello, this is ALMA, the virtual receptionist. Please tell me your name and how I can help you.
-    </Say>
+    <Play>${audioUrl}</Play>
   </Gather>
-  <Say language="en-US" voice="alice">
-    Thank you. We received your message and someone will follow up shortly.
-  </Say>
+  <Say>Thank you. Goodbye.</Say>
 </Response>`;
 
   return new Response(response, {

@@ -1,4 +1,5 @@
-﻿import { createClient } from "@/lib/supabase/server";
+﻿import OpenAI from "openai";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 function escapeXml(input:string) {
   return input
@@ -17,42 +18,57 @@ export async function POST(req:Request) {
   const to = formData.get("To")?.toString() || "";
   const callSid = formData.get("CallSid")?.toString() || "";
 
+  const supabase = createAdminClient();
+
+  const { data:connection } = await supabase
+    .from("workspace_voice_connections")
+    .select("*")
+    .eq("twilio_phone_number", to)
+    .maybeSingle();
+
   let almaResponse = "Thank you. I captured that. Is there anything else I can help you with?";
 
-  try {
-    const brainRes = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || ""}/api/receptionist/brain`, {
-      method:"POST",
-      headers:{ "Content-Type":"application/json" },
-      body:JSON.stringify({
-        businessName:"ALMA Client",
-        businessType:"service business",
-        callerMessage:speech,
-      }),
+  if (process.env.OPENAI_API_KEY) {
+    const client = new OpenAI({ apiKey:process.env.OPENAI_API_KEY });
+
+    const completion = await client.chat.completions.create({
+      model: process.env.ALMA_TEXT_MODEL || "gpt-4.1-mini",
+      messages:[
+        {
+          role:"system",
+          content:`You are ALMA Receptionist. Be warm, professional, and concise. Capture caller name, phone, reason, urgency, and preferred callback time. Never say you are ChatGPT.`
+        },
+        {
+          role:"user",
+          content:`Caller said: ${speech}`
+        }
+      ]
     });
 
-    const brain = await brainRes.json();
-    almaResponse = brain.response || almaResponse;
-  } catch {}
+    almaResponse = completion.choices[0]?.message?.content || almaResponse;
+  }
 
-  try {
-    const supabase = await createClient();
-    await supabase.from("receptionist_call_turns").insert({
+  const { data:turn } = await supabase
+    .from("receptionist_call_turns")
+    .insert({
       call_sid:callSid,
       phone_from:from,
       phone_to:to,
       user_message:speech,
       alma_response:almaResponse,
-    });
-  } catch {}
+    })
+    .select()
+    .single();
 
-  const safe = escapeXml(almaResponse);
+  const base = process.env.NEXT_PUBLIC_APP_URL || "";
+  const audioUrl = `${base}/api/voice/audio?turnId=${turn?.id}`;
 
   const response = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
   <Gather input="speech" language="en-US" timeout="5" action="/api/voice/status" method="POST">
-    <Say language="en-US" voice="alice">${safe}</Say>
+    <Play>${escapeXml(audioUrl)}</Play>
   </Gather>
-  <Say language="en-US" voice="alice">Thank you for calling. Goodbye.</Say>
+  <Say>Thank you for calling. Goodbye.</Say>
 </Response>`;
 
   return new Response(response, {

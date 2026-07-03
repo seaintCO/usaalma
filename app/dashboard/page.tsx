@@ -229,7 +229,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto pb-44 px-3 pb-4 text-sm">
+        <div className="flex-1 overflow-y-auto pb-64 scroll-smooth pb-44 px-3 pb-4 text-sm">
           <h5 className="mb-2 px-2 text-xs font-medium text-[#6B7280]">HISTORIAL</h5>
 
           {history.map((chat) => (
@@ -321,7 +321,7 @@ export default function DashboardPage() {
           <button onClick={() => { setMessages([]); setConversationId(null); }} className="rounded-lg p-2 hover:bg-[#F7F7F8]"><PenSquare className="h-5 w-5" /></button>
         </div>
 
-        <div className="flex-1 overflow-y-auto pb-44 px-4 pb-44 pt-8 md:px-6 md:pt-16">
+        <div className="flex-1 overflow-y-auto pb-64 scroll-smooth pb-44 px-4 pb-44 pt-8 md:px-6 md:pt-16">
           <div className="mx-auto max-w-3xl">
             {messages.length === 0 ? (
               <div className="mt-24 text-center md:mt-32">
@@ -336,7 +336,14 @@ export default function DashboardPage() {
                     {renderMessage(msg.content || "")}
                   </div>
                 ))}
-                {loading && <div className="max-w-[90%] rounded-2xl border border-[#E5E7EB] bg-[#F7F7F8] p-4 text-sm text-[#6B7280] md:max-w-[80%]">ALMA está trabajando...</div>}
+                {loading && (
+<div className="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm mb-4">
+<div className="flex items-center gap-2 text-sm font-medium">
+<div className="animate-spin h-4 w-4 rounded-full border-2 border-neutral-300 border-t-black"></div>
+<span>"✨ ALMA is thinking..."</span>
+</div>
+</div>
+) && <div className="max-w-[90%] rounded-2xl border border-[#E5E7EB] bg-[#F7F7F8] p-4 text-sm text-[#6B7280] md:max-w-[80%]">? Thinking...</div>}
               </div>
             )}
           </div>
@@ -359,7 +366,7 @@ export default function DashboardPage() {
                 <input ref={fileInputRef} type="file" className="hidden" accept="image/*,.pdf,.docx,.txt,.csv,.xlsx,.xls" onChange={(e) => { const file = e.target.files?.[0]; if (file) analyzeFile(file); }} />
                 <input ref={cameraInputRef} type="file" className="hidden" accept="image/*" capture="environment" onChange={(e) => { const file = e.target.files?.[0]; if (file) analyzeFile(file); }} />
                 <button onClick={() => fileInputRef.current?.click()} className="rounded-md p-1 text-[#6B7280] hover:bg-gray-200 hover:text-black" title="Upload file"><Paperclip className="h-5 w-5" /></button>
-                <button onClick={() => cameraInputRef.current?.click()} className="rounded-md p-1 text-[#6B7280] hover:bg-gray-200 hover:text-black" title="Take photo">📷</button>
+                <button onClick={() => cameraInputRef.current?.click()} className="rounded-md p-1 text-[#6B7280] hover:bg-gray-200 hover:text-black" title="Take photo">??</button>
                 <button className="rounded-md p-1 text-[#6B7280] hover:bg-gray-200 hover:text-black"><Mic className="h-5 w-5" /></button>
               </div>
 
@@ -373,6 +380,10 @@ export default function DashboardPage() {
     </main>
   );
 }
+
+
+
+
 
 
 

@@ -28,21 +28,20 @@ export async function upsertAlmaContext(userId:string, conversationId:string, pa
     .single();
 
   if (error) console.error("ALMA_CONTEXT_ERROR", error);
-
   return data;
 }
 
-export async function logAlmaBrainRun(input:any) {
+export async function logAlmaExecution(input:any) {
   const supabase = await createClient();
 
-  await supabase.from("alma_brain_runs").insert({
+  await supabase.from("alma_executions").insert({
     user_id: input.userId,
     conversation_id: input.conversationId,
-    user_message: input.userMessage,
     intent: input.intent,
-    plan: input.plan || {},
-    tool_used: input.toolUsed,
+    status: input.status || "completed",
+    steps: input.steps || [],
     result: input.result || {},
-    success: input.success || false,
+    error: input.error || null,
+    completed_at: input.completedAt || new Date().toISOString(),
   });
 }

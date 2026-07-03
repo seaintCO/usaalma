@@ -1,5 +1,5 @@
 ﻿import { detectIntent, detectImageSize, buildImageFollowupPrompt } from "@/lib/alma/brain";
-import { getAlmaContext, upsertAlmaContext, logAlmaBrainRun } from "@/lib/alma/context";
+import { getAlmaContext, upsertAlmaContext, logAlmaExecution } from "@/lib/alma/context";
 import OpenAI from "openai";
 import { getCurrentUser } from "@/lib/auth/user";
 import { buildContext } from "@/lib/ai/memory/context";
@@ -108,7 +108,7 @@ export async function POST(req:Request) {
             }
           });
 
-          await logAlmaBrainRun({
+          await logAlmaExecution({
             userId: user.id,
             conversationId,
             userMessage: message,
@@ -431,6 +431,7 @@ ${memoryContext || "Sin memoria guardada todavía."}
     },
   });
 }
+
 
 
 

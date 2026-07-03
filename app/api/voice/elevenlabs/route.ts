@@ -1,17 +1,32 @@
-﻿export async function POST(req:Request) {
+﻿import { getCurrentUser } from "@/lib/auth/user";
+import { createClient } from "@/lib/supabase/server";
+
+export async function POST(req:Request) {
+  const user = await getCurrentUser();
+  if (!user) return new Response("Unauthorized", { status:401 });
+
   const body = await req.json();
   const text = body.text || "Hello, this is ALMA.";
 
-  if (!process.env.ELEVENLABS_API_KEY) {
-    return new Response("Missing ELEVENLABS_API_KEY", { status:400 });
-  }
+  const supabase = await createClient();
 
-  const voiceId = process.env.ELEVENLABS_VOICE_ID || "EXAVITQu4vr4xnSDxMaL";
+  const { data:connection } = await supabase
+    .from("workspace_voice_connections")
+    .select("*")
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  const apiKey = connection?.elevenlabs_api_key;
+  const voiceId = connection?.elevenlabs_voice_id || "EXAVITQu4vr4xnSDxMaL";
+
+  if (!apiKey) {
+    return new Response("Missing ElevenLabs API key. Connect ElevenLabs in Voice Connections.", { status:400 });
+  }
 
   const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
     method:"POST",
     headers:{
-      "xi-api-key":process.env.ELEVENLABS_API_KEY,
+      "xi-api-key":apiKey,
       "Content-Type":"application/json",
       "Accept":"audio/mpeg",
     },

@@ -14,8 +14,8 @@ export function detectImageCategory(prompt:string):ImageCategory {
 export function normalizeImageSize(size?: string) {
   if (!size) return "1024x1024";
 
-  if (size === "1792x1024" || size === "16:9") return "1792x1024";
-  if (size === "1024x1792" || size === "9:16") return "1024x1792";
+  if (size === "1536x1024" || size === "16:9") return "1536x1024";
+  if (size === "1024x1536" || size === "9:16") return "1024x1536";
   if (size === "1024x1024" || size === "1:1") return "1024x1024";
 
   return "1024x1024";
@@ -90,4 +90,5 @@ No logo style.
 User request:
 ${prompt}`;
 }
+
 

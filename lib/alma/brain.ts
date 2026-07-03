@@ -37,8 +37,8 @@ export function detectIntent(message:string, context?:any): AlmaIntent {
 }
 
 export function detectImageSize(message:string) {
-  if (/9:16|vertical|portrait/i.test(message)) return "1024x1792";
-  if (/16:9|horizontal|landscape/i.test(message)) return "1792x1024";
+  if (/9:16|vertical|portrait/i.test(message)) return "1024x1536";
+  if (/16:9|horizontal|landscape/i.test(message)) return "1536x1024";
   if (/1:1|square/i.test(message)) return "1024x1024";
   return "1024x1024";
 }
@@ -47,3 +47,4 @@ export function buildImageFollowupPrompt(message:string, context:any) {
   const base = context?.last_image_prompt || message;
   return `${base}. Apply this change while preserving the same subject and style: ${message}`;
 }
+

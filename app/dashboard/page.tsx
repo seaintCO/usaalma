@@ -332,7 +332,7 @@ export default function DashboardPage() {
             ) : (
               <div className="space-y-5">
                 {messages.map((msg, index) => (
-                  <div key={index} className={msg.role === "user" ? "ml-auto max-w-[90%] rounded-2xl bg-black p-4 text-sm text-white md:max-w-[80%]" : "max-w-[90%] rounded-2xl border border-[#E5E7EB] bg-[#F7F7F8] p-4 text-sm leading-6 md:max-w-[80%]"}>
+                  <div key={index} className={msg.role === "user" ? "ml-auto max-w-[95%] md:max-w-[90%] rounded-2xl bg-black p-3 text-sm md:p-4 text-white md:max-w-[80%]" : "max-w-[95%] md:max-w-[90%] rounded-2xl border border-[#E5E7EB] bg-[#F7F7F8] p-3 text-sm md:p-4 leading-6 md:max-w-[80%]"}>
                     {renderMessage(msg.content || "")}
                   </div>
                 ))}
@@ -343,7 +343,7 @@ export default function DashboardPage() {
 <span>"✨ ALMA is thinking..."</span>
 </div>
 </div>
-) && <div className="max-w-[90%] rounded-2xl border border-[#E5E7EB] bg-[#F7F7F8] p-4 text-sm text-[#6B7280] md:max-w-[80%]">? Thinking...</div>}
+) && <div className="max-w-[95%] md:max-w-[90%] rounded-2xl border border-[#E5E7EB] bg-[#F7F7F8] p-3 text-sm md:p-4 text-[#6B7280] md:max-w-[80%]">? Thinking...</div>}
               </div>
             )}
           </div>

@@ -1,4 +1,4 @@
-﻿import OpenAI from "openai";
+import OpenAI from "openai";
 
 export async function createEmbedding(text:string) {
   if (!process.env.OPENAI_API_KEY) return null;

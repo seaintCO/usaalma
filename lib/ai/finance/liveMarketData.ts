@@ -1,4 +1,4 @@
-﻿export async function getLiveMarketData(symbol:string) {
+export async function getLiveMarketData(symbol:string) {
   const clean = symbol
     .replace("NASDAQ:", "")
     .replace("NYSE:", "")

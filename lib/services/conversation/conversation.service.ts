@@ -1,4 +1,4 @@
-﻿import { ConversationRepository } from "@/lib/db/repositories/conversation.repository";
+import { ConversationRepository } from "@/lib/db/repositories/conversation.repository";
 
 export class ConversationService {
   static async newChat(userId: string) {

@@ -1,4 +1,4 @@
-﻿import { WorkspaceRepository } from "@/lib/db/repositories/workspaces/workspace.repository";
+import { WorkspaceRepository } from "@/lib/db/repositories/workspaces/workspace.repository";
 
 export async function buildWorkspaceContext(userId:string) {
   const workspaces = await WorkspaceRepository.list(userId);

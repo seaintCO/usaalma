@@ -1,4 +1,4 @@
-﻿import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 import { isDemoMode } from "@/lib/config/demo";
 
 export async function getCurrentUser() {

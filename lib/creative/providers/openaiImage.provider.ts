@@ -1,4 +1,4 @@
-﻿import OpenAI from "openai";
+import OpenAI from "openai";
 import { buildImagePrompt, normalizeImageSize } from "@/lib/ai/images/imagePromptRouter";
 
 export async function generateOpenAIImage(prompt:string, size?:string) {

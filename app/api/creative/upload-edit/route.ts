@@ -1,4 +1,4 @@
-﻿import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { requirePaidUser } from "@/lib/api/requirePaidUser";
 import { CreativeAssetRepository } from "@/lib/db/repositories/creative/creativeAsset.repository";
 import { editOpenAIImage } from "@/lib/creative/providers/openaiImageEdit.provider";

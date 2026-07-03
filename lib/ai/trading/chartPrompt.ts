@@ -1,4 +1,4 @@
-﻿export function buildTradingChartPrompt(question:string) {
+export function buildTradingChartPrompt(question:string) {
   return `
 You are ALMA Markets, an elite trading chart analyst.
 

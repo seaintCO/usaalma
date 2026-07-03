@@ -1,4 +1,4 @@
-﻿import { ALMA_AGENTS } from "./agents";
+import { ALMA_AGENTS } from "./agents";
 
 export function selectAgent(message:string) {
   const text = message.toLowerCase();

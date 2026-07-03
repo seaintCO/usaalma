@@ -1,4 +1,4 @@
-﻿import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { requirePaidUser } from "@/lib/api/requirePaidUser";
 import { ReceptionistRepository } from "@/lib/db/repositories/receptionist/receptionist.repository";
 

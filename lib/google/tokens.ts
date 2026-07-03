@@ -1,4 +1,4 @@
-﻿import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 import { decryptSecret, encryptSecret } from "@/lib/security/crypto";
 
 function maybeDecrypt(value:string | null) {

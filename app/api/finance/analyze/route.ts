@@ -1,4 +1,4 @@
-﻿import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import OpenAI from "openai";
 import { requirePaidUser } from "@/lib/api/requirePaidUser";
 import { buildMarketAnalysisPrompt } from "@/lib/ai/finance/marketPrompt";

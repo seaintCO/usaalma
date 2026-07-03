@@ -1,4 +1,4 @@
-﻿import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 import { createEmbedding } from "@/lib/ai/embeddings/createEmbedding";
 
 export class DocumentRepository {

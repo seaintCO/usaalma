@@ -1,4 +1,4 @@
-﻿import OpenAI from "openai";
+import OpenAI from "openai";
 import { ImageRepository } from "@/lib/db/repositories/images/image.repository";
 import { buildImagePrompt, normalizeImageSize } from "@/lib/ai/images/imagePromptRouter";
 

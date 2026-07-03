@@ -1,4 +1,4 @@
-﻿export function allowedModulesForPlan(plan:string) {
+export function allowedModulesForPlan(plan:string) {
   if (plan === "business") {
     return [
       "planner",

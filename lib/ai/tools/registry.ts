@@ -1,4 +1,4 @@
-﻿import { createTaskTool } from "@/lib/tools/tasks/createTaskTool";
+import { createTaskTool } from "@/lib/tools/tasks/createTaskTool";
 import { createNoteTool } from "@/lib/tools/notes/createNoteTool";
 import { createContactTool } from "@/lib/tools/crm/createContactTool";
 import { createInvoiceTool } from "@/lib/tools/invoices/createInvoiceTool";

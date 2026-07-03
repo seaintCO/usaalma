@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { Mail, Phone, Plus, Users } from "lucide-react";
 import { useEffect, useState } from "react";

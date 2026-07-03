@@ -1,4 +1,4 @@
-﻿import OpenAI from "openai";
+import OpenAI from "openai";
 import { searchGmail, createGmailDraft, sendGmail } from "@/lib/google/gmail";
 
 export async function summarizeGmailTool(userId:string, query:string = "in:inbox newer_than:7d") {

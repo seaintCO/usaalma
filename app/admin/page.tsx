@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { Activity, BarChart3, Bot, FileText, MessageSquare, PhoneCall, ReceiptText, Store, Users } from "lucide-react";
 import { useEffect, useState } from "react";

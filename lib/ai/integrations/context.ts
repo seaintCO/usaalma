@@ -1,4 +1,4 @@
-﻿import { IntegrationRepository } from "@/lib/db/repositories/integrations/integration.repository";
+import { IntegrationRepository } from "@/lib/db/repositories/integrations/integration.repository";
 
 export async function buildIntegrationContext(userId:string) {
   const integrations = await IntegrationRepository.listConnected(userId);

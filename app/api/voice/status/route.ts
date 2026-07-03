@@ -1,4 +1,4 @@
-﻿import { CallLogRepository } from "@/lib/db/repositories/calls/callLog.repository";
+import { CallLogRepository } from "@/lib/db/repositories/calls/callLog.repository";
 
 export async function POST(req:Request) {
   const formData = await req.formData();

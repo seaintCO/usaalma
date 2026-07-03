@@ -1,4 +1,4 @@
-﻿import { executeTool } from "@/lib/ai/tools/registry";
+import { executeTool } from "@/lib/ai/tools/registry";
 import { createSimplePlan } from "./simplePlanner";
 
 export async function runPlannedExecution(userId:string, message:string) {

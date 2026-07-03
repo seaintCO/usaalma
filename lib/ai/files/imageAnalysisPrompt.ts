@@ -1,4 +1,4 @@
-﻿export function buildImageAnalysisPrompt(fileName:string, question:string) {
+export function buildImageAnalysisPrompt(fileName:string, question:string) {
   const lower = fileName.toLowerCase();
 
   const isScreenshot =

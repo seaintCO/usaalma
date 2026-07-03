@@ -1,4 +1,4 @@
-﻿export const ALMA_AGENTS = [
+export const ALMA_AGENTS = [
   {
     key: "planner",
     name: "Planner Agent",
@@ -13,9 +13,9 @@
   },
   {
     key: "finance",
-    name: "Finance Agent",
+    name: "Market Analyst Agent",
     description: "Ayuda con facturas, pagos, ingresos y organización financiera.",
-    system: "Eres el Finance Agent de ALMA. Ayudas con facturación, cobros, pagos e ingresos."
+    system: "Eres el Market Analyst Agent de ALMA. Ayudas con facturación, cobros, pagos e ingresos."
   },
   {
     key: "receptionist",

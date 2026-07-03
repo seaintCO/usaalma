@@ -1,4 +1,4 @@
-﻿import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth/user";
 import { WorkspaceInviteRepository } from "@/lib/db/repositories/workspaces/workspaceInvite.repository";
 

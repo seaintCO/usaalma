@@ -1,4 +1,4 @@
-﻿import OpenAI from "openai";
+import OpenAI from "openai";
 
 export async function optimizeCreativePrompt(input:{
   prompt:string;

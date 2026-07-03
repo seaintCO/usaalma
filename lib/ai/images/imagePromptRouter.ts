@@ -1,4 +1,4 @@
-﻿export type ImageCategory = "photo" | "logo" | "product" | "social" | "architecture" | "general";
+export type ImageCategory = "photo" | "logo" | "product" | "social" | "architecture" | "general";
 
 export function detectImageCategory(prompt:string):ImageCategory {
   const p = prompt.toLowerCase();

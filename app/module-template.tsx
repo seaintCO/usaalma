@@ -1,4 +1,4 @@
-﻿type PageProps = {
+type PageProps = {
   title: string;
   description: string;
 };

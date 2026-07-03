@@ -1,4 +1,4 @@
-﻿export function safeJsonParse(value:string) {
+export function safeJsonParse(value:string) {
   try {
     return JSON.parse(value);
   } catch {

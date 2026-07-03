@@ -1,4 +1,4 @@
-﻿import { planAlmaAction, detectImageSize, buildImageFollowupPrompt } from "@/lib/alma/brain";
+import { planAlmaAction, detectImageSize, buildImageFollowupPrompt } from "@/lib/alma/brain";
 import { getAlmaContext, upsertAlmaContext, logAlmaExecution } from "@/lib/alma/context";
 import OpenAI from "openai";
 import { getCurrentUser } from "@/lib/auth/user";

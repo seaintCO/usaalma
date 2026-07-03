@@ -1,4 +1,4 @@
-﻿import { AlmaPlan } from "./types";
+import { AlmaPlan } from "./types";
 
 function detectBusinessName(message:string) {
   const text = message.toLowerCase();

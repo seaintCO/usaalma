@@ -1,4 +1,4 @@
-﻿import { InvoiceRepository } from "@/lib/db/repositories/invoices/invoice.repository";
+import { InvoiceRepository } from "@/lib/db/repositories/invoices/invoice.repository";
 
 export async function createInvoiceTool(userId:string, clientName:string, amount:number) {
   const invoice = await InvoiceRepository.create(userId, {

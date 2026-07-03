@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useMemo, useState } from "react";
 import { CalendarDays, CheckCircle2, Clock, Filter, Plus, Trash2 } from "lucide-react";

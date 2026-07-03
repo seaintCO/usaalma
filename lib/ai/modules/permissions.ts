@@ -1,4 +1,4 @@
-﻿import { ModuleRepository } from "@/lib/db/repositories/modules/module.repository";
+import { ModuleRepository } from "@/lib/db/repositories/modules/module.repository";
 
 export async function getInstalledModuleKeys(userId:string) {
   const modules = await ModuleRepository.list(userId);

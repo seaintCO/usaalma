@@ -1,4 +1,4 @@
-﻿import crypto from "crypto";
+import crypto from "crypto";
 import { requireEnv } from "@/lib/config/env";
 
 const algorithm = "aes-256-gcm";

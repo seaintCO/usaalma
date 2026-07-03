@@ -1,4 +1,4 @@
-﻿import { searchDocuments } from "@/lib/ai/documents/search";
+import { searchDocuments } from "@/lib/ai/documents/search";
 
 export async function buildRelevantDocumentContext(userId:string, query:string) {
   const results = await searchDocuments(userId, query);

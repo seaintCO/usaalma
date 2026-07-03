@@ -1,4 +1,4 @@
-﻿import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 import { TaskRepository } from "@/lib/db/repositories/tasks/task.repository";
 
 export class WorkflowRunService {

@@ -1,4 +1,4 @@
-﻿export function buildMarketAnalysisPrompt(symbol:string, question:string) {
+export function buildMarketAnalysisPrompt(symbol:string, question:string) {
   return `
 You are ALMA Markets, an institutional-style trading analyst.
 

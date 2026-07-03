@@ -1,4 +1,4 @@
-﻿export default function AuthLoadingPage() {
+export default function AuthLoadingPage() {
   return (
     <main className="flex min-h-screen items-center justify-center bg-white text-black">
       <div className="text-center">

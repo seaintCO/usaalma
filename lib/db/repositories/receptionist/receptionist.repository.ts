@@ -1,4 +1,4 @@
-﻿import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 import { buildReceptionistPrompt } from "@/lib/receptionist/prompt";
 
 export class ReceptionistRepository {

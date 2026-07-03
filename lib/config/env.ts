@@ -1,4 +1,4 @@
-﻿export function requireEnv(name:string) {
+export function requireEnv(name:string) {
   const value = process.env[name];
 
   if (!value) {

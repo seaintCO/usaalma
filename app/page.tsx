@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState } from "react";
 import {
@@ -71,7 +71,7 @@ export default function Home() {
                 <div className="font-medium tracking-tight">ALMA</div>
                 <div className="text-[10px] text-[#6B7280]">Powered by SEAINT</div>
               </div>
-              {["Nuevo Chat", "Images", "Finance", "Files", "CRM", "Marketplace"].map((item) => (
+              {["Nuevo Chat", "Images", "Market Analyst", "Files", "CRM", "Marketplace"].map((item) => (
                 <div key={item} className="mb-2 rounded-xl px-3 py-2 text-sm text-[#6B7280]">{item}</div>
               ))}
             </aside>

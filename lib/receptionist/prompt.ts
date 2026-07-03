@@ -1,4 +1,4 @@
-﻿export function buildReceptionistPrompt(data:any) {
+export function buildReceptionistPrompt(data:any) {
   return `
 Eres la recepcionista IA de ${data.businessName}.
 

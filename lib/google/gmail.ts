@@ -1,4 +1,4 @@
-﻿import { getGoogleAccessToken } from "./tokens";
+import { getGoogleAccessToken } from "./tokens";
 
 function base64Url(input:string) {
   return Buffer.from(input)

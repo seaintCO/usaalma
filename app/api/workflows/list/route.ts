@@ -1,4 +1,4 @@
-﻿import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth/user";
 import { WorkflowRepository } from "@/lib/db/repositories/workflows/workflow.repository";
 

@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { GitBranch, Play, Plus, Zap } from "lucide-react";
 import { useEffect, useState } from "react";

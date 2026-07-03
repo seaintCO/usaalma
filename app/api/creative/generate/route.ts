@@ -1,4 +1,4 @@
-﻿import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { requirePaidUser } from "@/lib/api/requirePaidUser";
 import { generateCreativeAsset } from "@/lib/creative/generateCreativeAsset";
 import { buildCreativeTemplatePrompt } from "@/lib/creative/templates/templates";

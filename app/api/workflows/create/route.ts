@@ -1,4 +1,4 @@
-﻿import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { requirePaidUser } from "@/lib/api/requirePaidUser";
 import { WorkflowRepository } from "@/lib/db/repositories/workflows/workflow.repository";
 

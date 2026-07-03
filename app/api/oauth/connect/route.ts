@@ -1,4 +1,4 @@
-﻿import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth/user";
 import { OAuthRepository } from "@/lib/db/repositories/oauth/oauth.repository";
 

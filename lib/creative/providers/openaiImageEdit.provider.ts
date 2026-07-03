@@ -1,4 +1,4 @@
-﻿import OpenAI, { toFile } from "openai";
+import OpenAI, { toFile } from "openai";
 
 export async function editOpenAIImage(input:{
   imageBase64:string;

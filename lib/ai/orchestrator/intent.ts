@@ -1,4 +1,4 @@
-﻿export type AlmaIntent =
+export type AlmaIntent =
   | "chat"
   | "image_generate"
   | "image_edit"
@@ -25,7 +25,7 @@ export function detectAlmaIntent(message:string):AlmaIntent {
     return "image_generate";
   }
 
-  // Finance only when the user clearly asks for market/trading analysis
+  // Market Analyst only when the user clearly asks for market/trading analysis
   if (
     /(analyze|analysis|analiza|análisis|analisis|trade|trading|calls|puts|chart|market|stock|options|opciones|vwap|ema|support|resistance|soporte|resistencia|liquidity|liquidez)/.test(p) &&
     /(spy|spx|qqq|nq|es|aapl|tsla|nvda|meta|msft|amzn|btc|crypto|stock|market|trading|calls|puts|chart|precio|acciones|opciones)/.test(p)

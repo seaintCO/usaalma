@@ -1,4 +1,4 @@
-﻿import { CreativeAssetRepository } from "@/lib/db/repositories/creative/creativeAsset.repository";
+import { CreativeAssetRepository } from "@/lib/db/repositories/creative/creativeAsset.repository";
 import { optimizeCreativePrompt } from "./promptOptimizer";
 import { generateOpenAIImage } from "./providers/openaiImage.provider";
 import { buildImagePrompt, detectImageCategory } from "@/lib/ai/images/imagePromptRouter";

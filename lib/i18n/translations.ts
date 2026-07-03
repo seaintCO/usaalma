@@ -1,4 +1,4 @@
-﻿export const translations:any = {
+export const translations:any = {
   es: {
     login:"Iniciar sesión",
     createAccount:"Crear cuenta",

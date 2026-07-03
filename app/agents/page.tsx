@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { Bot, Brain, BriefcaseBusiness, Calendar, Cross, Phone, ReceiptText } from "lucide-react";
 import { useEffect, useState } from "react";

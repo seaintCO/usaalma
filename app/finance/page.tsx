@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useRef, useState } from "react";
 import TradingViewWidget from "@/components/finance/TradingViewWidget";
@@ -13,7 +13,7 @@ function cleanText(text:string) {
     .trim();
 }
 
-export default function FinancePage() {
+export default function MarketAnalystPage() {
   const [symbol, setSymbol] = useState("NASDAQ:AAPL");
   const [question, setQuestion] = useState("Analyze this chart. Where should I look for calls or puts?");
   const [answer, setAnswer] = useState("");
@@ -152,12 +152,12 @@ export default function FinancePage() {
           <section className="rounded-[2rem] border border-[#E5E7EB] bg-white p-6 shadow-sm">
             <div className="mb-4 flex items-center gap-2">
               <Sparkles className="h-4 w-4" />
-              <h2 className="font-medium">ALMA Chart Analysis</h2>
+              <h2 className="font-medium">ALMA Market Analysis</h2>
             </div>
 
             {!answer ? (
               <div className="flex min-h-[360px] items-center justify-center rounded-3xl bg-[#F7F7F8] p-8 text-center text-[#6B7280]">
-                Upload a chart screenshot and ALMA will break down market structure, liquidity, calls, puts, invalidation, and risk.
+                Upload a TradingView, Webull, Thinkorswim, Robinhood, Binance, or broker chart screenshot. ALMA will provide educational market analysis. Not financial advice.
               </div>
             ) : (
               <div className="whitespace-pre-wrap rounded-3xl bg-[#F7F7F8] p-6 text-sm leading-7 text-[#111111]">

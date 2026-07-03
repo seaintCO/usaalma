@@ -1,4 +1,4 @@
-﻿import { ReceptionistRepository } from "@/lib/db/repositories/receptionist/receptionist.repository";
+import { ReceptionistRepository } from "@/lib/db/repositories/receptionist/receptionist.repository";
 
 export async function createReceptionistTool(
   userId:string,

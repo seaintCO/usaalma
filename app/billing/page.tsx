@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { CheckCircle2, CreditCard } from "lucide-react";
 import { useEffect, useState } from "react";

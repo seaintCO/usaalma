@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { Building2, Mail, Plus, Users } from "lucide-react";
 import { useEffect, useState } from "react";

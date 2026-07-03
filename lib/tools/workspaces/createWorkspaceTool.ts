@@ -1,4 +1,4 @@
-﻿import { WorkspaceRepository } from "@/lib/db/repositories/workspaces/workspace.repository";
+import { WorkspaceRepository } from "@/lib/db/repositories/workspaces/workspace.repository";
 
 export async function createWorkspaceTool(userId:string, name:string, type:string = "business") {
   const workspace = await WorkspaceRepository.create(userId, name, type);

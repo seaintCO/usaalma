@@ -1,4 +1,4 @@
-﻿import OpenAI from "openai";
+import OpenAI from "openai";
 
 export async function optimizeImagePrompt(prompt:string) {
   if (!process.env.OPENAI_API_KEY) {

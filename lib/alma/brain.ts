@@ -1,4 +1,4 @@
-﻿export type AlmaIntent =
+export type AlmaIntent =
   | "image_generation"
   | "image_followup"
   | "crm"

@@ -1,4 +1,4 @@
-﻿import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { requirePaidUser } from "@/lib/api/requirePaidUser";
 import { generateBrandKit } from "@/lib/creative/brandKit";
 import { CreativeAssetRepository } from "@/lib/db/repositories/creative/creativeAsset.repository";

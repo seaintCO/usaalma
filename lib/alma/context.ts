@@ -1,4 +1,4 @@
-﻿import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 
 export async function getAlmaContext(userId:string, conversationId:string) {
   const supabase = await createClient();

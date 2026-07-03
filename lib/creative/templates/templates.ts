@@ -1,4 +1,4 @@
-﻿export const CREATIVE_TEMPLATES:any = {
+export const CREATIVE_TEMPLATES:any = {
   remove_background: {
     type:"edit",
     category:"remove_background",

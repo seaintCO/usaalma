@@ -1,4 +1,4 @@
-﻿import OpenAI from "openai";
+import OpenAI from "openai";
 
 export async function extractMemory(message:string) {
   if (!process.env.OPENAI_API_KEY) {

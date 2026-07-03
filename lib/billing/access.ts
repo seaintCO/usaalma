@@ -1,4 +1,4 @@
-﻿import { SubscriptionRepository } from "@/lib/db/repositories/billing/subscription.repository";
+import { SubscriptionRepository } from "@/lib/db/repositories/billing/subscription.repository";
 
 export async function userHasActiveSubscription(userId:string) {
   const subscription = await SubscriptionRepository.get(userId);

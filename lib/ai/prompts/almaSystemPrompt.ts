@@ -1,4 +1,4 @@
-﻿export function almaSystemPrompt() {
+export function almaSystemPrompt() {
   return `
 You are ALMA, an elite AI operating system for business, productivity, creativity, and execution.
 

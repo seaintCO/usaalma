@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { Bot, Phone, Plus } from "lucide-react";
 import { useEffect, useState } from "react";

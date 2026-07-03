@@ -33,7 +33,7 @@ function renderMessage(content:string) {
       <div className="space-y-3">
         <img
           src={`data:image/png;base64,${imageMatch[1]}`}
-          className="w-full rounded-2xl border border-[#E5E7EB] object-cover shadow-sm"
+          className="w-full max-h-[70vh] rounded-2xl border border-[#E5E7EB] object-contain shadow-sm"
           alt="ALMA generated image"
         />
         <p className="text-[#6B7280]">
@@ -229,7 +229,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto pb-64 scroll-smooth pb-44 px-3 pb-4 text-sm">
+        <div className="flex-1 overflow-y-auto pb-72 md:pb-44 scroll-smooth pb-64 scroll-smooth pb-44 px-3 pb-4 text-sm">
           <h5 className="mb-2 px-2 text-xs font-medium text-[#6B7280]">HISTORIAL</h5>
 
           {history.map((chat) => (
@@ -321,7 +321,7 @@ export default function DashboardPage() {
           <button onClick={() => { setMessages([]); setConversationId(null); }} className="rounded-lg p-2 hover:bg-[#F7F7F8]"><PenSquare className="h-5 w-5" /></button>
         </div>
 
-        <div className="flex-1 overflow-y-auto pb-64 scroll-smooth pb-44 px-4 pb-44 pt-8 md:px-6 md:pt-16">
+        <div className="flex-1 overflow-y-auto pb-72 md:pb-44 scroll-smooth pb-64 scroll-smooth pb-44 px-4 pb-44 pt-8 md:px-6 md:pt-16">
           <div className="mx-auto max-w-3xl">
             {messages.length === 0 ? (
               <div className="mt-24 text-center md:mt-32">

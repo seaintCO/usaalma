@@ -3,7 +3,7 @@
 import {
   ArrowUp, Calendar, CheckCircle2, CreditCard, FileText, FolderOpen,
   Menu, Mic, Paperclip, PenSquare, PlusCircle, ReceiptText,
-  Search, Settings, Store, Users, ImageIcon, Camera, Activity, Presentation } from "lucide-react";
+  Search, Settings, Store, Users, ImageIcon, Camera, Activity, Rocket, Presentation } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 const moduleMap:any = {
@@ -13,7 +13,7 @@ const moduleMap:any = {
   crm: ["CRM", Users, "/crm"],
   invoicing: ["Facturación", ReceiptText, "/invoicing"],
   documents: ["Documentos", FolderOpen, "/documents"],
-  presentations: ["Presentations", Presentation, "/presentations"],
+  launchStudio: ["Launch Studio", Rocket, "/launch-studio"],
 };
 
 function cleanAIText(text:string) {
@@ -380,6 +380,10 @@ export default function DashboardPage() {
     </main>
   );
 }
+
+
+
+
 
 
 

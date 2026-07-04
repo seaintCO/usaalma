@@ -9,7 +9,7 @@ export type AlmaIntent =
   | "fitness"
   | "trading"
   | "receptionist"
-  | "presentation"
+  | "launch_studio"
   | "general";
 
 export type AlmaPlan = {
@@ -70,11 +70,11 @@ export function planAlmaAction(message:string, context?:any): AlmaPlan {
     return { intent:"task", tool:"planner", action:"task_action", confidence:0.8, status:"✅ Planning task..." };
   }
 
-  if (/\b(presentation|deck|pitch deck|portfolio|slides|powerpoint|investor deck|sales deck)\b/i.test(m)) {
+  if (/\b(demo|mockup|mock up|prototype|launch page|live demo|presentation|deck|pitch deck|portfolio|slides|powerpoint|investor deck|sales deck)\b/i.test(m)) {
     return {
-      intent:"presentation",
-      tool:"slides",
-      action:"generate_presentation",
+      intent:"launch_studio",
+      tool:"launch_studio",
+      action:"generate_live_demo",
       confidence:0.9,
       status:"?? Building presentation..."
     };
@@ -117,6 +117,7 @@ export const getLiveStatus = (intent:string) => {
 export function detectIntent(message:string, context?:any): AlmaIntent {
   return planAlmaAction(message, context).intent;
 }
+
 
 
 

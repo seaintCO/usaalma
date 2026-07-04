@@ -9,6 +9,5 @@ export async function POST(req:Request) {
   }
 
   const demo = await generateLaunchDemo(prompt);
-
   return NextResponse.json({ demo });
 }

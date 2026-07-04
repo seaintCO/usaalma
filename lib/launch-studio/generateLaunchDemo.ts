@@ -1,19 +1,26 @@
-export async function generateLaunchDemo(prompt:string) {
+import { LaunchDemo } from "./schema";
+
+function slugify(input:string) {
+  return input.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 48) || "alma-demo";
+}
+
+function fallback(prompt:string):LaunchDemo {
   return {
     title: "ALMA Launch Demo",
-    prompt,
-    theme: "futuristic-dark",
+    slug: slugify(prompt),
+    theme: "midnight",
+    accent: "blue",
+    nav: ["Overview", "Demo", "Features", "Pricing"],
     sections: [
       {
         type: "hero",
         eyebrow: "AI GENERATED LIVE DEMO",
-        headline: "Build the shell before the product exists.",
-        subheadline: "Turn any business idea into a premium demo, portfolio, or pitch-ready experience in minutes.",
-        primary: "Launch Demo",
-        secondary: "View Mockup"
+        headline: "Turn any idea into a premium live demo.",
+        subheadline: "ALMA Launch Studio creates futuristic SaaS mockups, business portfolios, pitch shells, and client presentations from one prompt.",
+        bullets: ["Prompt to demo", "Export index.html", "Deploy on Vercel"]
       },
       {
-        type: "table",
+        type: "mock_dashboard",
         title: "Live Product Preview",
         rows: [
           ["ALMA OS", "AI Platform", "Active", "+42%"],
@@ -23,15 +30,103 @@ export async function generateLaunchDemo(prompt:string) {
         ]
       },
       {
+        type: "features",
+        title: "Built for founders who need to present fast.",
+        cards: [
+          { title: "Demo Shells", description: "Create a premium product illusion before the full product exists." },
+          { title: "Business Portfolios", description: "Generate a polished company profile for clients and investors." },
+          { title: "Investor Pages", description: "Turn ideas into pitch-ready narratives with strong visuals." }
+        ]
+      },
+      {
         type: "stats",
-        title: "Built for speed, polish, and presentation.",
+        title: "Speed that feels unfair.",
         stats: [
-          ["Demo Time", "3 min"],
+          ["Build Time", "3 min"],
           ["Export", "index.html"],
-          ["Design", "React + Tailwind"],
+          ["Design", "React Style"],
           ["Deploy", "Vercel Ready"]
         ]
+      },
+      {
+        type: "cta",
+        headline: "Ready to launch the demo?",
+        subheadline: "Export this experience and deploy it live."
       }
     ]
   };
+}
+
+export async function generateLaunchDemo(prompt:string):Promise<LaunchDemo> {
+  if (!process.env.OPENAI_API_KEY) return fallback(prompt);
+
+  const system = `
+You are ALMA Launch Studio, an elite AI product demo designer.
+
+Create an Aura-level futuristic live demo page, not a PowerPoint.
+The output will become a single deployable index.html.
+
+Return ONLY valid JSON with this shape:
+{
+  "title": "string",
+  "slug": "string",
+  "theme": "midnight|luxury|apple|neon|enterprise",
+  "accent": "blue|cyan|purple|gold|emerald",
+  "nav": ["string"],
+  "sections": [
+    {
+      "type": "hero|mock_dashboard|features|stats|process|pricing|testimonials|cta",
+      "eyebrow": "string",
+      "headline": "string",
+      "subheadline": "string",
+      "title": "string",
+      "description": "string",
+      "bullets": ["string"],
+      "cards": [{"title":"string","description":"string","metric":"string"}],
+      "rows": [["string","string","string","string"]],
+      "stats": [["string","string"]],
+      "steps": [{"title":"string","description":"string"}],
+      "plans": [{"name":"string","price":"string","features":["string"]}]
+    }
+  ]
+}
+
+Rules:
+- Make it look like a premium SaaS/product demo.
+- Use short powerful copy.
+- Include hero, mock_dashboard, features, stats, process or pricing, and cta.
+- Make it specific to the user's prompt.
+- No markdown. No comments. JSON only.
+`;
+
+  try {
+    const res = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`
+      },
+      body: JSON.stringify({
+        model: process.env.OPENAI_MODEL || "gpt-4o-mini",
+        temperature: 0.8,
+        messages: [
+          { role: "system", content: system },
+          { role: "user", content: prompt }
+        ]
+      })
+    });
+
+    const data = await res.json();
+    const raw = data?.choices?.[0]?.message?.content || "";
+    const json = raw.replace(/```json/g, "").replace(/```/g, "").trim();
+    const parsed = JSON.parse(json);
+
+    return {
+      ...fallback(prompt),
+      ...parsed,
+      slug: parsed.slug || slugify(parsed.title || prompt)
+    };
+  } catch {
+    return fallback(prompt);
+  }
 }

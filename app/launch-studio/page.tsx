@@ -14,6 +14,7 @@ const templates = [
 export default function LaunchStudioPage() {
   const [prompt, setPrompt] = useState("");
   const [template, setTemplate] = useState("saas");
+  const [theme, setTheme] = useState("startup");
   const [demo, setDemo] = useState<any>(null);
   const [projectId, setProjectId] = useState("");
   const [loading, setLoading] = useState(false);
@@ -23,12 +24,27 @@ export default function LaunchStudioPage() {
   const [viewport, setViewport] = useState<"desktop" | "mobile">("desktop");
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [deployUrl, setDeployUrl] = useState("");
+const [components, setComponents] = useState<any[]>([]);
+const [versions, setVersions] = useState<any[]>([]);
+const [score, setScore] = useState<any>(null);
 
   useEffect(() => {
-    loadProjects();
+    loadProjects(); loadComponents();
   }, []);
 
-  async function loadProjects() {
+  async function loadComponents() {
+  const res = await fetch("/api/launch-studio/components");
+  const data = await res.json();
+  setComponents(data.components || []);
+}
+
+async function loadVersions(id:string) {
+  const res = await fetch(`/api/launch-studio/versions?projectId=${id}`);
+  const data = await res.json();
+  setVersions(data.versions || []);
+}
+
+async function loadProjects() {
     const res = await fetch("/api/launch-studio/list");
     const data = await res.json();
     setProjects(data.projects || []);
@@ -41,7 +57,7 @@ export default function LaunchStudioPage() {
     const res = await fetch("/api/launch-studio/generate", {
       method:"POST",
       headers:{ "Content-Type":"application/json" },
-      body:JSON.stringify({ prompt, template })
+      body:JSON.stringify({ prompt, template, theme })
     });
 
     const data = await res.json();
@@ -93,11 +109,22 @@ export default function LaunchStudioPage() {
     const res = await fetch("/api/launch-studio/save", {
       method:"POST",
       headers:{ "Content-Type":"application/json" },
-      body:JSON.stringify({ id:projectId || null, demo, prompt, template })
+      body:JSON.stringify({ id:projectId || null, demo, prompt, template, theme })
     });
 
     const data = await res.json();
-    if (data.project?.id) setProjectId(data.project.id);
+    if (data.project?.id) {
+      setProjectId(data.project.id);
+
+      await fetch("/api/launch-studio/versions", {
+        method:"POST",
+        headers:{ "Content-Type":"application/json" },
+        body:JSON.stringify({ projectId:data.project.id, demo, title:demo.title })
+      });
+
+      await loadVersions(data.project.id);
+    }
+
     await loadProjects();
   }
 
@@ -107,7 +134,7 @@ export default function LaunchStudioPage() {
       headers:{ "Content-Type":"application/json" },
       body:JSON.stringify({ id })
     });
-    await loadProjects();
+    await loadProjects(); loadComponents();
   }
 
   function loadProject(p:any) {
@@ -115,6 +142,7 @@ export default function LaunchStudioPage() {
     setDemo(p.demo);
     setPrompt(p.prompt || "");
     setTemplate(p.template || "saas");
+    loadVersions(p.id);
   }
 
   async function downloadFromApi(url:string, filename:string) {
@@ -135,23 +163,7 @@ export default function LaunchStudioPage() {
     window.URL.revokeObjectURL(objectUrl);
   }
 
-  async function deployToVercel() {
-    if (!demo) return;
-
-    setLoading(true);
-
-    const res = await fetch("/api/launch-studio/vercel-deploy", {
-      method:"POST",
-      headers:{ "Content-Type":"application/json" },
-      body:JSON.stringify({ demo })
-    });
-
-    const data = await res.json();
-    if (data.url) setDeployUrl(data.url);
-    else alert(data.error || "Deploy failed");
-
-    setLoading(false);
-  }
+  
 
   function updateSection(index:number, key:string, value:any) {
     if (!demo) return;
@@ -188,6 +200,21 @@ export default function LaunchStudioPage() {
     setDragIndex(null);
   }
 
+
+  function addComponent(component:any) {
+    if (!demo) return;
+    const next = structuredClone(demo);
+    next.sections = [...(next.sections || []), component.component || component];
+    setDemo(next);
+  }
+
+  function addFreeformCard(sectionIndex:number) {
+    if (!demo) return;
+    const next = structuredClone(demo);
+    if (!next.sections[sectionIndex].cards) next.sections[sectionIndex].cards = [];
+    next.sections[sectionIndex].cards.push({ title:"New Block", description:"Edit this freeform block." });
+    setDemo(next);
+  }
   const generatedCode = useMemo(() => demo ? JSON.stringify(demo, null, 2) : "", [demo]);
 
   return (
@@ -226,6 +253,23 @@ export default function LaunchStudioPage() {
               <h1 className="text-5xl font-semibold leading-[0.92] tracking-[-0.075em]">
                 Prompt to live demo.
               </h1>
+
+              <div className="mt-6">
+                <p className="mb-2 text-xs font-bold uppercase tracking-widest text-white/35">Theme</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {["apple","luxury","fintech","construction","startup","enterprise"].map((id)=>(
+                    <button
+                      key={id}
+                      onClick={()=>setTheme(id)}
+                      className={`rounded-2xl border px-4 py-3 text-left text-sm font-bold capitalize ${
+                        theme === id ? "border-cyan-300 bg-cyan-300/20 text-cyan-100" : "border-white/10 bg-white/[0.04] text-white/50"
+                      }`}
+                    >
+                      {id}
+                    </button>
+                  ))}
+                </div>
+              </div>
 
               <div className="mt-6 grid grid-cols-2 gap-2">
                 {templates.map(([id, name])=>(
@@ -292,6 +336,31 @@ export default function LaunchStudioPage() {
             )}
 
             <div className="rounded-[2rem] border border-white/10 bg-black/45 p-5 backdrop-blur-xl">
+              <p className="mb-3 text-sm font-bold text-white/50">Component Marketplace</p>
+              <div className="grid grid-cols-1 gap-2">
+                {components.slice(0,8).map((c:any)=>(
+                  <button key={c.id || c.name} onClick={()=>addComponent(c)} className="rounded-2xl border border-white/10 bg-white/[0.04] p-3 text-left text-sm hover:bg-white/[0.08]">
+                    <strong>{c.name}</strong>
+                    <p className="text-xs text-white/35">{c.category}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="rounded-[2rem] border border-white/10 bg-black/45 p-5 backdrop-blur-xl">
+              <p className="mb-3 text-sm font-bold text-white/50">Version History</p>
+              <div className="space-y-2">
+                {versions.length === 0 && <p className="text-sm text-white/30">No versions yet.</p>}
+                {versions.slice(0,5).map((v:any)=>(
+                  <button key={v.id} onClick={()=>setDemo(v.demo)} className="w-full rounded-2xl border border-white/10 bg-white/[0.04] p-3 text-left text-sm hover:bg-white/[0.08]">
+                    <strong>{v.title || "Version"}</strong>
+                    <p className="text-xs text-white/35">{new Date(v.created_at).toLocaleString()}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="rounded-[2rem] border border-white/10 bg-black/45 p-5 backdrop-blur-xl">
               <p className="mb-3 text-sm font-bold text-white/50">Supabase Projects</p>
               <div className="space-y-2">
                 {projects.length === 0 && <p className="text-sm text-white/30">No saved demos yet.</p>}
@@ -331,20 +400,37 @@ export default function LaunchStudioPage() {
                   <Save size={16} className="inline" /> Save
                 </button>
                 <button onClick={()=>downloadFromApi("/api/launch-studio/export", `${demo?.slug || "alma-demo"}.html`)} disabled={!demo} className="rounded-full bg-white px-4 py-2 text-sm font-bold text-black disabled:opacity-40">
-                  HTML
-                </button>
+                  HTML</button>
                 <button onClick={()=>downloadFromApi("/api/launch-studio/react-export", `${demo?.slug || "alma-demo"}.tsx`)} disabled={!demo} className="rounded-full bg-cyan-300 px-4 py-2 text-sm font-bold text-black disabled:opacity-40">
                   TSX
                 </button>
-                <button onClick={deployToVercel} disabled={!demo || loading} className="rounded-full bg-blue-500 px-4 py-2 text-sm font-bold disabled:opacity-40">
-                  Deploy
-                </button>
+                <button
+  onClick={()=>downloadFromApi("/api/launch-studio/next-project", `${demo?.slug || "alma-demo"}-next-project.zip`)}
+  disabled={!demo}
+  className="rounded-full bg-blue-500 px-4 py-2 text-sm font-bold disabled:opacity-40"
+>
+  Next ZIP
+</button>
+
+<a
+  href="https://vercel.com/new"
+  target="_blank"
+  className="rounded-full bg-white px-4 py-2 text-sm font-bold text-black"
+>
+  Open Vercel
+</a>
               </div>
             </div>
 
+            {score && (
+              <div className="mb-4 rounded-2xl border border-purple-400/20 bg-purple-500/10 p-4 text-purple-200">
+                Design score: {score.before} ? {score.after}
+              </div>
+            )}
+
             {deployUrl && (
               <a href={deployUrl} target="_blank" className="mb-4 block rounded-2xl border border-emerald-400/20 bg-emerald-500/10 p-4 text-emerald-200">
-                Live: {deployUrl}
+                Public preview: {typeof window !== "undefined" ? window.location.origin : ""}{deployUrl}
               </a>
             )}
 
@@ -382,6 +468,12 @@ export default function LaunchStudioPage() {
                   onDrop={()=>onDropSection(sectionIndex)}
                   className="border-b border-white/5 p-8"
                 >
+                  <div className="mb-3 flex justify-end">
+                    <button onClick={()=>addFreeformCard(sectionIndex)} className="rounded-full border border-white/10 bg-white/[0.06] px-3 py-1 text-xs font-bold">
+                      Add Block
+                    </button>
+                  </div>
+
                   <div className="mb-5 flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-white/30">
                     <MousePointer2 size={14} />
                     Drag Section {sectionIndex + 1}: {section.type}
@@ -474,3 +566,8 @@ export default function LaunchStudioPage() {
     </main>
   );
 }
+
+
+
+
+

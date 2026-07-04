@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useState } from "react";
 import { Copy, Download, Sparkles, Wand2 } from "lucide-react";

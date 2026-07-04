@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useMemo, useState } from "react";
 import { Search, Plus, Trash2, Edit3, Heart, Save, Sparkles, Target, Apple, Calendar, ShoppingCart } from "lucide-react";

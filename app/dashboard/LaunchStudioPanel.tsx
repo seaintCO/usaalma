@@ -159,9 +159,7 @@ export default function LaunchStudioPanel() {
             <div className="grid h-[calc(100vh-230px)] place-items-center bg-white px-8 text-center">
               <div>
                 <p className="text-sm font-medium uppercase tracking-[0.3em] text-[#9CA3AF]">ALMA Launch Studio</p>
-                <h2 className="mt-4 text-4xl font-normal tracking-tight text-black md:text-6xl">
-                  Build a premium demo from one prompt.
-                </h2>
+                <h2 className="mt-4 text-4xl font-normal tracking-tight text-black md:text-6xl">Build a premium demo from one prompt.</h2>
                 <p className="mx-auto mt-5 max-w-xl text-[#6B7280]">
                   Generate the shell, preview it here, then export HTML or a full Next.js project for Vercel.
                 </p>

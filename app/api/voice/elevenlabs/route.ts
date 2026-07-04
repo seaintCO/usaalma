@@ -1,4 +1,4 @@
-﻿import { getCurrentUser } from "@/lib/auth/user";
+import { getCurrentUser } from "@/lib/auth/user";
 import { createClient } from "@/lib/supabase/server";
 
 export async function POST(req:Request) {

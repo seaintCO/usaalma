@@ -12,7 +12,7 @@ const moduleMap:any = {
   tasks: ["Tasks", CheckCircle2, "/tasks"],
   notes: ["Notes", FileText, "/notes"],
   crm: ["CRM", Users, "/crm"],
-  invoicing: ["FacturaciÃ³n", ReceiptText, "/invoicing"],
+  invoicing: ["Facturación", ReceiptText, "/invoicing"],
   documents: ["Documentos", FolderOpen, "/documents"],
   launchStudio: ["Launch Studio", Rocket, "/launch-studio"],
 };
@@ -264,10 +264,10 @@ export default function DashboardPage() {
 
           <div className="mx-2 my-6 h-px bg-[#E5E7EB]" />
 
-          <h5 className="mb-2 px-2 text-xs font-medium text-[#6B7280]">MÃ“DULOS</h5>
+          <h5 className="mb-2 px-2 text-xs font-medium text-[#6B7280]">MÓDULOS</h5>
 
           {installedModules.length === 0 ? (
-            <p className="px-2 py-2 text-xs text-[#6B7280]">Instala mÃ³dulos desde Marketplace.</p>
+            <p className="px-2 py-2 text-xs text-[#6B7280]">Instala MÓDULOS desde Marketplace.</p>
           ) : (
             installedModules.map((module:any) => {
               const item = moduleMap[module.module_key] || [module.name, Store, "/marketplace"];
@@ -331,9 +331,9 @@ export default function DashboardPage() {
           <div className="mx-auto max-w-3xl">
             {messages.length === 0 ? (
               <div className="mt-24 text-center md:mt-32">
-                <h1 className="mb-2 text-3xl font-normal tracking-tight md:text-4xl">Buenos dÃ­as.</h1>
+                <h1 className="mb-2 text-3xl font-normal tracking-tight md:text-4xl">Buenos días.</h1>
                 <h2 className="mb-4 text-3xl font-normal tracking-tight md:text-4xl">Soy ALMA.</h2>
-                <p className="text-lg text-[#6B7280]">Chat, imÃ¡genes, documentos, cÃ³digo y automatizaciÃ³n en un solo lugar.</p>
+                <p className="text-lg text-[#6B7280]">Chat, imágenes, documentos, código y automatización en un solo lugar.</p>
               </div>
             ) : (
               <div className="space-y-5">
@@ -358,7 +358,7 @@ export default function DashboardPage() {
         <div className="absolute bottom-0 w-full bg-gradient-to-t from-white via-white to-transparent px-3 pb-4 pt-10 md:px-8 md:pb-6">
           <div className="mx-auto flex w-full max-w-3xl flex-col gap-3">
             <div className="flex gap-2 overflow-x-auto pb-1 md:flex-wrap">
-              {["Crea una imagen premium", "Haz un logo", "Genera un anuncio 16:9", "Escribe cÃ³digo"].map((label) => (
+              {["Crea una imagen premium", "Haz un logo", "Genera un anuncio 16:9", "Escribe código"].map((label) => (
                 <button key={label} onClick={() => setInput(label)} className="shrink-0 rounded-full border border-[#E5E7EB] bg-[#F7F7F8] px-3 py-1.5 text-xs font-medium text-[#6B7280] hover:text-black">
                   {label}
                 </button>
@@ -366,7 +366,7 @@ export default function DashboardPage() {
             </div>
 
             <div className="relative flex flex-col overflow-hidden rounded-2xl border border-[#E5E7EB] bg-[#F7F7F8] shadow-sm">
-              <textarea value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } }} rows={1} placeholder="PÃ­dele a ALMA crear, editar, escribir o construir..." className="max-h-32 w-full resize-none bg-transparent p-4 pb-12 text-base outline-none placeholder:text-gray-400" />
+              <textarea value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } }} rows={1} placeholder="Pídele a ALMA crear, editar, escribir o construir..." className="max-h-32 w-full resize-none bg-transparent p-4 pb-12 text-base outline-none placeholder:text-gray-400" />
 
               <div className="absolute bottom-3 left-4 flex items-center gap-2">
                 <input ref={fileInputRef} type="file" className="hidden" accept="image/*,.pdf,.docx,.txt,.csv,.xlsx,.xls" onChange={(e) => { const file = e.target.files?.[0]; if (file) analyzeFile(file); }} />

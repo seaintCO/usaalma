@@ -8,12 +8,8 @@ export async function POST(req:Request) {
     return NextResponse.json({ error:"Missing demo" }, { status:400 });
   }
 
-  const html = renderLaunchHtml(demo);
-
-  return new NextResponse(html, {
+  return new NextResponse(renderLaunchHtml(demo), {
     status:200,
-    headers:{
-      "Content-Type":"text/html; charset=utf-8"
-    }
+    headers:{ "Content-Type":"text/html; charset=utf-8" }
   });
 }

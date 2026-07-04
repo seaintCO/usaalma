@@ -1,11 +1,5 @@
-"use client";
-
-import LaunchStudioPanel from "../dashboard/LaunchStudioPanel";
+import { notFound } from "next/navigation";
 
 export default function LaunchStudioPage() {
-  return (
-    <main className="min-h-screen bg-white">
-      <LaunchStudioPanel />
-    </main>
-  );
+  notFound();
 }

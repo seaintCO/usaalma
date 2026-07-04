@@ -26,7 +26,7 @@ export default function SignupPage() {
       return;
     }
 
-    alert("Cuenta creada. Ahora inicia sesión.");
+    alert("Cuenta creada. Ahora inicia sesiÃƒÂ³n.");
     window.location.href = "/login";
   }
 
@@ -41,17 +41,17 @@ export default function SignupPage() {
         <h1 className="mb-2 text-2xl font-medium tracking-tight">Crear tu ALMA</h1>
         <p className="mb-8 text-sm text-[#6B7280]">Beta privada.</p>
 
-        <form onSubmit={signup} className="space-y-4">
+        <form onSubmit={signup} className="space-y-4" autoComplete="on">
           <input value={fullName} onChange={(e) => setFullName(e.target.value)} className="w-full rounded-xl border border-[#E5E7EB] px-4 py-3 outline-none focus:border-[#2563EB]" placeholder="Nombre completo" />
-          <input value={email} onChange={(e) => setEmail(e.target.value)} className="w-full rounded-xl border border-[#E5E7EB] px-4 py-3 outline-none focus:border-[#2563EB]" placeholder="Correo electrónico" type="email" required />
-          <input value={password} onChange={(e) => setPassword(e.target.value)} className="w-full rounded-xl border border-[#E5E7EB] px-4 py-3 outline-none focus:border-[#2563EB]" placeholder="Contraseña" type="password" required />
+          <input value={email} onChange={(e) => setEmail(e.target.value)} className="w-full rounded-xl border border-[#E5E7EB] px-4 py-3 outline-none focus:border-[#2563EB]" placeholder="Correo electrÃƒÂ³nico" type="email" autoComplete="email" inputMode="email" required />
+          <input value={password} onChange={(e) => setPassword(e.target.value)} className="w-full rounded-xl border border-[#E5E7EB] px-4 py-3 outline-none focus:border-[#2563EB]" placeholder="ContraseÃƒÂ±a" type="password" autoComplete="new-password" required />
           <button disabled={loading} className="w-full rounded-xl bg-[#2563EB] py-3 font-medium text-white disabled:opacity-50">
             {loading ? "Creando..." : "Crear cuenta"}
           </button>
         </form>
 
         <p className="mt-6 text-center text-sm text-[#6B7280]">
-          ¿Ya tienes cuenta? <a href="/login" className="text-black">Inicia sesión</a>
+          Ã‚Â¿Ya tienes cuenta? <a href="/login" className="text-black">Inicia sesiÃƒÂ³n</a>
         </p>
       </div>
     </main>

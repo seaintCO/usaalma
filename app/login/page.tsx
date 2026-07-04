@@ -39,18 +39,18 @@ export default function LoginPage() {
           <div className="text-xs text-[#6B7280]">Powered by SEAINT</div>
         </div>
 
-        <h1 className="mb-2 text-2xl font-medium tracking-tight">Iniciar sesión</h1>
+        <h1 className="mb-2 text-2xl font-medium tracking-tight">Iniciar sesiÃ³n</h1>
         <p className="mb-8 text-sm text-[#6B7280]">
           Entra a tu sistema operativo personal y empresarial.
         </p>
 
-        <form onSubmit={login} className="space-y-4">
+        <form onSubmit={login} className="space-y-4" autoComplete="on">
           <input
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             className="w-full rounded-xl border border-[#E5E7EB] px-4 py-3 outline-none focus:border-[#2563EB]"
-            placeholder="Correo electrónico"
-            type="email"
+            placeholder="Correo electrÃ³nico"
+            type="email" autoComplete="email" inputMode="email"
             required
           />
 
@@ -58,8 +58,8 @@ export default function LoginPage() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             className="w-full rounded-xl border border-[#E5E7EB] px-4 py-3 outline-none focus:border-[#2563EB]"
-            placeholder="Contraseña"
-            type="password"
+            placeholder="ContraseÃ±a"
+            type="password" autoComplete="current-password"
             required
           />
 
@@ -73,7 +73,7 @@ export default function LoginPage() {
 
         <div className="mt-6 flex justify-between text-sm text-[#6B7280]">
           <a href="/forgot-password" className="hover:text-black">
-            Olvidé mi contraseña
+            OlvidÃ© mi contraseÃ±a
           </a>
           <a href="/signup" className="hover:text-black">
             Crear cuenta

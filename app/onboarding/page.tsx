@@ -1,89 +1,62 @@
 "use client";
 
-import { ArrowRight, Sparkles } from "lucide-react";
 import { useState } from "react";
 
+const plans = [
+  { id:"starter", name:"Starter", price:"$20/mo", desc:"For creators and small business owners.", images:"50 Nocturai images/month" },
+  { id:"pro", name:"Pro", price:"$40/mo", desc:"For serious operators building with ALMA.", images:"100 Nocturai images/month" },
+  { id:"business", name:"Business", price:"Custom", desc:"For teams and companies.", images:"Custom usage" },
+];
+
 export default function OnboardingPage() {
-  const [businessName, setBusinessName] = useState("");
-  const [businessType, setBusinessType] = useState("");
-  const [goal, setGoal] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState("");
 
-  async function finishOnboarding() {
-    if (!businessName.trim()) return;
+  async function checkout(plan:string) {
+    setLoading(plan);
 
-    setLoading(true);
-
-    const res = await fetch("/api/onboarding/save", {
+    const res = await fetch("/api/billing/checkout", {
       method:"POST",
       headers:{ "Content-Type":"application/json" },
-      body:JSON.stringify({
-        businessName,
-        businessType,
-        goal,
-      }),
+      body:JSON.stringify({ plan }),
     });
 
-    if (res.ok) {
-      window.location.href = "/dashboard";
-    } else {
-      setLoading(false);
-      alert("No se pudo completar onboarding.");
+    const data = await res.json();
+
+    if (data.url) window.location.href = data.url;
+    else {
+      setLoading("");
+      alert(data.error || "Could not start checkout.");
     }
   }
 
   return (
-    <main className="min-h-screen bg-[#F7F7F8] px-4 py-8 text-[#111111] md:px-6 md:py-10">
-      <div className="mx-auto flex min-h-[80vh] max-w-3xl items-center">
-        <div className="w-full rounded-[2rem] border border-[#E5E7EB] bg-white p-6 shadow-sm md:p-10">
-          <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-2xl border border-[#E5E7EB] bg-[#F7F7F8]">
-            <Sparkles className="h-5 w-5" />
-          </div>
-
-          <p className="mb-2 text-xs font-medium uppercase tracking-[0.2em] text-[#6B7280]">
-            Bienvenido a ALMA
+    <main className="min-h-screen bg-[#F7F7F8] px-6 py-10 text-black">
+      <div className="mx-auto max-w-5xl">
+        <div className="text-center">
+          <p className="text-sm font-medium uppercase tracking-[0.25em] text-[#9CA3AF]">Welcome to ALMA</p>
+          <h1 className="mt-4 text-5xl font-normal tracking-tight md:text-7xl">Choose your operating system.</h1>
+          <p className="mx-auto mt-5 max-w-2xl text-[#6B7280]">
+            Chat, files, Nocturai, Launch Studio, automations, and business memory in one autonomous AI workspace.
           </p>
-
-          <h1 className="text-4xl font-medium tracking-tight md:text-5xl">
-            Vamos a configurar tu espacio.
-          </h1>
-
-          <p className="mt-4 text-lg text-[#6B7280]">
-            ALMA creará un workspace, documento base y primeras tareas automáticamente.
-          </p>
-
-          <div className="mt-8 grid gap-4">
-            <input
-              value={businessName}
-              onChange={(e) => setBusinessName(e.target.value)}
-              placeholder="Nombre de tu negocio"
-              className="rounded-2xl border border-[#E5E7EB] bg-[#F7F7F8] px-4 py-4 outline-none"
-            />
-
-            <input
-              value={businessType}
-              onChange={(e) => setBusinessType(e.target.value)}
-              placeholder="Tipo de negocio: roofing, real estate, agency..."
-              className="rounded-2xl border border-[#E5E7EB] bg-[#F7F7F8] px-4 py-4 outline-none"
-            />
-
-            <textarea
-              value={goal}
-              onChange={(e) => setGoal(e.target.value)}
-              placeholder="¿Cuál es tu meta principal?"
-              className="min-h-32 rounded-2xl border border-[#E5E7EB] bg-[#F7F7F8] p-4 outline-none"
-            />
-          </div>
-
-          <button
-            onClick={finishOnboarding}
-            disabled={loading}
-            className="mt-6 flex w-full items-center justify-center gap-2 rounded-2xl bg-black py-4 font-medium text-white disabled:opacity-50"
-          >
-            {loading ? "Configurando..." : "Configurar mi ALMA"}
-            <ArrowRight className="h-4 w-4" />
-          </button>
         </div>
+
+        <div className="mt-10 grid gap-5 md:grid-cols-3">
+          {plans.map((plan)=>(
+            <div key={plan.id} className="rounded-[2rem] border border-[#E5E7EB] bg-white p-6 shadow-sm">
+              <h2 className="text-2xl font-medium">{plan.name}</h2>
+              <p className="mt-2 text-4xl tracking-tight">{plan.price}</p>
+              <p className="mt-3 text-sm text-[#6B7280]">{plan.desc}</p>
+              <div className="mt-5 rounded-2xl bg-[#F7F7F8] p-4 text-sm">{plan.images}</div>
+              <button onClick={()=>checkout(plan.id)} disabled={Boolean(loading)} className="mt-6 w-full rounded-full bg-black py-3 text-sm font-medium text-white disabled:opacity-50">
+                {loading === plan.id ? "Opening Stripe..." : plan.id === "business" ? "Continue" : "Start"}
+              </button>
+            </div>
+          ))}
+        </div>
+
+        <a href="/dashboard" className="mx-auto mt-8 block text-center text-sm text-[#6B7280] hover:text-black">
+          Continue with free beta access
+        </a>
       </div>
     </main>
   );

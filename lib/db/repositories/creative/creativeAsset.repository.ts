@@ -7,8 +7,7 @@ export class CreativeAssetRepository {
     const { data } = await supabase
       .from("creative_assets")
       .select("*")
-      .eq("user_id", userId)
-      .order("created_at", { ascending:false });
+      .eq("user_id", userId).is("deleted_at", null).order("created_at", { ascending:false });
 
     return data ?? [];
   }
@@ -40,3 +39,4 @@ export class CreativeAssetRepository {
     return data;
   }
 }
+

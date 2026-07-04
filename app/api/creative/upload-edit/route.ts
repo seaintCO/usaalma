@@ -1,3 +1,5 @@
+import { checkImageCredits, recordImageUsage } from "@/lib/usage/imageCredits";
+import { trackEvent } from "@/lib/analytics/track";
 import { NextResponse } from "next/server";
 import { requirePaidUser } from "@/lib/api/requirePaidUser";
 import { CreativeAssetRepository } from "@/lib/db/repositories/creative/creativeAsset.repository";
@@ -35,6 +37,12 @@ export async function POST(req:Request) {
   if (error) return error;
 
   try {
+    const credits = await checkImageCredits(user.id, 1);
+    if (!credits.allowed) {
+      await trackEvent(user.id, "nocturai_credit_blocked", { used:credits.used, limit:credits.limit });
+      return NextResponse.json({ success:false, message:credits.message, credits }, { status:429 });
+    }
+
     const form = await req.formData();
     const file = form.get("file") as File | null;
     const action = form.get("action")?.toString() || "edit";
@@ -70,6 +78,7 @@ export async function POST(req:Request) {
         fileName:file.name,
         fileType:file.type,
       },
+      folderId:form.get("folderId")?.toString() || null,
     });
 
     return NextResponse.json({
@@ -84,3 +93,4 @@ export async function POST(req:Request) {
     }, { status:500 });
   }
 }
+

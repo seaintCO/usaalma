@@ -47,3 +47,4 @@ ${prompt}`;
 
   return NextResponse.json({ demo });
 }
+

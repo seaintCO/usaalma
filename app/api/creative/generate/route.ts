@@ -1,3 +1,5 @@
+import { checkImageCredits, recordImageUsage } from "@/lib/usage/imageCredits";
+import { trackEvent } from "@/lib/analytics/track";
 import { NextResponse } from "next/server";
 import { requirePaidUser } from "@/lib/api/requirePaidUser";
 import { generateCreativeAsset } from "@/lib/creative/generateCreativeAsset";
@@ -10,6 +12,12 @@ export async function POST(req:Request) {
 
   try {
     const body = await req.json();
+
+    const credits = await checkImageCredits(user.id, 1);
+    if (!credits.allowed) {
+      await trackEvent(user.id, "nocturai_credit_blocked", { used:credits.used, limit:credits.limit });
+      return NextResponse.json({ success:false, message:credits.message, credits }, { status:429 });
+    }
 
     if (!body.prompt) {
       return NextResponse.json({
@@ -27,6 +35,11 @@ export async function POST(req:Request) {
       ...templateInput,
     });
 
+    if (result?.success !== false) {
+      await recordImageUsage(user.id, 1, { source:"creative_generate", templateKey:body.templateKey });
+      await trackEvent(user.id, "nocturai_generated", { templateKey:body.templateKey, category:body.category });
+    }
+
     return NextResponse.json(result);
   } catch (error:any) {
     console.error("CREATIVE_GENERATE_ERROR", {
@@ -40,3 +53,4 @@ export async function POST(req:Request) {
     }, { status:500 });
   }
 }
+

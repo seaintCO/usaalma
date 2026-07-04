@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
-import { requirePaidUser } from "@/lib/api/requirePaidUser";
+import { createClient } from "@/lib/supabase/server";
 import { buildNocturaiPrompt } from "@/lib/creative/nocturaiPrompt";
 
 export async function POST(req:Request) {
-  const { error } = await requirePaidUser();
-  if (error) return error;
+  const supabase = await createClient();
+  const { data:{ user } } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error:"Unauthorized" }, { status:401 });
 
   const body = await req.json();
 

@@ -11,9 +11,10 @@ export async function GET() {
     .from("launch_studio_projects")
     .select("*")
     .eq("user_id", user.id)
-    .order("updated_at", { ascending:false });
+    .order("updated_at", { ascending:false }).limit(20);
 
   if (error) return NextResponse.json({ error:error.message }, { status:500 });
 
   return NextResponse.json({ projects:data || [] });
 }
+

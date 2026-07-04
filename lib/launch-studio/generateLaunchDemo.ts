@@ -102,7 +102,8 @@ Return ONLY valid JSON with this shape:
 Rules:
 - Make it look like a premium SaaS/product demo.
 - Use short powerful copy.
-- Include hero, mock_dashboard, features, stats, process or pricing, and cta.
+- Include 5 to 7 sections max.
+- Keep all text short.
 - Make it specific to the user's prompt.
 - No markdown. No comments. JSON only.
 `;
@@ -142,3 +143,5 @@ ${prompt}` }
     return { ...fallback(prompt), theme:themeId as any };
   }
 }
+
+

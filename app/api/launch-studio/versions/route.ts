@@ -32,8 +32,9 @@ export async function GET(req:Request) {
     .select("*")
     .eq("user_id", user.id)
     .eq("project_id", projectId)
-    .order("created_at", { ascending:false });
+    .order("created_at", { ascending:false }).limit(20);
 
   if (error) return NextResponse.json({ error:error.message }, { status:500 });
   return NextResponse.json({ versions:data || [] });
 }
+

@@ -13,6 +13,7 @@ const templates = [
 
 export default function LaunchStudioPage() {
   const [prompt, setPrompt] = useState("");
+  const [website, setWebsite] = useState("");
   const [template, setTemplate] = useState("saas");
   const [theme, setTheme] = useState("startup");
   const [demo, setDemo] = useState<any>(null);
@@ -57,7 +58,7 @@ async function loadProjects() {
     const res = await fetch("/api/launch-studio/generate", {
       method:"POST",
       headers:{ "Content-Type":"application/json" },
-      body:JSON.stringify({ prompt, template, theme })
+      body:JSON.stringify({ prompt, template, theme, website })
     });
 
     const data = await res.json();
@@ -285,8 +286,15 @@ async function loadProjects() {
                 ))}
               </div>
 
-              <textarea
-                value={prompt}
+              <input
+                name="website"
+                value={website}
+                onChange={(e)=>setWebsite(e.target.value)}
+                className="hidden"
+                tabIndex={-1}
+                autoComplete="off"
+              />
+              <textarea value={prompt}
                 onChange={(e)=>setPrompt(e.target.value)}
                 placeholder="Example: Create a futuristic demo for an AI receptionist company for real estate offices..."
                 className="mt-4 h-36 w-full resize-none rounded-[1.5rem] border border-white/10 bg-white/[0.035] p-5 text-white outline-none placeholder:text-white/30"
@@ -566,6 +574,8 @@ async function loadProjects() {
     </main>
   );
 }
+
+
 
 
 

@@ -3,6 +3,49 @@
 import { Mail, Plug, ShieldCheck, X } from "lucide-react";
 import { useEffect, useState } from "react";
 
+function LanguageSelector() {
+  const [preferredLanguage, setPreferredLanguage] = require("react").useState("auto");
+
+  require("react").useEffect(() => {
+    fetch("/api/settings/language")
+      .then((res:any)=>res.json())
+      .then((data:any)=>setPreferredLanguage(data.language || "auto"));
+  }, []);
+
+  async function save(language:string) {
+    setPreferredLanguage(language);
+    await fetch("/api/settings/language", {
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body:JSON.stringify({ language })
+    });
+  }
+
+  return (
+    <div className="rounded-3xl border border-[#E5E7EB] bg-white p-5 shadow-sm">
+      <h2 className="text-lg font-medium">Language / Idioma</h2>
+      <p className="mt-1 text-sm text-[#6B7280]">Choose how ALMA displays pages.</p>
+      <div className="mt-4 grid gap-2 sm:grid-cols-3">
+        {[
+          ["auto","Auto"],
+          ["en","English"],
+          ["es","Espaol"]
+        ].map(([id,label])=>(
+          <button
+            key={id}
+            onClick={()=>save(id)}
+            className={`rounded-2xl border px-4 py-3 text-sm font-medium ${
+              preferredLanguage === id ? "border-black bg-black text-white" : "border-[#E5E7EB] bg-[#F7F7F8] text-[#6B7280]"
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function SettingsPage() {
   const [connections, setConnections] = useState<any[]>([]);
   const [showGmailModal, setShowGmailModal] = useState(false);
@@ -29,7 +72,7 @@ export default function SettingsPage() {
     <main className="min-h-screen bg-[#F7F7F8] px-4 py-8 text-[#111111] md:px-6 md:py-10">
       <div className="mx-auto max-w-5xl">
         <a href="/dashboard" className="text-sm text-[#6B7280] hover:text-black">
-          ← Volver a ALMA
+           Volver a ALMA
         </a>
 
         <div className="mt-8">
@@ -105,7 +148,7 @@ export default function SettingsPage() {
                 <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-black text-3xl font-bold">
                   A
                 </div>
-                <div className="text-2xl text-white/50">•••</div>
+                <div className="text-2xl text-white/50"></div>
                 <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white text-3xl font-bold text-black">
                   G
                 </div>
@@ -116,7 +159,7 @@ export default function SettingsPage() {
               <div className="mt-8 rounded-2xl border border-white/20 p-5 text-left text-sm leading-6 text-white/70">
                 <p>
                   <strong className="text-white">This page will redirect to Google.</strong>{" "}
-                  You will sign in and confirm permissions on Google’s page.
+                  You will sign in and confirm permissions on Googles page.
                 </p>
 
                 <p className="mt-4">
@@ -140,6 +183,7 @@ export default function SettingsPage() {
           </div>
         </div>
       )}
-    </main>
+          <div className="mx-auto mt-6 max-w-3xl"><LanguageSelector /></div>`r`n    </main>
   );
 }
+

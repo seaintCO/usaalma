@@ -12,8 +12,7 @@ export async function GET() {
   const { data, error: dbError } = await supabase
     .from("creative_assets")
     .select("*")
-    .eq("user_id", user.id)
-    .order("created_at", { ascending:false });
+    .eq("user_id", user.id).is("deleted_at", null).order("created_at", { ascending:false }).limit(60);
 
   if (dbError) {
     console.error("CREATIVE_LIST_ERROR", dbError);
@@ -22,3 +21,4 @@ export async function GET() {
 
   return NextResponse.json(data ?? []);
 }
+

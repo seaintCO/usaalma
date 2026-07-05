@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import { useEffect, useState } from "react";
-import { Activity, Brain, CheckCircle2, ClipboardList, Plus, Save, TrendingUp } from "lucide-react";
+import { Brain, CheckCircle2, ClipboardList, Plus, Save, Search, TrendingUp, Upload } from "lucide-react";
 
 const defaultSymbols = ["SPY", "QQQ", "NVDA", "TSLA", "AAPL", "META", "BTCUSD"];
 
@@ -27,16 +27,7 @@ export default function TraderPage() {
     await fetch("/api/trader/journal", {
       method:"POST",
       headers:{ "Content-Type":"application/json" },
-      body:JSON.stringify({
-        symbol,
-        direction,
-        setup,
-        entry,
-        stop,
-        target,
-        notes,
-        confidence:82
-      })
+      body:JSON.stringify({ symbol, direction, setup, entry, stop, target, notes, confidence:82 })
     });
 
     setNotes("");
@@ -56,60 +47,78 @@ export default function TraderPage() {
   useEffect(()=>{ load(); }, []);
 
   return (
-    <main className="min-h-screen bg-[#F7F7F8] px-4 py-6 text-black md:px-8">
+    <main className="min-h-screen bg-[#F6F7F9] px-4 py-5 text-black md:px-8 md:py-8">
       <div className="mx-auto max-w-7xl">
-        <div className="mb-6 rounded-[2rem] border border-[#E5E7EB] bg-white p-6 shadow-sm">
-          <p className="text-sm font-medium uppercase tracking-[0.25em] text-[#9CA3AF]">ALMA Trader</p>
-          <h1 className="mt-3 text-4xl font-normal tracking-tight md:text-6xl">Your AI trading operating system.</h1>
-          <p className="mt-4 max-w-3xl text-[#6B7280]">
-            Chart workspace, AI analyst, journal, watchlist, setup checklist, and trade memory.
-          </p>
-        </div>
+        <section className="rounded-[2rem] border border-[#E5E7EB] bg-white p-6 shadow-sm md:p-8">
+          <p className="text-sm font-medium uppercase tracking-[0.25em] text-[#9CA3AF]">ALMA Trader OS</p>
+          <div className="mt-4 flex flex-col justify-between gap-5 md:flex-row md:items-end">
+            <div>
+              <h1 className="text-4xl font-normal tracking-tight md:text-7xl">Trade with memory.</h1>
+              <p className="mt-4 max-w-2xl text-base leading-7 text-[#6B7280] md:text-lg">
+                Chart workspace, AI analyst, journal, watchlist, checklist, and your personal trading playbook.
+              </p>
+            </div>
 
-        <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
-          <section className="overflow-hidden rounded-[2rem] border border-[#E5E7EB] bg-white shadow-sm">
-            <div className="flex items-center justify-between border-b border-[#E5E7EB] p-4">
-              <div className="flex items-center gap-2">
-                <TrendingUp className="h-5 w-5" />
-                <strong>{symbol}</strong>
+            <div className="flex gap-2">
+              <a href="/finance" className="inline-flex items-center gap-2 rounded-full bg-black px-5 py-3 text-sm font-medium text-white">
+                <Upload className="h-4 w-4" />
+                Analyze Screenshot
+              </a>
+            </div>
+          </div>
+        </section>
+
+        <section className="mt-5 grid gap-5 lg:grid-cols-[1fr_420px]">
+          <div className="overflow-hidden rounded-[2rem] border border-[#E5E7EB] bg-white shadow-sm">
+            <div className="flex flex-col gap-4 border-b border-[#E5E7EB] p-4 md:flex-row md:items-center md:justify-between">
+              <div className="flex items-center gap-3">
+                <div className="grid h-11 w-11 place-items-center rounded-2xl bg-black text-white">
+                  <TrendingUp className="h-5 w-5" />
+                </div>
+                <div>
+                  <p className="text-xs uppercase tracking-[0.2em] text-[#9CA3AF]">Active chart</p>
+                  <strong className="text-2xl">{symbol}</strong>
+                </div>
               </div>
 
-              <select
-                value={symbol}
-                onChange={(e)=>setSymbol(e.target.value)}
-                className="rounded-full border border-[#E5E7EB] bg-[#F7F7F8] px-4 py-2 text-sm"
-              >
-                {[...defaultSymbols, ...watchlist.map((w)=>w.symbol)].filter(Boolean).map((s, i)=>(
-                  <option key={i} value={s}>{s}</option>
-                ))}
-              </select>
+              <div className="flex gap-2">
+                <select value={symbol} onChange={(e)=>setSymbol(e.target.value)} className="min-w-0 flex-1 rounded-full border border-[#E5E7EB] bg-[#F7F7F8] px-4 py-3 text-sm md:min-w-40">
+                  {[...defaultSymbols, ...watchlist.map((w)=>w.symbol)].filter(Boolean).map((s, i)=>(
+                    <option key={i} value={s}>{s}</option>
+                  ))}
+                </select>
+
+                <button onClick={()=>addWatchlist()} className="rounded-full bg-[#F7F7F8] px-4 py-3 text-sm font-medium">
+                  + Watch
+                </button>
+              </div>
             </div>
 
             <iframe
               title="TradingView Chart"
-              className="h-[640px] w-full border-0"
+              className="h-[520px] w-full border-0 md:h-[720px]"
               src={`https://s.tradingview.com/widgetembed/?symbol=${encodeURIComponent(symbol)}&interval=15&theme=light&style=1&hideideas=1&withdateranges=1&saveimage=1`}
             />
-          </section>
+          </div>
 
           <aside className="space-y-5">
             <div className="rounded-[2rem] border border-[#E5E7EB] bg-white p-5 shadow-sm">
               <div className="flex items-center gap-2">
                 <Brain className="h-5 w-5" />
-                <h2 className="text-lg font-medium">ALMA Checklist</h2>
+                <h2 className="text-xl font-medium">ALMA Trade Checklist</h2>
               </div>
 
               <div className="mt-4 space-y-3 text-sm">
                 {[
-                  "EMA 9/21 aligned",
-                  "VWAP reclaim confirmed",
-                  "Volume supports move",
-                  "Liquidity zone identified",
-                  "Stop and target defined"
+                  "Trend direction is clear",
+                  "VWAP / key level is respected",
+                  "Volume confirms the move",
+                  "Liquidity area is identified",
+                  "Entry, stop, and target are defined"
                 ].map((item)=>(
-                  <div key={item} className="flex items-center gap-2 rounded-2xl bg-[#F7F7F8] p-3">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                    {item}
+                  <div key={item} className="flex items-center gap-3 rounded-2xl bg-[#F7F7F8] p-4">
+                    <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+                    <span>{item}</span>
                   </div>
                 ))}
               </div>
@@ -118,16 +127,22 @@ export default function TraderPage() {
             <div className="rounded-[2rem] border border-[#E5E7EB] bg-white p-5 shadow-sm">
               <div className="flex items-center gap-2">
                 <ClipboardList className="h-5 w-5" />
-                <h2 className="text-lg font-medium">Journal Trade</h2>
+                <h2 className="text-xl font-medium">Journal Trade</h2>
               </div>
 
               <div className="mt-4 grid gap-3">
-                <input value={direction} onChange={(e)=>setDirection(e.target.value)} placeholder="Calls / Puts" className="rounded-2xl border border-[#E5E7EB] bg-[#F7F7F8] px-4 py-3 text-sm outline-none" />
-                <input value={setup} onChange={(e)=>setSetup(e.target.value)} placeholder="Setup type" className="rounded-2xl border border-[#E5E7EB] bg-[#F7F7F8] px-4 py-3 text-sm outline-none" />
-                <input value={entry} onChange={(e)=>setEntry(e.target.value)} placeholder="Entry" className="rounded-2xl border border-[#E5E7EB] bg-[#F7F7F8] px-4 py-3 text-sm outline-none" />
-                <input value={stop} onChange={(e)=>setStop(e.target.value)} placeholder="Stop" className="rounded-2xl border border-[#E5E7EB] bg-[#F7F7F8] px-4 py-3 text-sm outline-none" />
-                <input value={target} onChange={(e)=>setTarget(e.target.value)} placeholder="Target" className="rounded-2xl border border-[#E5E7EB] bg-[#F7F7F8] px-4 py-3 text-sm outline-none" />
-                <textarea value={notes} onChange={(e)=>setNotes(e.target.value)} placeholder="What did ALMA see? What is the lesson?" className="min-h-24 rounded-2xl border border-[#E5E7EB] bg-[#F7F7F8] p-4 text-sm outline-none" />
+                <div className="grid grid-cols-2 gap-3">
+                  <input value={direction} onChange={(e)=>setDirection(e.target.value)} placeholder="Calls / Puts" className="rounded-2xl border border-[#E5E7EB] bg-[#F7F7F8] px-4 py-3 text-sm outline-none" />
+                  <input value={setup} onChange={(e)=>setSetup(e.target.value)} placeholder="Setup" className="rounded-2xl border border-[#E5E7EB] bg-[#F7F7F8] px-4 py-3 text-sm outline-none" />
+                </div>
+
+                <div className="grid grid-cols-3 gap-3">
+                  <input value={entry} onChange={(e)=>setEntry(e.target.value)} placeholder="Entry" className="rounded-2xl border border-[#E5E7EB] bg-[#F7F7F8] px-4 py-3 text-sm outline-none" />
+                  <input value={stop} onChange={(e)=>setStop(e.target.value)} placeholder="Stop" className="rounded-2xl border border-[#E5E7EB] bg-[#F7F7F8] px-4 py-3 text-sm outline-none" />
+                  <input value={target} onChange={(e)=>setTarget(e.target.value)} placeholder="Target" className="rounded-2xl border border-[#E5E7EB] bg-[#F7F7F8] px-4 py-3 text-sm outline-none" />
+                </div>
+
+                <textarea value={notes} onChange={(e)=>setNotes(e.target.value)} placeholder="What did ALMA see? What was the lesson?" className="min-h-28 rounded-2xl border border-[#E5E7EB] bg-[#F7F7F8] p-4 text-sm outline-none" />
               </div>
 
               <button onClick={saveJournal} className="mt-4 flex w-full items-center justify-center gap-2 rounded-full bg-black px-5 py-3 text-sm font-medium text-white">
@@ -137,32 +152,27 @@ export default function TraderPage() {
             </div>
 
             <div className="rounded-[2rem] border border-[#E5E7EB] bg-white p-5 shadow-sm">
-              <h2 className="text-lg font-medium">Watchlist</h2>
-
-              <button onClick={()=>addWatchlist()} className="mt-4 flex w-full items-center justify-center gap-2 rounded-full bg-[#F7F7F8] px-5 py-3 text-sm font-medium">
-                <Plus className="h-4 w-4" />
-                Add {symbol}
-              </button>
-
+              <h2 className="text-xl font-medium">Watchlist</h2>
               <div className="mt-4 flex flex-wrap gap-2">
-                {watchlist.map((w)=>(
-                  <button key={w.id} onClick={()=>setSymbol(w.symbol)} className="rounded-full bg-black px-4 py-2 text-sm text-white">
-                    {w.symbol}
+                {[...defaultSymbols, ...watchlist.map((w)=>w.symbol)].filter(Boolean).map((s, i)=>(
+                  <button key={i} onClick={()=>setSymbol(s)} className={`rounded-full px-4 py-2 text-sm ${symbol === s ? "bg-black text-white" : "bg-[#F7F7F8] text-[#6B7280]"}`}>
+                    {s}
                   </button>
                 ))}
               </div>
             </div>
           </aside>
-        </div>
+        </section>
 
-        <section className="mt-6 rounded-[2rem] border border-[#E5E7EB] bg-white p-5 shadow-sm">
-          <h2 className="text-xl font-medium">Recent Journal</h2>
+        <section className="mt-5 rounded-[2rem] border border-[#E5E7EB] bg-white p-5 shadow-sm">
+          <div className="flex items-center gap-2">
+            <Search className="h-5 w-5" />
+            <h2 className="text-xl font-medium">Recent Journal</h2>
+          </div>
 
           <div className="mt-4 grid gap-3 md:grid-cols-3">
             {journal.length === 0 ? (
-              <div className="rounded-2xl bg-[#F7F7F8] p-4 text-sm text-[#6B7280]">
-                No journal entries yet.
-              </div>
+              <div className="rounded-2xl bg-[#F7F7F8] p-4 text-sm text-[#6B7280]">No journal entries yet.</div>
             ) : (
               journal.map((j)=>(
                 <div key={j.id} className="rounded-2xl border border-[#E5E7EB] bg-[#F7F7F8] p-4">

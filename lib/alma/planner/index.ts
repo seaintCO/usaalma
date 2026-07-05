@@ -1,4 +1,4 @@
-﻿import { planAlmaAction, detectImageSize, buildImageFollowupPrompt } from "@/lib/alma/brain";
+import { planAlmaAction, detectImageSize, buildImageFollowupPrompt } from "@/lib/alma/brain";
 
 export function createAlmaPlan(message:string, workspace:any) {
   const plan = planAlmaAction(message, workspace?.almaContext);

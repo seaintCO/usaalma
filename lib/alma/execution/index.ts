@@ -1,4 +1,4 @@
-﻿import { generateImageTool } from "@/lib/tools/images/generateImageTool";
+import { generateImageTool } from "@/lib/tools/images/generateImageTool";
 import { upsertAlmaContext, logAlmaExecution } from "@/lib/alma/context";
 
 export async function executeAlmaPlan(input:any) {

@@ -1,7 +1,7 @@
 export type AlmaLanguage = "auto" | "en" | "es";
 
 export function detectLanguage(text:string):"en" | "es" {
-  const spanishWords = /\b(hola|gracias|quiero|necesito|puedes|ayuda|crear|imagen|documento|negocio|factura|contrato|dinero|español)\b/i;
+  const spanishWords = /\b(hola|gracias|quiero|necesito|puedes|ayuda|crear|imagen|documento|negocio|factura|contrato|dinero|espaï¿½ol)\b/i;
   return spanishWords.test(text) ? "es" : "en";
 }
 
@@ -18,15 +18,15 @@ export const t = {
     verify:"Verify important information.",
   },
   es: {
-    dashboardTitle:"Buenos días.",
-    dashboardSubtitle:"Chat, imágenes, documentos, código y automatización en un solo lugar.",
-    askPlaceholder:"Pídele a ALMA cualquier cosa...",
-    newChat:"Nueva conversación",
-    modules:"MÓDULOS",
-    billing:"Facturación",
+    dashboardTitle:"Buenos dï¿½as.",
+    dashboardSubtitle:"Chat, imï¿½genes, documentos, cï¿½digo y automatizaciï¿½n en un solo lugar.",
+    askPlaceholder:"Pï¿½dele a ALMA cualquier cosa...",
+    newChat:"Nueva conversaciï¿½n",
+    modules:"Mï¿½DULOS",
+    billing:"Facturaciï¿½n",
     creative:"ALMA Nocturai",
     launch:"Launch Studio",
-    verify:"Verifica información importante.",
+    verify:"Verifica informaciï¿½n importante.",
   }
 };
 

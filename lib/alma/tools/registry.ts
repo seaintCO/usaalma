@@ -1,4 +1,4 @@
-﻿export type AlmaToolName =
+export type AlmaToolName =
   | "creative"
   | "sites"
   | "crm"

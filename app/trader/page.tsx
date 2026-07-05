@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useState } from "react";
 import { Brain, CheckCircle2, ClipboardList, Plus, Save, Search, TrendingUp, Upload } from "lucide-react";

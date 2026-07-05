@@ -1,4 +1,4 @@
-﻿export function createTextStream(conversationId:string, run: (controller:ReadableStreamDefaultController<Uint8Array>, encoder:TextEncoder) => Promise<void>) {
+export function createTextStream(conversationId:string, run: (controller:ReadableStreamDefaultController<Uint8Array>, encoder:TextEncoder) => Promise<void>) {
   const encoder = new TextEncoder();
 
   const readable = new ReadableStream({

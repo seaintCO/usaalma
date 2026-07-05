@@ -1,4 +1,4 @@
-﻿export function reflectOnResult(result:any) {
+export function reflectOnResult(result:any) {
   if (!result) {
     return {
       ok:false,

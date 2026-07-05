@@ -1,3 +1,4 @@
+import { chooseAlmaModel } from "@/lib/alma/modelRouter";
 import { planAlmaAction, detectImageSize, buildImageFollowupPrompt } from "@/lib/alma/brain";
 import { getAlmaContext, upsertAlmaContext, logAlmaExecution } from "@/lib/alma/context";
 import OpenAI from "openai";
@@ -193,7 +194,7 @@ ${planned.steps.map((s:any, i:number) => `${i + 1}. ${s.label} — ${s.result?.m
         try {
           const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
           const result:any = await client.responses.create({
-            model: process.env.ALMA_MODEL || "gpt-5.5",
+            model: chooseAlmaModel(message || "", "auto"),
             input: buildMarketAnalysisPrompt("Chart / Market", message)
           });
 
@@ -324,7 +325,7 @@ ${memoryContext || "Sin memoria guardada todavía."}
 `;
 
   const firstResponse:any = await client.responses.create({
-    model: process.env.ALMA_MODEL || "gpt-5.5",
+    model: chooseAlmaModel(message || "", "auto"),
     input: [
       { role:"system", content:systemPrompt },
       { role:"user", content:message }
@@ -352,7 +353,7 @@ ${memoryContext || "Sin memoria guardada todavía."}
     }
 
     const finalStream = await client.responses.create({
-      model: process.env.ALMA_MODEL || "gpt-5.5",
+      model: chooseAlmaModel(message || "", "auto"),
       stream:true,
       input:[
         { role:"system", content:systemPrompt },
@@ -394,7 +395,7 @@ ${memoryContext || "Sin memoria guardada todavía."}
   }
 
   const stream = await client.responses.create({
-    model: process.env.ALMA_MODEL || "gpt-5.5",
+    model: chooseAlmaModel(message || "", "auto"),
     stream:true,
     input:[
       { role:"system", content:systemPrompt },

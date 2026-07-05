@@ -46,6 +46,50 @@ function LanguageSelector() {
   );
 }
 
+function AlmaModeSelector() {
+  const React = require("react");
+  const [mode, setMode] = React.useState("auto");
+
+  React.useEffect(() => {
+    fetch("/api/settings/alma-mode")
+      .then((res:any)=>res.json())
+      .then((data:any)=>setMode(data.mode || "auto"));
+  }, []);
+
+  async function save(nextMode:string) {
+    setMode(nextMode);
+    await fetch("/api/settings/alma-mode", {
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body:JSON.stringify({ mode:nextMode })
+    });
+  }
+
+  return (
+    <div className="rounded-3xl border border-[#E5E7EB] bg-white p-5 shadow-sm">
+      <h2 className="text-lg font-medium">ALMA Intelligence</h2>
+      <p className="mt-1 text-sm text-[#6B7280]">Choose how ALMA thinks. Auto is recommended.</p>
+      <div className="mt-4 grid gap-2 sm:grid-cols-3">
+        {[
+          ["auto","Auto"],
+          ["fast","Fast"],
+          ["deep","Deep Thinking"]
+        ].map(([id,label])=>(
+          <button
+            key={id}
+            onClick={()=>save(id)}
+            className={`rounded-2xl border px-4 py-3 text-sm font-medium ${
+              mode === id ? "border-black bg-black text-white" : "border-[#E5E7EB] bg-[#F7F7F8] text-[#6B7280]"
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function SettingsPage() {
   const [connections, setConnections] = useState<any[]>([]);
   const [showGmailModal, setShowGmailModal] = useState(false);

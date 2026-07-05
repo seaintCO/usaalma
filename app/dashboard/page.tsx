@@ -143,7 +143,7 @@ export default function DashboardPage() {
     setInput("");
     setMessages((prev) => [...prev, { role:"user", content:userMessage }]);
     setLoading(true);
-    setMessages((prev) => [...prev, { role:"assistant", content:"âœ¨ ALMA is thinking..." }]);
+    setMessages((prev) => [...prev, { role:"assistant", content:"ALMA is thinking..." }]);
 
     const res = await fetch("/api/chat/stream", {
       method:"POST",
@@ -350,13 +350,13 @@ export default function DashboardPage() {
 <span>ALMA is thinking...</span>
 </div>
 </div>
-) && <div className="max-w-[95%] md:max-w-[90%] rounded-2xl border border-[#E5E7EB] bg-[#F7F7F8] p-3 text-sm md:p-4 text-[#6B7280] md:max-w-[80%]">? Thinking...</div>}
+) && <div className="max-w-[95%] md:max-w-[90%] rounded-2xl border border-[#E5E7EB] bg-[#F7F7F8] p-3 text-sm md:p-4 text-[#6B7280] md:max-w-[80%]">ALMA is thinking...</div>}
               </div>
             )}
           </div>
         </div>
 
-        <div className="absolute bottom-0 w-full bg-gradient-to-t from-white via-white to-transparent px-3 pb-4 pt-10 md:px-8 md:pb-6">
+        <div className="absolute bottom-0 w-full bg-gradient-to-t from-white via-white to-transparent px-3 pb-4 pt-10 md:px-4 md:pb-6">
           <div className="mx-auto flex w-full max-w-3xl flex-col gap-3">
             <div className="flex gap-2 overflow-x-auto pb-1 md:flex-wrap">
               {["Crea una imagen premium", "Haz un logo", "Genera un anuncio 16:9", "Escribe código"].map((label) => (
@@ -367,7 +367,7 @@ export default function DashboardPage() {
             </div>
 
             <div className="relative flex flex-col overflow-hidden rounded-2xl border border-[#E5E7EB] bg-[#F7F7F8] shadow-sm">
-              <textarea value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } }} rows={1} placeholder="Pídele a ALMA crear, editar, escribir o construir..." className="max-h-32 w-full resize-none bg-transparent p-4 pb-12 text-base outline-none placeholder:text-gray-400" />
+              <textarea value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } }} rows={1} placeholder="Pídele a ALMA crear, editar, escribir o construir..." className="max-h-32 w-full resize-none text-base leading-6 bg-transparent p-4 pb-12 text-base outline-none placeholder:text-gray-400" />
 
               <div className="absolute bottom-3 left-4 flex items-center gap-2">
                 <input ref={fileInputRef} type="file" className="hidden" accept="image/*,.pdf,.docx,.txt,.csv,.xlsx,.xls" onChange={(e) => { const file = e.target.files?.[0]; if (file) analyzeFile(file); }} />
@@ -380,7 +380,7 @@ export default function DashboardPage() {
               <button onClick={sendMessage} disabled={loading} className="absolute bottom-3 right-4 rounded-lg bg-black p-1.5 text-white hover:bg-gray-800 disabled:opacity-40"><ArrowUp className="h-5 w-5" /></button>
             </div>
 
-            <p className="text-center text-[10px] text-gray-400">ALMA puede cometer errores. Verifica informaciÃ³n importante.</p>
+            <p className="text-center text-[10px] text-gray-400">ALMA puede cometer errores. Verifica información importante.</p>
           </div>
         </div>
         </>

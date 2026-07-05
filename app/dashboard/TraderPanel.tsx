@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useRef, useState } from "react";
 import { Brain, CalendarDays, CheckCircle2, Download, GraduationCap, Plus, Sparkles, TrendingUp, Upload } from "lucide-react";
@@ -148,10 +148,7 @@ export default function TraderPanel() {
             </p>
           </div>
 
-          <button onClick={()=>fileRef.current?.click()} className="inline-flex items-center justify-center gap-2 rounded-full bg-black px-5 py-3 text-sm font-medium text-white">
-            <Upload className="h-4 w-4" />
-            Upload Chart
-          </button>
+          <div className="rounded-full bg-[#F7F7F8] px-5 py-3 text-sm font-medium text-[#6B7280]">Educational only. Not financial advice.</div>
         </div>
       </section>
 
@@ -278,8 +275,8 @@ export default function TraderPanel() {
               ))}
             </div>
 
-            <a href="/journal" className="mt-4 block rounded-full bg-[#F7F7F8] px-5 py-3 text-center text-sm font-medium">
-              Open Full Journal
+            <a href="/planner" className="mt-4 block rounded-full bg-[#F7F7F8] px-5 py-3 text-center text-sm font-medium">
+              Open Planner Calendar
             </a>
           </div>
         </aside>

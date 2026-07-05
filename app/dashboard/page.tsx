@@ -284,6 +284,7 @@ export default function DashboardPage() {
           <div className="mx-2 my-6 h-px bg-[#E5E7EB]" />
 
           <a href="/fitness" className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[#6B7280] hover:bg-gray-200 hover:text-black"><Activity className="h-4 w-4" />Fitness</a>
+          <button onClick={() => { setActiveWorkspace("trader"); setSidebarOpen(false); }} className="flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left text-[#6B7280] hover:bg-gray-200 hover:text-black"><Activity className="h-4 w-4" />ALMA Trader</button>
           <a href="/finance" className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[#6B7280] hover:bg-gray-200 hover:text-black"><CreditCard className="h-4 w-4" />Market Analyst</a>
           <a href="/images" className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[#6B7280] hover:bg-gray-200 hover:text-black"><ImageIcon className="h-4 w-4" />Images</a>
           <a href="/creative" className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[#6B7280] hover:bg-gray-200 hover:text-black"><Settings className="h-4 w-4" />Creative Studio</a>

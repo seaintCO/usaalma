@@ -1,22 +1,20 @@
 ﻿"use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Brain, CheckCircle2, ClipboardList, GraduationCap, Plus, Save, Sparkles, TrendingUp, Upload } from "lucide-react";
+import { Brain, CalendarDays, CheckCircle2, Download, GraduationCap, Plus, Sparkles, TrendingUp, Upload } from "lucide-react";
 
 const defaultSymbols = ["SPY", "QQQ", "NVDA", "TSLA", "AAPL", "META", "BTCUSD"];
-const starterQuestion = "Analyze this chart like an elite trader. Give me bias, key levels, calls/puts plan, invalidation, risk, and what I should wait for. Educational only.";
+
+const starterQuestion =
+  "Analyze this chart like an elite trader. Give me bias, key levels, calls/puts plan, invalidation, risk, and what I should wait for. Educational only.";
 
 export default function TraderPanel() {
   const [symbol, setSymbol] = useState("SPY");
-  const [journal, setJournal] = useState<any[]>([]);
   const [watchlist, setWatchlist] = useState<any[]>([]);
-  const [notes, setNotes] = useState("");
-  const [direction, setDirection] = useState("Calls");
-  const [setup, setSetup] = useState("VWAP Reclaim");
-  const [entry, setEntry] = useState("");
-  const [stop, setStop] = useState("");
-  const [target, setTarget] = useState("");
+  const [journal, setJournal] = useState<any[]>([]);
   const [question, setQuestion] = useState(starterQuestion);
+  const [coachQuestion, setCoachQuestion] = useState("");
+  const [coachAnswer, setCoachAnswer] = useState("");
   const [chartFile, setChartFile] = useState<File | null>(null);
   const [analysis, setAnalysis] = useState("");
   const [analyzing, setAnalyzing] = useState(false);
@@ -29,33 +27,12 @@ export default function TraderPanel() {
     setWatchlist(w.watchlist || []);
   }
 
-  async function saveJournal(customNotes?:string) {
-    await fetch("/api/trader/journal", {
-      method:"POST",
-      headers:{ "Content-Type":"application/json" },
-      body:JSON.stringify({
-        symbol,
-        direction,
-        setup,
-        entry,
-        stop,
-        target,
-        notes:customNotes || notes || analysis,
-        confidence:82
-      })
-    });
-
-    setNotes("");
-    await load();
-  }
-
   async function addWatchlist(s = symbol) {
     await fetch("/api/trader/watchlist", {
       method:"POST",
       headers:{ "Content-Type":"application/json" },
       body:JSON.stringify({ symbol:s })
     });
-
     await load();
   }
 
@@ -78,14 +55,82 @@ export default function TraderPanel() {
     });
 
     const data = await res.json();
-
-    if (!data.success) {
-      setAnalysis(data.error || "ALMA could not analyze this chart.");
-    } else {
-      setAnalysis(data.answer || "No analysis returned.");
-    }
-
+    setAnalysis(data.answer || data.error || "ALMA could not analyze this chart.");
     setAnalyzing(false);
+  }
+
+  async function askCoach() {
+    if (!coachQuestion.trim()) return;
+
+    setCoachAnswer("ALMA Coach is thinking...");
+
+    const res = await fetch("/api/chat/stream", {
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body:JSON.stringify({
+        message:`You are ALMA Trader Coach. Answer this trading education question clearly, no financial advice. Question: ${coachQuestion}`
+      })
+    });
+
+    if (!res.body) return;
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let text = "";
+
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      text += decoder.decode(value).replace(/\[CONVERSATION_ID:.*?\]\n/, "");
+      setCoachAnswer(text);
+    }
+  }
+
+  async function saveAnalysis() {
+    if (!analysis) return;
+
+    await fetch("/api/trader/journal", {
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body:JSON.stringify({
+        symbol,
+        direction:"Analysis",
+        setup:"Chart Review",
+        notes:analysis,
+        confidence:82
+      })
+    });
+
+    await load();
+    alert("Saved to journal.");
+  }
+
+  function downloadPdf() {
+    if (!analysis) return;
+
+    const html = `
+      <html>
+        <head>
+          <title>ALMA Trader Analysis</title>
+          <style>
+            body{font-family:Arial;padding:40px;line-height:1.6}
+            h1{font-size:28px}
+            pre{white-space:pre-wrap;font-family:Arial}
+          </style>
+        </head>
+        <body>
+          <h1>ALMA Trader Analysis - ${symbol}</h1>
+          <p>Educational only. Not financial advice.</p>
+          <pre>${analysis.replace(/</g,"&lt;").replace(/>/g,"&gt;")}</pre>
+        </body>
+      </html>
+    `;
+
+    const win = window.open("", "_blank");
+    if (!win) return;
+    win.document.write(html);
+    win.document.close();
+    win.print();
   }
 
   useEffect(()=>{ load(); }, []);
@@ -99,7 +144,7 @@ export default function TraderPanel() {
           <div>
             <h1 className="text-4xl font-normal tracking-tight md:text-7xl">Trade with memory.</h1>
             <p className="mt-4 max-w-2xl text-base leading-7 text-[#6B7280] md:text-lg">
-              Chart workspace, AI analyst, journal, watchlist, checklist, education, and your personal trading playbook.
+              Chart workspace, AI analysis, trading coach, journal calendar, and personal trading playbook.
             </p>
           </div>
 
@@ -110,7 +155,7 @@ export default function TraderPanel() {
         </div>
       </section>
 
-      <section className="mt-5 grid gap-5 xl:grid-cols-[1fr_460px]">
+      <section className="mt-5 grid gap-5 xl:grid-cols-[1fr_430px]">
         <div className="space-y-5">
           <div className="overflow-hidden rounded-[2rem] border border-[#E5E7EB] bg-white shadow-sm">
             <div className="flex flex-col gap-4 border-b border-[#E5E7EB] p-4 md:flex-row md:items-center md:justify-between">
@@ -119,7 +164,7 @@ export default function TraderPanel() {
                   <TrendingUp className="h-5 w-5" />
                 </div>
                 <div>
-                  <p className="text-xs uppercase tracking-[0.2em] text-[#9CA3AF]">Active chart</p>
+                  <p className="text-xs uppercase tracking-[0.2em] text-[#9CA3AF]">Active Chart</p>
                   <strong className="text-2xl">{symbol}</strong>
                 </div>
               </div>
@@ -145,55 +190,43 @@ export default function TraderPanel() {
           </div>
 
           <div className="rounded-[2rem] border border-[#E5E7EB] bg-white p-5 shadow-sm">
-            <div className="flex items-center gap-2">
-              <Sparkles className="h-5 w-5" />
-              <h2 className="text-xl font-medium">ALMA Chart Analysis</h2>
-            </div>
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-5 w-5" />
+                <h2 className="text-xl font-medium">AI Chart Analysis</h2>
+              </div>
 
-            <input
-              ref={fileRef}
-              type="file"
-              accept="image/*"
-              hidden
-              onChange={(e)=>setChartFile(e.target.files?.[0] || null)}
-            />
-
-            <div className="mt-4 grid gap-3 md:grid-cols-[1fr_auto]">
-              <button onClick={()=>fileRef.current?.click()} className="rounded-2xl border border-dashed border-[#D1D5DB] bg-[#F7F7F8] px-4 py-4 text-left text-sm">
-                {chartFile ? chartFile.name : "Upload TradingView, Webull, Robinhood, Thinkorswim, Binance, or broker chart screenshot"}
-              </button>
-
-              <button onClick={analyzeChart} disabled={analyzing || !chartFile} className="rounded-2xl bg-black px-6 py-4 text-sm font-medium text-white disabled:opacity-40">
-                {analyzing ? "Analyzing..." : "Analyze"}
+              <button onClick={()=>fileRef.current?.click()} className="rounded-full bg-black px-5 py-3 text-sm font-medium text-white">
+                Upload Screenshot
               </button>
             </div>
 
-            <textarea
-              value={question}
-              onChange={(e)=>setQuestion(e.target.value)}
-              className="mt-3 min-h-28 w-full resize-none rounded-2xl border border-[#E5E7EB] bg-[#F7F7F8] p-4 text-sm outline-none"
-            />
+            <input ref={fileRef} type="file" accept="image/*" hidden onChange={(e)=>setChartFile(e.target.files?.[0] || null)} />
 
-            <div className="mt-4 min-h-52 rounded-3xl bg-[#F7F7F8] p-5 text-sm leading-7 text-[#111827] whitespace-pre-wrap">
-              {analyzing ? (
-                <div>
-                  <p className="font-medium">ALMA is reading market structure...</p>
-                  <p className="mt-2 text-[#6B7280]">Checking bias, liquidity, VWAP/EMA logic, calls/puts scenarios, invalidation, and risk.</p>
-                </div>
-              ) : analysis ? (
-                analysis
-              ) : (
-                <div className="text-[#6B7280]">
-                  Upload a chart and ask ALMA when to look for calls or puts. This is educational analysis, not financial advice.
-                </div>
-              )}
+            <div className="mt-4 rounded-2xl border border-dashed border-[#D1D5DB] bg-[#F7F7F8] p-4 text-sm text-[#6B7280]">
+              {chartFile ? chartFile.name : "Upload TradingView, Webull, Robinhood, Thinkorswim, Binance, or broker chart screenshot."}
             </div>
 
-            {analysis && (
-              <button onClick={()=>saveJournal(analysis)} className="mt-4 rounded-full bg-black px-5 py-3 text-sm font-medium text-white">
-                Save analysis to journal
+            <textarea value={question} onChange={(e)=>setQuestion(e.target.value)} className="mt-3 min-h-24 w-full resize-none rounded-2xl border border-[#E5E7EB] bg-[#F7F7F8] p-4 text-sm outline-none" />
+
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button onClick={analyzeChart} disabled={analyzing || !chartFile} className="rounded-full bg-black px-5 py-3 text-sm font-medium text-white disabled:opacity-40">
+                {analyzing ? "Analyzing..." : "Analyze Chart"}
               </button>
-            )}
+
+              <button onClick={saveAnalysis} disabled={!analysis} className="rounded-full bg-[#F7F7F8] px-5 py-3 text-sm font-medium disabled:opacity-40">
+                Save to Journal
+              </button>
+
+              <button onClick={downloadPdf} disabled={!analysis} className="inline-flex items-center gap-2 rounded-full bg-[#F7F7F8] px-5 py-3 text-sm font-medium disabled:opacity-40">
+                <Download className="h-4 w-4" />
+                Download PDF
+              </button>
+            </div>
+
+            <div className="mt-4 min-h-48 rounded-3xl bg-[#F7F7F8] p-5 text-sm leading-7 whitespace-pre-wrap">
+              {analyzing ? "ALMA is checking bias, liquidity, VWAP/EMA, calls/puts scenarios, invalidation, and risk..." : analysis || "Your analysis will appear here."}
+            </div>
           </div>
         </div>
 
@@ -201,17 +234,11 @@ export default function TraderPanel() {
           <div className="rounded-[2rem] border border-[#E5E7EB] bg-white p-5 shadow-sm">
             <div className="flex items-center gap-2">
               <Brain className="h-5 w-5" />
-              <h2 className="text-xl font-medium">ALMA Trade Checklist</h2>
+              <h2 className="text-xl font-medium">ALMA Checklist</h2>
             </div>
 
             <div className="mt-4 space-y-3 text-sm">
-              {[
-                "Trend direction is clear",
-                "VWAP / key level is respected",
-                "Volume confirms the move",
-                "Liquidity area is identified",
-                "Entry, stop, and target are defined"
-              ].map((item)=>(
+              {["Trend direction is clear", "VWAP/key level is respected", "Volume confirms the move", "Liquidity area is identified", "Entry, stop, target are defined"].map((item)=>(
                 <div key={item} className="flex items-center gap-3 rounded-2xl bg-[#F7F7F8] p-4">
                   <CheckCircle2 className="h-5 w-5 text-emerald-500" />
                   <span>{item}</span>
@@ -226,75 +253,36 @@ export default function TraderPanel() {
               <h2 className="text-xl font-medium">Trading Coach</h2>
             </div>
 
-            <div className="mt-4 space-y-3 text-sm text-[#111827]">
-              <div className="rounded-2xl bg-[#F7F7F8] p-4">
-                <strong>Calls:</strong> Look for bullish confirmation near support, VWAP reclaim, higher lows, and volume expansion.
-              </div>
-              <div className="rounded-2xl bg-[#F7F7F8] p-4">
-                <strong>Puts:</strong> Look for rejection at resistance, VWAP loss, lower highs, and failed breakout structure.
-              </div>
-              <div className="rounded-2xl bg-[#F7F7F8] p-4">
-                <strong>Risk:</strong> No setup is valid without invalidation. If the level breaks, the idea is dead.
-              </div>
+            <textarea value={coachQuestion} onChange={(e)=>setCoachQuestion(e.target.value)} placeholder="Ask anything: What is VWAP? When do I look for puts? Explain liquidity sweep..." className="mt-4 min-h-24 w-full resize-none rounded-2xl border border-[#E5E7EB] bg-[#F7F7F8] p-4 text-sm outline-none" />
+
+            <button onClick={askCoach} className="mt-3 rounded-full bg-black px-5 py-3 text-sm font-medium text-white">
+              Ask Coach
+            </button>
+
+            <div className="mt-4 min-h-32 rounded-2xl bg-[#F7F7F8] p-4 text-sm leading-7 whitespace-pre-wrap text-[#111827]">
+              {coachAnswer || "ALMA can teach concepts, explain setups, and help you understand what to wait for."}
             </div>
           </div>
 
           <div className="rounded-[2rem] border border-[#E5E7EB] bg-white p-5 shadow-sm">
             <div className="flex items-center gap-2">
-              <ClipboardList className="h-5 w-5" />
-              <h2 className="text-xl font-medium">Journal Trade</h2>
+              <CalendarDays className="h-5 w-5" />
+              <h2 className="text-xl font-medium">Journal Calendar</h2>
             </div>
 
-            <div className="mt-4 grid gap-3">
-              <div className="grid grid-cols-2 gap-3">
-                <input value={direction} onChange={(e)=>setDirection(e.target.value)} placeholder="Calls / Puts" className="rounded-2xl border border-[#E5E7EB] bg-[#F7F7F8] px-4 py-3 text-sm outline-none" />
-                <input value={setup} onChange={(e)=>setSetup(e.target.value)} placeholder="Setup" className="rounded-2xl border border-[#E5E7EB] bg-[#F7F7F8] px-4 py-3 text-sm outline-none" />
-              </div>
-
-              <div className="grid grid-cols-3 gap-3">
-                <input value={entry} onChange={(e)=>setEntry(e.target.value)} placeholder="Entry" className="rounded-2xl border border-[#E5E7EB] bg-[#F7F7F8] px-4 py-3 text-sm outline-none" />
-                <input value={stop} onChange={(e)=>setStop(e.target.value)} placeholder="Stop" className="rounded-2xl border border-[#E5E7EB] bg-[#F7F7F8] px-4 py-3 text-sm outline-none" />
-                <input value={target} onChange={(e)=>setTarget(e.target.value)} placeholder="Target" className="rounded-2xl border border-[#E5E7EB] bg-[#F7F7F8] px-4 py-3 text-sm outline-none" />
-              </div>
-
-              <textarea value={notes} onChange={(e)=>setNotes(e.target.value)} placeholder="What did ALMA see? What was the lesson?" className="min-h-28 rounded-2xl border border-[#E5E7EB] bg-[#F7F7F8] p-4 text-sm outline-none" />
-            </div>
-
-            <button onClick={()=>saveJournal()} className="mt-4 flex w-full items-center justify-center gap-2 rounded-full bg-black px-5 py-3 text-sm font-medium text-white">
-              <Save className="h-4 w-4" />
-              Save Journal
-            </button>
-          </div>
-
-          <div className="rounded-[2rem] border border-[#E5E7EB] bg-white p-5 shadow-sm">
-            <h2 className="text-xl font-medium">Watchlist</h2>
-            <div className="mt-4 flex flex-wrap gap-2">
-              {[...defaultSymbols, ...watchlist.map((w)=>w.symbol)].filter(Boolean).map((s, i)=>(
-                <button key={i} onClick={()=>setSymbol(s)} className={`rounded-full px-4 py-2 text-sm ${symbol === s ? "bg-black text-white" : "bg-[#F7F7F8] text-[#6B7280]"}`}>
-                  {s}
-                </button>
+            <div className="mt-4 grid grid-cols-7 gap-2 text-center text-xs">
+              {Array.from({ length: 30 }).map((_, i)=>(
+                <div key={i} className={`rounded-xl p-2 ${journal[i] ? "bg-black text-white" : "bg-[#F7F7F8] text-[#6B7280]"}`}>
+                  {i + 1}
+                </div>
               ))}
             </div>
+
+            <a href="/journal" className="mt-4 block rounded-full bg-[#F7F7F8] px-5 py-3 text-center text-sm font-medium">
+              Open Full Journal
+            </a>
           </div>
         </aside>
-      </section>
-
-      <section className="mt-5 rounded-[2rem] border border-[#E5E7EB] bg-white p-5 shadow-sm">
-        <h2 className="text-xl font-medium">Recent Journal</h2>
-        <div className="mt-4 grid gap-3 md:grid-cols-3">
-          {journal.length === 0 ? (
-            <div className="rounded-2xl bg-[#F7F7F8] p-4 text-sm text-[#6B7280]">No journal entries yet.</div>
-          ) : (
-            journal.map((j)=>(
-              <div key={j.id} className="rounded-2xl border border-[#E5E7EB] bg-[#F7F7F8] p-4">
-                <div className="font-medium">{j.symbol} - {j.direction}</div>
-                <div className="mt-1 text-sm text-[#6B7280]">{j.setup}</div>
-                <div className="mt-3 text-sm">Entry: {j.entry || "-"} | Stop: {j.stop || "-"} | Target: {j.target || "-"}</div>
-                <p className="mt-3 text-sm text-[#6B7280]">{j.notes}</p>
-              </div>
-            ))
-          )}
-        </div>
       </section>
     </div>
   );

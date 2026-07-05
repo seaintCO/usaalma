@@ -50,6 +50,7 @@ export default function TraderPanel() {
     <div className="h-full overflow-y-auto bg-[#F6F7F9] px-4 py-5 text-black md:px-8 md:py-8">
       <section className="rounded-[2rem] border border-[#E5E7EB] bg-white p-6 shadow-sm md:p-8">
         <p className="text-sm font-medium uppercase tracking-[0.25em] text-[#9CA3AF]">ALMA Trader OS</p>
+
         <div className="mt-4 flex flex-col justify-between gap-5 md:flex-row md:items-end">
           <div>
             <h1 className="text-4xl font-normal tracking-tight md:text-7xl">Trade with memory.</h1>

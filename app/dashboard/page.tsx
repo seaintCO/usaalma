@@ -60,7 +60,7 @@ export default function DashboardPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState("");
-  const [activeWorkspace, setActiveWorkspace] = useState<"chat" | "launch">("chat");
+  const [activeWorkspace, setActiveWorkspace] = useState<"chat" | "launch" | "trader">("chat");
 
   async function loadHistory() {
     const res = await fetch("/api/conversation/list");

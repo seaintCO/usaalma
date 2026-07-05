@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 
@@ -8,50 +8,78 @@ export default function SignupPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
-  async function signup(e: React.FormEvent) {
+  async function signup(e:React.FormEvent) {
     e.preventDefault();
     setLoading(true);
 
     const res = await fetch("/api/auth/signup", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ fullName, email, password }),
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body:JSON.stringify({ fullName, email, password })
     });
 
     const data = await res.json();
+    setLoading(false);
 
     if (!res.ok) {
-      setLoading(false);
       alert(data.error || "No se pudo crear la cuenta.");
       return;
     }
 
-    alert("Cuenta creada. Ahora inicia sesiÃƒÂ³n.");
-    window.location.href = "/login";
+    window.location.href = "/login?created=1";
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[#F7F7F8] px-6 text-[#111111]">
-      <div className="w-full max-w-md rounded-[2rem] border border-[#E5E7EB] bg-white p-8 shadow-xl shadow-black/5">
-        <div className="mb-8 text-center">
-          <div className="text-2xl font-medium tracking-tight">ALMA</div>
-          <div className="text-xs text-[#6B7280]">Powered by SEAINT</div>
+    <main className="flex min-h-screen items-center justify-center bg-[#F7F7F8] px-5 text-black">
+      <div className="w-full max-w-md rounded-[2rem] border border-[#E5E7EB] bg-white p-8 shadow-2xl shadow-black/10">
+        <div className="text-center">
+          <h1 className="text-3xl font-normal tracking-tight">ALMA</h1>
+          <p className="mt-1 text-xs text-[#6B7280]">Powered by SEAINT</p>
         </div>
 
-        <h1 className="mb-2 text-2xl font-medium tracking-tight">Crear tu ALMA</h1>
-        <p className="mb-8 text-sm text-[#6B7280]">Beta privada.</p>
+        <div className="mt-8">
+          <h2 className="text-3xl font-normal tracking-tight">Crear tu ALMA</h2>
+          <p className="mt-3 text-sm text-[#6B7280]">Beta privada.</p>
+        </div>
 
-        <form onSubmit={signup} className="space-y-4" autoComplete="on">
-          <input value={fullName} onChange={(e) => setFullName(e.target.value)} className="w-full rounded-xl border border-[#E5E7EB] px-4 py-3 outline-none focus:border-[#2563EB]" placeholder="Nombre completo" />
-          <input value={email} onChange={(e) => setEmail(e.target.value)} className="w-full rounded-xl border border-[#E5E7EB] px-4 py-3 outline-none focus:border-[#2563EB]" placeholder="Correo electrÃƒÂ³nico" type="email" autoComplete="email" inputMode="email" required />
-          <input value={password} onChange={(e) => setPassword(e.target.value)} className="w-full rounded-xl border border-[#E5E7EB] px-4 py-3 outline-none focus:border-[#2563EB]" placeholder="ContraseÃƒÂ±a" type="password" autoComplete="new-password" required />
-          <button disabled={loading} className="w-full rounded-xl bg-[#2563EB] py-3 font-medium text-white disabled:opacity-50">
+        <form onSubmit={signup} className="mt-8 space-y-4" autoComplete="on">
+          <input
+            value={fullName}
+            onChange={(e)=>setFullName(e.target.value)}
+            placeholder="Nombre completo"
+            autoComplete="name"
+            className="w-full rounded-2xl border border-[#E5E7EB] bg-white px-5 py-4 text-base outline-none focus:border-black"
+          />
+
+          <input
+            value={email}
+            onChange={(e)=>setEmail(e.target.value)}
+            type="email"
+            autoComplete="email"
+            inputMode="email"
+            required
+            placeholder="Correo electrónico"
+            className="w-full rounded-2xl border border-[#E5E7EB] bg-white px-5 py-4 text-base outline-none focus:border-black"
+          />
+
+          <input
+            value={password}
+            onChange={(e)=>setPassword(e.target.value)}
+            type="password"
+            autoComplete="new-password"
+            required
+            minLength={8}
+            placeholder="Contraseña"
+            className="w-full rounded-2xl border border-[#E5E7EB] bg-white px-5 py-4 text-base outline-none focus:border-black"
+          />
+
+          <button disabled={loading} className="w-full rounded-2xl bg-black py-4 text-base font-medium text-white disabled:opacity-50">
             {loading ? "Creando..." : "Crear cuenta"}
           </button>
         </form>
 
-        <p className="mt-6 text-center text-sm text-[#6B7280]">
-          Ã‚Â¿Ya tienes cuenta? <a href="/login" className="text-black">Inicia sesiÃƒÂ³n</a>
+        <p className="mt-8 text-center text-sm text-[#6B7280]">
+          ¿Ya tienes cuenta? <a href="/login" className="font-medium text-black">Inicia sesión</a>
         </p>
       </div>
     </main>

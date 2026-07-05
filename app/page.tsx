@@ -1,5 +1,6 @@
 "use client";
-import AlmaReplayDemo from "@/components/marketing/AlmaReplayDemo";
+import AlmaHeroReplay from "@/components/marketing/AlmaHeroReplay";
+import AlmaPricingTabs from "@/components/marketing/AlmaPricingTabs";
 import { useState } from "react";
 import {
   Calendar, CheckCircle2, FileText, Mic, ReceiptText, Store,
@@ -120,6 +121,6 @@ export default function Home() {
           <h2 className="mb-16 text-center text-3xl font-medium tracking-tight md:text-4xl">Precios simples.</h2>
         </div>
       </section>
-      <section className="mx-auto max-w-6xl px-6 py-16"><AlmaReplayDemo /></section>`r`n</main>
+      <section className="mx-auto max-w-6xl px-6 py-16"><AlmaHeroReplay /></section>`r`n</main>
   );
 }

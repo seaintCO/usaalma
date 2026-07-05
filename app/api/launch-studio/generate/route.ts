@@ -1,3 +1,4 @@
+import { rememberEvent } from "@/lib/memory/almaMemory";
 import { NextResponse } from "next/server";
 import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";

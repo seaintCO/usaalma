@@ -1,3 +1,4 @@
+import { rememberEvent } from "@/lib/memory/almaMemory";
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
@@ -41,5 +42,14 @@ export async function POST(req:Request) {
     .single();
 
   if (error) return NextResponse.json({ error:error.message }, { status:500 });
+  await rememberEvent({
+    userId:user.id,
+    module:"trader",
+    eventType:"journal_saved",
+    title:`${body.symbol || "Trade"} journal saved`,
+    summary:body.notes || body.setup || "Trader journal entry saved.",
+    metadata:body
+  });
+
   return NextResponse.json({ journal:data });
 }

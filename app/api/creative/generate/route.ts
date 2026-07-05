@@ -1,3 +1,4 @@
+import { rememberEvent } from "@/lib/memory/almaMemory";
 import { checkImageCredits, recordImageUsage } from "@/lib/usage/imageCredits";
 import { trackEvent } from "@/lib/analytics/track";
 import { NextResponse } from "next/server";
@@ -38,6 +39,14 @@ export async function POST(req:Request) {
     if (result?.success !== false) {
       await recordImageUsage(user.id, 1, { source:"creative_generate", templateKey:body.templateKey });
       await trackEvent(user.id, "nocturai_generated", { templateKey:body.templateKey, category:body.category });
+      await rememberEvent({
+        userId:user.id,
+        module:"nocturai",
+        eventType:"image_generated",
+        title:body.title || "Nocturai image generated",
+        summary:body.prompt || "Creative asset generated.",
+        metadata:{ templateKey:body.templateKey, category:body.category }
+      });
     }
 
     return NextResponse.json(result);

@@ -1,3 +1,4 @@
+import { getRecentMemory, rememberEvent } from "@/lib/memory/almaMemory";
 import { chooseAlmaModel } from "@/lib/alma/modelRouter";
 import { planAlmaAction, detectImageSize, buildImageFollowupPrompt } from "@/lib/alma/brain";
 import { getAlmaContext, upsertAlmaContext, logAlmaExecution } from "@/lib/alma/context";

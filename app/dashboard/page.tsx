@@ -6,6 +6,7 @@ import {
   Search, Settings, Store, Users, ImageIcon, Camera, Activity, Rocket, Presentation } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import LaunchStudioPanel from "./LaunchStudioPanel";
+import TraderPanel from "./TraderPanel";
 
 const moduleMap:any = {
   planner: ["Planner", Calendar, "/planner"],

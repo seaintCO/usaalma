@@ -48,6 +48,18 @@ function renderMessage(content:string) {
   return <div className="whitespace-pre-wrap leading-7">{cleanAIText(content)}</div>;
 }
 
+
+function InlineAppFrame({ title, src }: { title: string; src: string }) {
+  return (
+    <div className="h-full w-full bg-[#F7F7F8]">
+      <iframe
+        title={title}
+        src={src}
+        className="h-full min-h-screen w-full border-0 bg-[#F7F7F8]"
+      />
+    </div>
+  );
+}
 export default function DashboardPage() {
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<any[]>([]);
@@ -61,7 +73,7 @@ export default function DashboardPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState("");
-  const [activeWorkspace, setActiveWorkspace] = useState<"chat" | "launch" | "trader">("chat");
+  const [activeWorkspace, setActiveWorkspace] = useState<string>("chat");
 
   async function loadHistory() {
     const res = await fetch("/api/conversation/list");
@@ -273,30 +285,15 @@ export default function DashboardPage() {
               <span className="text-[10px] text-green-600">FREE</span>
             </a>
 
-            <a href="/planner" className="flex items-center justify-between rounded-lg px-2 py-1.5 text-[#6B7280] hover:bg-gray-200 hover:text-black">
-              <span className="flex items-center gap-2.5"><Calendar className="h-4 w-4" />Planner</span>
-              <span className="text-[10px] text-green-600">FREE</span>
-            </a>
+            <button onClick={() => { setActiveWorkspace("planner"); setSidebarOpen(false); }} className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-[#6B7280] hover:bg-gray-200 hover:text-black"><span className="flex items-center gap-2.5"><Calendar className="h-4 w-4" />Planner</span><span className="text-[10px] text-green-600">FREE</span></button>
 
-            <a href="/tasks" className="flex items-center justify-between rounded-lg px-2 py-1.5 text-[#6B7280] hover:bg-gray-200 hover:text-black">
-              <span className="flex items-center gap-2.5"><CheckCircle2 className="h-4 w-4" />Tasks</span>
-              <span className="text-[10px] text-green-600">FREE</span>
-            </a>
+            <button onClick={() => { setActiveWorkspace("tasks"); setSidebarOpen(false); }} className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-[#6B7280] hover:bg-gray-200 hover:text-black"><span className="flex items-center gap-2.5"><CheckCircle2 className="h-4 w-4" />Tasks</span><span className="text-[10px] text-green-600">FREE</span></button>
 
-            <a href="/notes" className="flex items-center justify-between rounded-lg px-2 py-1.5 text-[#6B7280] hover:bg-gray-200 hover:text-black">
-              <span className="flex items-center gap-2.5"><FileText className="h-4 w-4" />Notes</span>
-              <span className="text-[10px] text-green-600">FREE</span>
-            </a>
+            <button onClick={() => { setActiveWorkspace("notes"); setSidebarOpen(false); }} className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-[#6B7280] hover:bg-gray-200 hover:text-black"><span className="flex items-center gap-2.5"><FileText className="h-4 w-4" />Notes</span><span className="text-[10px] text-green-600">FREE</span></button>
 
-            <a href="/documents" className="flex items-center justify-between rounded-lg px-2 py-1.5 text-[#6B7280] hover:bg-gray-200 hover:text-black">
-              <span className="flex items-center gap-2.5"><FolderOpen className="h-4 w-4" />Documents</span>
-              <span className="text-[10px] text-green-600">FREE</span>
-            </a>
+            <button onClick={() => { setActiveWorkspace("documents"); setSidebarOpen(false); }} className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-[#6B7280] hover:bg-gray-200 hover:text-black"><span className="flex items-center gap-2.5"><FolderOpen className="h-4 w-4" />Documents</span><span className="text-[10px] text-green-600">FREE</span></button>
 
-            <a href="/fitness" className="flex items-center justify-between rounded-lg px-2 py-1.5 text-[#6B7280] hover:bg-gray-200 hover:text-black">
-              <span className="flex items-center gap-2.5"><Activity className="h-4 w-4" />Fitness</span>
-              <span className="text-[10px] text-green-600">FREE</span>
-            </a>
+            <button onClick={() => { setActiveWorkspace("fitness"); setSidebarOpen(false); }} className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-[#6B7280] hover:bg-gray-200 hover:text-black"><span className="flex items-center gap-2.5"><Activity className="h-4 w-4" />Fitness</span><span className="text-[10px] text-green-600">FREE</span></button>
           </div>
 
           <div className="mx-2 my-6 h-px bg-[#E5E7EB]" />
@@ -304,15 +301,9 @@ export default function DashboardPage() {
           <div className="mb-6 space-y-1">
             <h5 className="mb-2 px-2 text-xs font-medium uppercase tracking-wide text-[#6B7280]">BUSINESS</h5>
 
-            <a href="/crm" className="flex items-center justify-between rounded-lg px-2 py-1.5 text-[#6B7280] hover:bg-gray-200 hover:text-black">
-              <span className="flex items-center gap-2.5"><Users className="h-4 w-4" />CRM</span>
-              <span className="text-[10px] text-green-600">FREE</span>
-            </a>
+            <button onClick={() => { setActiveWorkspace("crm"); setSidebarOpen(false); }} className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-[#6B7280] hover:bg-gray-200 hover:text-black"><span className="flex items-center gap-2.5"><Users className="h-4 w-4" />CRM</span><span className="text-[10px] text-green-600">FREE</span></button>
 
-            <a href="/invoicing" className="flex items-center justify-between rounded-lg px-2 py-1.5 text-[#6B7280] hover:bg-gray-200 hover:text-black">
-              <span className="flex items-center gap-2.5"><ReceiptText className="h-4 w-4" />Invoices</span>
-              <span className="text-[10px] text-green-600">FREE</span>
-            </a>
+            <button onClick={() => { setActiveWorkspace("invoicing"); setSidebarOpen(false); }} className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-[#6B7280] hover:bg-gray-200 hover:text-black"><span className="flex items-center gap-2.5"><ReceiptText className="h-4 w-4" />Invoices</span><span className="text-[10px] text-green-600">FREE</span></button>
           </div>
 
           <div className="mx-2 my-6 h-px bg-[#E5E7EB]" />
@@ -325,15 +316,9 @@ export default function DashboardPage() {
               <span className="text-[10px] text-black">PRO</span>
             </button>
 
-            <a href="/images" className="flex items-center justify-between rounded-lg px-2 py-1.5 text-[#6B7280] hover:bg-gray-200 hover:text-black">
-              <span className="flex items-center gap-2.5"><ImageIcon className="h-4 w-4" />Images</span>
-              <span className="text-[10px] text-black">PRO</span>
-            </a>
+            <button onClick={() => { setActiveWorkspace("images"); setSidebarOpen(false); }} className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-[#6B7280] hover:bg-gray-200 hover:text-black"><span className="flex items-center gap-2.5"><ImageIcon className="h-4 w-4" />Images</span><span className="text-[10px] text-black">PRO</span></button>
 
-            <a href="/creative" className="flex items-center justify-between rounded-lg px-2 py-1.5 text-[#6B7280] hover:bg-gray-200 hover:text-black">
-              <span className="flex items-center gap-2.5"><Settings className="h-4 w-4" />Creative Studio</span>
-              <span className="text-[10px] text-black">PRO</span>
-            </a>
+            <button onClick={() => { setActiveWorkspace("creative"); setSidebarOpen(false); }} className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-[#6B7280] hover:bg-gray-200 hover:text-black"><span className="flex items-center gap-2.5"><Settings className="h-4 w-4" />Creative Studio</span><span className="text-[10px] text-black">PRO</span></button>
 
             <button onClick={() => { setActiveWorkspace("launch"); setSidebarOpen(false); }} className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-[#6B7280] hover:bg-gray-200 hover:text-black">
               <span className="flex items-center gap-2.5"><Rocket className="h-4 w-4" />Launch Studio</span>
@@ -456,6 +441,9 @@ export default function DashboardPage() {
     </main>
   );
 }
+
+
+
 
 
 

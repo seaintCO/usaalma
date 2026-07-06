@@ -78,7 +78,7 @@ const almaText = {
     planner: "Planner",
     tasks: "Tasks",
     notes: "Notes",
-    documents: "Documents",
+    documents: "Documentos",
     fitness: "Fitness",
     crm: "CRM",
     invoices: "Invoices",

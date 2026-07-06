@@ -36,7 +36,12 @@ export const almaDictionary = {
     identity: "I am ALMA.",
     subtitle: "Chat, images, documents, code, and automation in one place.",
     prompt: "Ask ALMA to create, edit, write, or build...",
-    disclaimer: "ALMA can make mistakes. Verify important information."
+    disclaimer: "ALMA can make mistakes. Verify important information.",
+    chipImage: "Create a premium image",
+    chipLogo: "Make a logo",
+    chipAd: "Generate a 16:9 ad",
+    chipCode: "Write code",
+    loading: "Loading your workspace..."
   },
   es: {
     language: "Idioma",
@@ -69,7 +74,12 @@ export const almaDictionary = {
     identity: "Soy ALMA.",
     subtitle: "Chat, imagenes, documentos, codigo y automatizacion en un solo lugar.",
     prompt: "Pidele a ALMA crear, editar, escribir o construir...",
-    disclaimer: "ALMA puede cometer errores. Verifica informacion importante."
+    disclaimer: "ALMA puede cometer errores. Verifica informacion importante.",
+    chipImage: "Crea una imagen premium",
+    chipLogo: "Haz un logo",
+    chipAd: "Genera un anuncio 16:9",
+    chipCode: "Escribe codigo",
+    loading: "Cargando tu espacio..."
   }
 } as const;
 

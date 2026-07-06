@@ -14,7 +14,7 @@ const moduleMap:any = {
   notes: ["Notes", FileText, "/notes"],
   crm: ["CRM", Users, "/crm"],
   invoicing: ["Invoices", ReceiptText, "/invoicing"],
-  documents: ["Documentos", FolderOpen, "/documents"],
+  documents: ["Documents", FolderOpen, "/documents"],
   launchStudio: ["Launch Studio", Rocket, "/launch-studio"],
 };
 
@@ -118,7 +118,7 @@ const almaText = {
     planner: "Planificador",
     tasks: "Tareas",
     notes: "Notas",
-    documents: "Documentos",
+    documents: "Documents",
     fitness: "Fitness",
     crm: "CRM",
     invoices: "Facturas",
@@ -319,6 +319,12 @@ export default function DashboardPage() {
           <div>
             <div className="text-lg font-medium tracking-tight">ALMA</div>
             <div className="text-[10px] text-[#6B7280]">Powered by SEAINT</div>
+          <button
+            onClick={() => setLanguage(language === "en" ? "es" : "en")}
+            className="mt-3 rounded-full border border-[#E5E7EB] bg-white px-3 py-1 text-[11px] font-medium text-[#6B7280] hover:text-black"
+          >
+            Language: {language.toUpperCase()}
+          </button>
           </div>
         </a>
 
@@ -531,6 +537,10 @@ export default function DashboardPage() {
     </main>
   );
 }
+
+
+
+
 
 
 

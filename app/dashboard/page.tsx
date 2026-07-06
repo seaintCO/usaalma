@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import {
   ArrowUp, Calendar, CheckCircle2, CreditCard, FileText, FolderOpen,
@@ -313,23 +313,43 @@ export default function DashboardPage() {
   }, []);
 
   function Sidebar() {
+    const activeBadge = <span className="text-[10px] font-medium text-green-600">{t.active.toUpperCase()}</span>;
+    const proBadge = <span className="text-[10px] font-medium text-black">{t.pro.toUpperCase()}</span>;
+
     return (
       <aside className="flex h-full w-72 flex-col border-r border-[#E5E7EB] bg-[#F7F7F8] md:w-64">
-        <a href="/" className="flex h-16 items-center px-5 hover:bg-gray-100">
-          <div>
+        <div className="px-5 pb-4 pt-5">
+          <button
+            onClick={() => { setActiveWorkspace("chat"); setSidebarOpen(false); }}
+            className="text-left"
+          >
             <div className="text-lg font-medium tracking-tight">ALMA</div>
             <div className="text-[10px] text-[#6B7280]">Powered by SEAINT</div>
-          <button
-            onClick={() => setLanguage(language === "en" ? "es" : "en")}
-            className="mt-3 rounded-full border border-[#E5E7EB] bg-white px-3 py-1 text-[11px] font-medium text-[#6B7280] hover:text-black"
-          >
-            Language: {language.toUpperCase()}
           </button>
+
+          <div className="mt-4 grid grid-cols-2 gap-2 rounded-2xl border border-[#E5E7EB] bg-white p-1 shadow-sm">
+            <button
+              type="button"
+              onClick={() => setLanguage("en")}
+              className={`rounded-xl px-3 py-1.5 text-xs font-medium ${language === "en" ? "bg-black text-white" : "text-[#6B7280] hover:text-black"}`}
+            >
+              EN
+            </button>
+            <button
+              type="button"
+              onClick={() => setLanguage("es")}
+              className={`rounded-xl px-3 py-1.5 text-xs font-medium ${language === "es" ? "bg-black text-white" : "text-[#6B7280] hover:text-black"}`}
+            >
+              ES
+            </button>
           </div>
-        </a>
+        </div>
 
         <div className="px-3">
-          <button onClick={() => { setActiveWorkspace("chat"); setMessages([]); setConversationId(null); setSidebarOpen(false); }} className="mb-4 flex w-full items-center justify-between rounded-xl border border-[#E5E7EB] bg-white px-3 py-2 text-sm font-medium shadow-sm">
+          <button
+            onClick={() => { setActiveWorkspace("chat"); setMessages([]); setConversationId(null); setSidebarOpen(false); }}
+            className="mb-4 flex w-full items-center justify-between rounded-xl border border-[#E5E7EB] bg-white px-3 py-2 text-sm font-medium shadow-sm"
+          >
             <span className="flex items-center gap-2"><PlusCircle className="h-4 w-4 text-[#6B7280]" />{t.newChat}</span>
             <PenSquare className="h-4 w-4 text-[#6B7280]" />
           </button>
@@ -340,106 +360,68 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto pb-72 md:pb-44 scroll-smooth pb-64 scroll-smooth pb-44 px-3 pb-4 text-sm">
-          <h5 className="mb-2 px-2 text-xs font-medium text-[#6B7280]">{t.history.toUpperCase()}</h5>
+        <div className="flex-1 overflow-y-auto px-3 pb-8 text-sm">
+          <h5 className="mb-2 px-2 text-xs font-medium uppercase tracking-wide text-[#6B7280]">{t.history}</h5>
 
           {history.map((chat) => (
             <div key={chat.id} className="group flex items-center gap-1 rounded-lg hover:bg-gray-200">
-              {editingId === chat.id ? (
-                <input
-                  autoFocus
-                  value={editingTitle}
-                  onChange={(e) => setEditingTitle(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") renameConversation(chat.id);
-                    if (e.key === "Escape") setEditingId(null);
-                  }}
-                  className="min-w-0 flex-1 bg-transparent px-2 py-1.5 text-sm outline-none"
-                />
-              ) : (
-                <button onClick={() => loadConversation(chat.id)} className="min-w-0 flex-1 truncate px-2 py-1.5 text-left text-[#6B7280] hover:text-black">
-                  {chat.title || "Nueva conversaciÃƒÂ³n"}
-                </button>
-              )}
-
-              <button onClick={() => { setEditingId(chat.id); setEditingTitle(chat.title || "Nueva conversaciÃƒÂ³n"); }} className="hidden px-1 text-xs text-[#6B7280] group-hover:block">
-                Editar
+              <button onClick={() => loadConversation(chat.id)} className="min-w-0 flex-1 truncate px-2 py-1.5 text-left text-[#6B7280] hover:text-black">
+                {chat.title || t.newChat}
               </button>
               <button onClick={() => deleteConversation(chat.id)} className="hidden px-1 text-xs text-red-500 group-hover:block">
-                Borrar
+                Delete
               </button>
             </div>
           ))}
 
-                    <div className="mx-2 my-6 h-px bg-[#E5E7EB]" />
+          <div className="mx-2 my-6 h-px bg-[#E5E7EB]" />
 
           <div className="mb-6 space-y-1">
-            <h5 className="mb-2 px-2 text-xs font-medium uppercase tracking-wide text-[#6B7280]">{t.core.toUpperCase()}</h5>
+            <h5 className="mb-2 px-2 text-xs font-medium uppercase tracking-wide text-[#6B7280]">{t.core}</h5>
 
-            <a href="/dashboard/apps" className="flex items-center justify-between rounded-lg px-2 py-1.5 text-[#6B7280] hover:bg-gray-200 hover:text-black">
-              <span className="flex items-center gap-2.5"><Home className="h-4 w-4" />{t.home}</span>
-              <span className="text-[10px] text-green-600">{t.active.toUpperCase()}</span>
-            </a>
-
-            <button onClick={() => { setActiveWorkspace("planner"); setSidebarOpen(false); }} className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-[#6B7280] hover:bg-gray-200 hover:text-black"><span className="flex items-center gap-2.5"><Calendar className="h-4 w-4" />{t.planner}</span><span className="text-[10px] text-green-600">{t.active.toUpperCase()}</span></button>
-
-            <button onClick={() => { setActiveWorkspace("tasks"); setSidebarOpen(false); }} className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-[#6B7280] hover:bg-gray-200 hover:text-black"><span className="flex items-center gap-2.5"><CheckCircle2 className="h-4 w-4" />{t.tasks}</span><span className="text-[10px] text-green-600">{t.active.toUpperCase()}</span></button>
-
-            <button onClick={() => { setActiveWorkspace("notes"); setSidebarOpen(false); }} className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-[#6B7280] hover:bg-gray-200 hover:text-black"><span className="flex items-center gap-2.5"><FileText className="h-4 w-4" />{t.notes}</span><span className="text-[10px] text-green-600">{t.active.toUpperCase()}</span></button>
-
-            <button onClick={() => { setActiveWorkspace("documents"); setSidebarOpen(false); }} className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-[#6B7280] hover:bg-gray-200 hover:text-black"><span className="flex items-center gap-2.5"><FolderOpen className="h-4 w-4" />{t.documents}</span><span className="text-[10px] text-green-600">{t.active.toUpperCase()}</span></button>
-
-            <button onClick={() => { setActiveWorkspace("fitness"); setSidebarOpen(false); }} className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-[#6B7280] hover:bg-gray-200 hover:text-black"><span className="flex items-center gap-2.5"><Activity className="h-4 w-4" />{t.fitness}</span><span className="text-[10px] text-green-600">{t.active.toUpperCase()}</span></button>
+            <button onClick={() => { setActiveWorkspace("apps"); setSidebarOpen(false); }} className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-[#6B7280] hover:bg-gray-200 hover:text-black"><span className="flex items-center gap-2.5"><Home className="h-4 w-4" />{t.home}</span>{activeBadge}</button>
+            <button onClick={() => { setActiveWorkspace("planner"); setSidebarOpen(false); }} className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-[#6B7280] hover:bg-gray-200 hover:text-black"><span className="flex items-center gap-2.5"><Calendar className="h-4 w-4" />{t.planner}</span>{activeBadge}</button>
+            <button onClick={() => { setActiveWorkspace("tasks"); setSidebarOpen(false); }} className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-[#6B7280] hover:bg-gray-200 hover:text-black"><span className="flex items-center gap-2.5"><CheckCircle2 className="h-4 w-4" />{t.tasks}</span>{activeBadge}</button>
+            <button onClick={() => { setActiveWorkspace("notes"); setSidebarOpen(false); }} className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-[#6B7280] hover:bg-gray-200 hover:text-black"><span className="flex items-center gap-2.5"><FileText className="h-4 w-4" />{t.notes}</span>{activeBadge}</button>
+            <button onClick={() => { setActiveWorkspace("documents"); setSidebarOpen(false); }} className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-[#6B7280] hover:bg-gray-200 hover:text-black"><span className="flex items-center gap-2.5"><FolderOpen className="h-4 w-4" />{t.documents}</span>{activeBadge}</button>
+            <button onClick={() => { setActiveWorkspace("fitness"); setSidebarOpen(false); }} className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-[#6B7280] hover:bg-gray-200 hover:text-black"><span className="flex items-center gap-2.5"><Activity className="h-4 w-4" />{t.fitness}</span>{activeBadge}</button>
           </div>
 
           <div className="mx-2 my-6 h-px bg-[#E5E7EB]" />
 
           <div className="mb-6 space-y-1">
-            <h5 className="mb-2 px-2 text-xs font-medium uppercase tracking-wide text-[#6B7280]">{t.business.toUpperCase()}</h5>
+            <h5 className="mb-2 px-2 text-xs font-medium uppercase tracking-wide text-[#6B7280]">{t.business}</h5>
 
-            <button onClick={() => { setActiveWorkspace("crm"); setSidebarOpen(false); }} className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-[#6B7280] hover:bg-gray-200 hover:text-black"><span className="flex items-center gap-2.5"><Users className="h-4 w-4" />CRM</span><span className="text-[10px] text-green-600">{t.active.toUpperCase()}</span></button>
-
-            <button onClick={() => { setActiveWorkspace("invoicing"); setSidebarOpen(false); }} className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-[#6B7280] hover:bg-gray-200 hover:text-black"><span className="flex items-center gap-2.5"><ReceiptText className="h-4 w-4" />{t.invoices}</span><span className="text-[10px] text-green-600">{t.active.toUpperCase()}</span></button>
+            <button onClick={() => { setActiveWorkspace("crm"); setSidebarOpen(false); }} className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-[#6B7280] hover:bg-gray-200 hover:text-black"><span className="flex items-center gap-2.5"><Users className="h-4 w-4" />{t.crm}</span>{activeBadge}</button>
+            <button onClick={() => { setActiveWorkspace("invoicing"); setSidebarOpen(false); }} className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-[#6B7280] hover:bg-gray-200 hover:text-black"><span className="flex items-center gap-2.5"><ReceiptText className="h-4 w-4" />{t.invoices}</span>{activeBadge}</button>
           </div>
 
           <div className="mx-2 my-6 h-px bg-[#E5E7EB]" />
 
           <div className="mb-6 space-y-1">
-            <h5 className="mb-2 px-2 text-xs font-medium uppercase tracking-wide text-[#6B7280]">AI</h5>
+            <h5 className="mb-2 px-2 text-xs font-medium uppercase tracking-wide text-[#6B7280]">{t.ai}</h5>
 
-            <button onClick={() => { setActiveWorkspace("chat"); setSidebarOpen(false); }} className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-[#6B7280] hover:bg-gray-200 hover:text-black">
-              <span className="flex items-center gap-2.5"><Mic className="h-4 w-4" />ALMA</span>
-              <span className="text-[10px] text-black">{t.pro.toUpperCase()}</span>
-            </button>
-
-            <button onClick={() => { setActiveWorkspace("images"); setSidebarOpen(false); }} className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-[#6B7280] hover:bg-gray-200 hover:text-black"><span className="flex items-center gap-2.5"><ImageIcon className="h-4 w-4" />{t.images}</span><span className="text-[10px] text-black">{t.pro.toUpperCase()}</span></button>
-
-            <button onClick={() => { setActiveWorkspace("creative"); setSidebarOpen(false); }} className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-[#6B7280] hover:bg-gray-200 hover:text-black"><span className="flex items-center gap-2.5"><Settings className="h-4 w-4" />{t.creativeStudio}</span><span className="text-[10px] text-black">{t.pro.toUpperCase()}</span></button>
-
-            <button onClick={() => { setActiveWorkspace("launch"); setSidebarOpen(false); }} className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-[#6B7280] hover:bg-gray-200 hover:text-black">
-              <span className="flex items-center gap-2.5"><Rocket className="h-4 w-4" />{t.launchStudio}</span>
-              <span className="text-[10px] text-black">{t.pro.toUpperCase()}</span>
-            </button>
-
-            <button onClick={() => { setActiveWorkspace("trader"); setSidebarOpen(false); }} className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-[#6B7280] hover:bg-gray-200 hover:text-black">
-              <span className="flex items-center gap-2.5"><Activity className="h-4 w-4" />{t.trader}</span>
-              <span className="text-[10px] text-black">{t.pro.toUpperCase()}</span>
-            </button>
+            <button onClick={() => { setActiveWorkspace("chat"); setSidebarOpen(false); }} className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-[#6B7280] hover:bg-gray-200 hover:text-black"><span className="flex items-center gap-2.5"><Mic className="h-4 w-4" />{t.alma}</span>{proBadge}</button>
+            <button onClick={() => { setActiveWorkspace("images"); setSidebarOpen(false); }} className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-[#6B7280] hover:bg-gray-200 hover:text-black"><span className="flex items-center gap-2.5"><ImageIcon className="h-4 w-4" />{t.images}</span>{proBadge}</button>
+            <button onClick={() => { setActiveWorkspace("creative"); setSidebarOpen(false); }} className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-[#6B7280] hover:bg-gray-200 hover:text-black"><span className="flex items-center gap-2.5"><Settings className="h-4 w-4" />{t.creativeStudio}</span>{proBadge}</button>
+            <button onClick={() => { setActiveWorkspace("launch"); setSidebarOpen(false); }} className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-[#6B7280] hover:bg-gray-200 hover:text-black"><span className="flex items-center gap-2.5"><Rocket className="h-4 w-4" />{t.launchStudio}</span>{proBadge}</button>
+            <button onClick={() => { setActiveWorkspace("trader"); setSidebarOpen(false); }} className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-[#6B7280] hover:bg-gray-200 hover:text-black"><span className="flex items-center gap-2.5"><Activity className="h-4 w-4" />{t.trader}</span>{proBadge}</button>
           </div>
 
           <div className="mx-2 my-6 h-px bg-[#E5E7EB]" />
 
           <div className="mb-6 space-y-1">
-            <h5 className="mb-2 px-2 text-xs font-medium uppercase tracking-wide text-[#6B7280]">{t.platform.toUpperCase()}</h5>
+            <h5 className="mb-2 px-2 text-xs font-medium uppercase tracking-wide text-[#6B7280]">{t.platform}</h5>
 
-            <a href="/marketplace" className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[#6B7280] hover:bg-gray-200 hover:text-black"><Store className="h-4 w-4" />{t.marketplace}</a>
-            <a href="/billing" className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[#6B7280] hover:bg-gray-200 hover:text-black"><CreditCard className="h-4 w-4" />{t.billing}</a>
-            <a href="/settings" className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[#6B7280] hover:bg-gray-200 hover:text-black"><Settings className="h-4 w-4" />{t.settings}</a>
+            <button onClick={() => { setActiveWorkspace("marketplace"); setSidebarOpen(false); }} className="flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left text-[#6B7280] hover:bg-gray-200 hover:text-black"><Store className="h-4 w-4" />{t.marketplace}</button>
+            <button onClick={() => { setActiveWorkspace("billing"); setSidebarOpen(false); }} className="flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left text-[#6B7280] hover:bg-gray-200 hover:text-black"><CreditCard className="h-4 w-4" />{t.billing}</button>
+            <button onClick={() => { setActiveWorkspace("settings"); setSidebarOpen(false); }} className="flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left text-[#6B7280] hover:bg-gray-200 hover:text-black"><Settings className="h-4 w-4" />{t.settings}</button>
           </div>
         </div>
       </aside>
     );
   }
+
 
   if (!authReady) {
     return (
@@ -474,6 +456,32 @@ export default function DashboardPage() {
           <LaunchStudioPanel />
         ) : activeWorkspace === "trader" ? (
           <TraderPanel />
+        ) : activeWorkspace === "apps" ? (
+          <InlineAppFrame title="Apps" src={`/dashboard/apps?lang=${language}`} />
+        ) : activeWorkspace === "planner" ? (
+          <InlineAppFrame title="Planner" src={`/planner?lang=${language}`} />
+        ) : activeWorkspace === "tasks" ? (
+          <InlineAppFrame title="Tasks" src={`/tasks?lang=${language}`} />
+        ) : activeWorkspace === "notes" ? (
+          <InlineAppFrame title="Notes" src={`/notes?lang=${language}`} />
+        ) : activeWorkspace === "documents" ? (
+          <InlineAppFrame title="Documents" src={`/documents?lang=${language}`} />
+        ) : activeWorkspace === "fitness" ? (
+          <InlineAppFrame title="Fitness" src={`/fitness?lang=${language}`} />
+        ) : activeWorkspace === "crm" ? (
+          <InlineAppFrame title="CRM" src={`/crm?lang=${language}`} />
+        ) : activeWorkspace === "invoicing" ? (
+          <InlineAppFrame title="Invoices" src={`/invoicing?lang=${language}`} />
+        ) : activeWorkspace === "images" ? (
+          <InlineAppFrame title="Images" src={`/images?lang=${language}`} />
+        ) : activeWorkspace === "creative" ? (
+          <InlineAppFrame title="Creative Studio" src={`/creative?lang=${language}`} />
+        ) : activeWorkspace === "marketplace" ? (
+          <InlineAppFrame title="Marketplace" src={`/marketplace?lang=${language}`} />
+        ) : activeWorkspace === "billing" ? (
+          <InlineAppFrame title="Billing" src={`/billing?lang=${language}`} />
+        ) : activeWorkspace === "settings" ? (
+          <InlineAppFrame title="Settings" src={`/settings?lang=${language}`} />
         ) : (
         <>
         <div className="flex-1 overflow-y-auto pb-72 md:pb-44 scroll-smooth pb-64 scroll-smooth pb-44 px-4 pb-44 pt-8 md:px-6 md:pt-16">

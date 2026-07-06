@@ -60,6 +60,89 @@ function InlineAppFrame({ title, src }: { title: string; src: string }) {
     </div>
   );
 }
+type AlmaLanguage = "en" | "es";
+
+const almaText = {
+  en: {
+    newChat: "New Chat",
+    search: "Search...",
+    history: "History",
+    edit: "Edit",
+    delete: "Delete",
+    core: "Core",
+    business: "Business",
+    ai: "AI",
+    platform: "Platform",
+    active: "Active",
+    pro: "Pro",
+    home: "Home",
+    planner: "Planner",
+    tasks: "Tasks",
+    notes: "Notes",
+    documents: "Documents",
+    fitness: "Fitness",
+    crm: "CRM",
+    invoices: "Invoices",
+    alma: "ALMA",
+    images: "Images",
+    creativeStudio: "Creative Studio",
+    launchStudio: "Launch Studio",
+    trader: "Trader",
+    marketplace: "Marketplace",
+    billing: "Billing",
+    settings: "Settings",
+    greeting: "Good morning.",
+    identity: "I am ALMA.",
+    subtitle: "Chat, images, documents, code, and automation in one place.",
+    prompt: "Ask ALMA to create, edit, write, or build...",
+    disclaimer: "ALMA can make mistakes. Verify important information.",
+    chipImage: "Create a premium image",
+    chipLogo: "Make a logo",
+    chipAd: "Generate a 16:9 ad",
+    chipCode: "Write code",
+    loading: "{t.loading}"
+  },
+  es: {
+    newChat: "Nuevo Chat",
+    search: "Buscar...",
+    history: "Historial",
+    edit: "Editar",
+    delete: "Borrar",
+    core: "Core",
+    business: "Negocio",
+    ai: "IA",
+    platform: "Plataforma",
+    active: "Activo",
+    pro: "Pro",
+    home: "Inicio",
+    planner: "Planificador",
+    tasks: "Tareas",
+    notes: "Notas",
+    documents: "Documentos",
+    fitness: "Fitness",
+    crm: "CRM",
+    invoices: "Facturas",
+    alma: "ALMA",
+    images: "Imagenes",
+    creativeStudio: "Estudio Creativo",
+    launchStudio: "Launch Studio",
+    trader: "Trader",
+    marketplace: "Marketplace",
+    billing: "Pagos",
+    settings: "Configuracion",
+    greeting: "{t.greeting}",
+    identity: "{t.identity}",
+    subtitle: "{t.subtitle}",
+    prompt: "{t.prompt}",
+    disclaimer: "{t.disclaimer}",
+    chipImage: "{t.chipImage}",
+    chipLogo: "{t.chipLogo}",
+    chipAd: "{t.chipAd}",
+    chipCode: "{t.chipCode}",
+    loading: "Cargando tu espacio..."
+  }
+};
+
 export default function DashboardPage() {
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<any[]>([]);
@@ -74,6 +157,8 @@ export default function DashboardPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState("");
   const [activeWorkspace, setActiveWorkspace] = useState<string>("chat");
+  const [language, setLanguage] = useState<AlmaLanguage>("en");
+  const t = almaText[language];
 
   async function loadHistory() {
     const res = await fetch("/api/conversation/list");
@@ -219,6 +304,11 @@ export default function DashboardPage() {
       setAuthReady(true);
     }
 
+    const savedLanguage = localStorage.getItem("alma_language");
+    if (savedLanguage === "en" || savedLanguage === "es") {
+      setLanguage(savedLanguage);
+    }
+
     checkOnboarding();
   }, []);
 
@@ -234,18 +324,18 @@ export default function DashboardPage() {
 
         <div className="px-3">
           <button onClick={() => { setActiveWorkspace("chat"); setMessages([]); setConversationId(null); setSidebarOpen(false); }} className="mb-4 flex w-full items-center justify-between rounded-xl border border-[#E5E7EB] bg-white px-3 py-2 text-sm font-medium shadow-sm">
-            <span className="flex items-center gap-2"><PlusCircle className="h-4 w-4 text-[#6B7280]" />Nuevo Chat</span>
+            <span className="flex items-center gap-2"><PlusCircle className="h-4 w-4 text-[#6B7280]" />{t.newChat}</span>
             <PenSquare className="h-4 w-4 text-[#6B7280]" />
           </button>
 
           <div className="relative mb-4">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#6B7280]" />
-            <input placeholder="Buscar..." className="w-full rounded-lg border border-[#E5E7EB] bg-transparent py-1.5 pl-9 pr-3 text-sm outline-none focus:border-black" />
+            <input placeholder={t.search} className="w-full rounded-lg border border-[#E5E7EB] bg-transparent py-1.5 pl-9 pr-3 text-sm outline-none focus:border-black" />
           </div>
         </div>
 
         <div className="flex-1 overflow-y-auto pb-72 md:pb-44 scroll-smooth pb-64 scroll-smooth pb-44 px-3 pb-4 text-sm">
-          <h5 className="mb-2 px-2 text-xs font-medium text-[#6B7280]">HISTORIAL</h5>
+          <h5 className="mb-2 px-2 text-xs font-medium text-[#6B7280]">{t.history.toUpperCase()}</h5>
 
           {history.map((chat) => (
             <div key={chat.id} className="group flex items-center gap-1 rounded-lg hover:bg-gray-200">
@@ -278,32 +368,32 @@ export default function DashboardPage() {
                     <div className="mx-2 my-6 h-px bg-[#E5E7EB]" />
 
           <div className="mb-6 space-y-1">
-            <h5 className="mb-2 px-2 text-xs font-medium uppercase tracking-wide text-[#6B7280]">CORE</h5>
+            <h5 className="mb-2 px-2 text-xs font-medium uppercase tracking-wide text-[#6B7280]">{t.core.toUpperCase()}</h5>
 
             <a href="/dashboard/apps" className="flex items-center justify-between rounded-lg px-2 py-1.5 text-[#6B7280] hover:bg-gray-200 hover:text-black">
-              <span className="flex items-center gap-2.5"><Home className="h-4 w-4" />Home</span>
-              <span className="text-[10px] text-green-600">FREE</span>
+              <span className="flex items-center gap-2.5"><Home className="h-4 w-4" />{t.home}</span>
+              <span className="text-[10px] text-green-600">{t.active.toUpperCase()}</span>
             </a>
 
-            <button onClick={() => { setActiveWorkspace("planner"); setSidebarOpen(false); }} className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-[#6B7280] hover:bg-gray-200 hover:text-black"><span className="flex items-center gap-2.5"><Calendar className="h-4 w-4" />Planner</span><span className="text-[10px] text-green-600">FREE</span></button>
+            <button onClick={() => { setActiveWorkspace("planner"); setSidebarOpen(false); }} className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-[#6B7280] hover:bg-gray-200 hover:text-black"><span className="flex items-center gap-2.5"><Calendar className="h-4 w-4" />{t.planner}</span><span className="text-[10px] text-green-600">{t.active.toUpperCase()}</span></button>
 
-            <button onClick={() => { setActiveWorkspace("tasks"); setSidebarOpen(false); }} className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-[#6B7280] hover:bg-gray-200 hover:text-black"><span className="flex items-center gap-2.5"><CheckCircle2 className="h-4 w-4" />Tasks</span><span className="text-[10px] text-green-600">FREE</span></button>
+            <button onClick={() => { setActiveWorkspace("tasks"); setSidebarOpen(false); }} className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-[#6B7280] hover:bg-gray-200 hover:text-black"><span className="flex items-center gap-2.5"><CheckCircle2 className="h-4 w-4" />{t.tasks}</span><span className="text-[10px] text-green-600">{t.active.toUpperCase()}</span></button>
 
-            <button onClick={() => { setActiveWorkspace("notes"); setSidebarOpen(false); }} className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-[#6B7280] hover:bg-gray-200 hover:text-black"><span className="flex items-center gap-2.5"><FileText className="h-4 w-4" />Notes</span><span className="text-[10px] text-green-600">FREE</span></button>
+            <button onClick={() => { setActiveWorkspace("notes"); setSidebarOpen(false); }} className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-[#6B7280] hover:bg-gray-200 hover:text-black"><span className="flex items-center gap-2.5"><FileText className="h-4 w-4" />{t.notes}</span><span className="text-[10px] text-green-600">{t.active.toUpperCase()}</span></button>
 
-            <button onClick={() => { setActiveWorkspace("documents"); setSidebarOpen(false); }} className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-[#6B7280] hover:bg-gray-200 hover:text-black"><span className="flex items-center gap-2.5"><FolderOpen className="h-4 w-4" />Documents</span><span className="text-[10px] text-green-600">FREE</span></button>
+            <button onClick={() => { setActiveWorkspace("documents"); setSidebarOpen(false); }} className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-[#6B7280] hover:bg-gray-200 hover:text-black"><span className="flex items-center gap-2.5"><FolderOpen className="h-4 w-4" />{t.documents}</span><span className="text-[10px] text-green-600">{t.active.toUpperCase()}</span></button>
 
-            <button onClick={() => { setActiveWorkspace("fitness"); setSidebarOpen(false); }} className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-[#6B7280] hover:bg-gray-200 hover:text-black"><span className="flex items-center gap-2.5"><Activity className="h-4 w-4" />Fitness</span><span className="text-[10px] text-green-600">FREE</span></button>
+            <button onClick={() => { setActiveWorkspace("fitness"); setSidebarOpen(false); }} className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-[#6B7280] hover:bg-gray-200 hover:text-black"><span className="flex items-center gap-2.5"><Activity className="h-4 w-4" />{t.fitness}</span><span className="text-[10px] text-green-600">{t.active.toUpperCase()}</span></button>
           </div>
 
           <div className="mx-2 my-6 h-px bg-[#E5E7EB]" />
 
           <div className="mb-6 space-y-1">
-            <h5 className="mb-2 px-2 text-xs font-medium uppercase tracking-wide text-[#6B7280]">BUSINESS</h5>
+            <h5 className="mb-2 px-2 text-xs font-medium uppercase tracking-wide text-[#6B7280]">{t.business.toUpperCase()}</h5>
 
-            <button onClick={() => { setActiveWorkspace("crm"); setSidebarOpen(false); }} className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-[#6B7280] hover:bg-gray-200 hover:text-black"><span className="flex items-center gap-2.5"><Users className="h-4 w-4" />CRM</span><span className="text-[10px] text-green-600">FREE</span></button>
+            <button onClick={() => { setActiveWorkspace("crm"); setSidebarOpen(false); }} className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-[#6B7280] hover:bg-gray-200 hover:text-black"><span className="flex items-center gap-2.5"><Users className="h-4 w-4" />CRM</span><span className="text-[10px] text-green-600">{t.active.toUpperCase()}</span></button>
 
-            <button onClick={() => { setActiveWorkspace("invoicing"); setSidebarOpen(false); }} className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-[#6B7280] hover:bg-gray-200 hover:text-black"><span className="flex items-center gap-2.5"><ReceiptText className="h-4 w-4" />Invoices</span><span className="text-[10px] text-green-600">FREE</span></button>
+            <button onClick={() => { setActiveWorkspace("invoicing"); setSidebarOpen(false); }} className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-[#6B7280] hover:bg-gray-200 hover:text-black"><span className="flex items-center gap-2.5"><ReceiptText className="h-4 w-4" />{t.invoices}</span><span className="text-[10px] text-green-600">{t.active.toUpperCase()}</span></button>
           </div>
 
           <div className="mx-2 my-6 h-px bg-[#E5E7EB]" />
@@ -313,32 +403,32 @@ export default function DashboardPage() {
 
             <button onClick={() => { setActiveWorkspace("chat"); setSidebarOpen(false); }} className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-[#6B7280] hover:bg-gray-200 hover:text-black">
               <span className="flex items-center gap-2.5"><Mic className="h-4 w-4" />ALMA</span>
-              <span className="text-[10px] text-black">PRO</span>
+              <span className="text-[10px] text-black">{t.pro.toUpperCase()}</span>
             </button>
 
-            <button onClick={() => { setActiveWorkspace("images"); setSidebarOpen(false); }} className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-[#6B7280] hover:bg-gray-200 hover:text-black"><span className="flex items-center gap-2.5"><ImageIcon className="h-4 w-4" />Images</span><span className="text-[10px] text-black">PRO</span></button>
+            <button onClick={() => { setActiveWorkspace("images"); setSidebarOpen(false); }} className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-[#6B7280] hover:bg-gray-200 hover:text-black"><span className="flex items-center gap-2.5"><ImageIcon className="h-4 w-4" />{t.images}</span><span className="text-[10px] text-black">{t.pro.toUpperCase()}</span></button>
 
-            <button onClick={() => { setActiveWorkspace("creative"); setSidebarOpen(false); }} className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-[#6B7280] hover:bg-gray-200 hover:text-black"><span className="flex items-center gap-2.5"><Settings className="h-4 w-4" />Creative Studio</span><span className="text-[10px] text-black">PRO</span></button>
+            <button onClick={() => { setActiveWorkspace("creative"); setSidebarOpen(false); }} className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-[#6B7280] hover:bg-gray-200 hover:text-black"><span className="flex items-center gap-2.5"><Settings className="h-4 w-4" />{t.creativeStudio}</span><span className="text-[10px] text-black">{t.pro.toUpperCase()}</span></button>
 
             <button onClick={() => { setActiveWorkspace("launch"); setSidebarOpen(false); }} className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-[#6B7280] hover:bg-gray-200 hover:text-black">
-              <span className="flex items-center gap-2.5"><Rocket className="h-4 w-4" />Launch Studio</span>
-              <span className="text-[10px] text-black">PRO</span>
+              <span className="flex items-center gap-2.5"><Rocket className="h-4 w-4" />{t.launchStudio}</span>
+              <span className="text-[10px] text-black">{t.pro.toUpperCase()}</span>
             </button>
 
             <button onClick={() => { setActiveWorkspace("trader"); setSidebarOpen(false); }} className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-[#6B7280] hover:bg-gray-200 hover:text-black">
-              <span className="flex items-center gap-2.5"><Activity className="h-4 w-4" />Trader</span>
-              <span className="text-[10px] text-black">PRO</span>
+              <span className="flex items-center gap-2.5"><Activity className="h-4 w-4" />{t.trader}</span>
+              <span className="text-[10px] text-black">{t.pro.toUpperCase()}</span>
             </button>
           </div>
 
           <div className="mx-2 my-6 h-px bg-[#E5E7EB]" />
 
           <div className="mb-6 space-y-1">
-            <h5 className="mb-2 px-2 text-xs font-medium uppercase tracking-wide text-[#6B7280]">PLATFORM</h5>
+            <h5 className="mb-2 px-2 text-xs font-medium uppercase tracking-wide text-[#6B7280]">{t.platform.toUpperCase()}</h5>
 
-            <a href="/marketplace" className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[#6B7280] hover:bg-gray-200 hover:text-black"><Store className="h-4 w-4" />Marketplace</a>
-            <a href="/billing" className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[#6B7280] hover:bg-gray-200 hover:text-black"><CreditCard className="h-4 w-4" />Billing</a>
-            <a href="/settings" className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[#6B7280] hover:bg-gray-200 hover:text-black"><Settings className="h-4 w-4" />Settings</a>
+            <a href="/marketplace" className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[#6B7280] hover:bg-gray-200 hover:text-black"><Store className="h-4 w-4" />{t.marketplace}</a>
+            <a href="/billing" className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[#6B7280] hover:bg-gray-200 hover:text-black"><CreditCard className="h-4 w-4" />{t.billing}</a>
+            <a href="/settings" className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[#6B7280] hover:bg-gray-200 hover:text-black"><Settings className="h-4 w-4" />{t.settings}</a>
           </div>
         </div>
       </aside>
@@ -350,7 +440,7 @@ export default function DashboardPage() {
       <main className="flex min-h-screen items-center justify-center bg-white text-black">
         <div className="text-center">
           <div className="text-3xl font-medium tracking-tight">ALMA</div>
-          <div className="mt-2 text-sm text-[#6B7280]">Loading your workspace...</div>
+          <div className="mt-2 text-sm text-[#6B7280]">{t.loading}</div>
         </div>
       </main>
     );
@@ -384,9 +474,9 @@ export default function DashboardPage() {
           <div className="mx-auto max-w-3xl">
             {messages.length === 0 ? (
               <div className="mt-24 text-center md:mt-32">
-                <h1 className="mb-2 text-3xl font-normal tracking-tight md:text-4xl">Buenos dias.</h1>
-                <h2 className="mb-4 text-3xl font-normal tracking-tight md:text-4xl">Soy ALMA.</h2>
-                <p className="text-lg text-[#6B7280]">Chat, imagenes, documentos, codigo y automatizacion en un solo lugar.</p>
+                <h1 className="mb-2 text-3xl font-normal tracking-tight md:text-4xl">{t.greeting}</h1>
+                <h2 className="mb-4 text-3xl font-normal tracking-tight md:text-4xl">{t.identity}</h2>
+                <p className="text-lg text-[#6B7280]">{t.subtitle}</p>
               </div>
             ) : (
               <div className="space-y-5">
@@ -411,7 +501,7 @@ export default function DashboardPage() {
         <div className="absolute bottom-0 w-full bg-gradient-to-t from-white via-white to-transparent px-3 pb-4 pt-10 md:px-4 md:pb-6">
           <div className="mx-auto flex w-full max-w-3xl flex-col gap-3">
             <div className="flex gap-2 overflow-x-auto pb-1 md:flex-wrap">
-              {["Crea una imagen premium", "Haz un logo", "Genera un anuncio 16:9", "Escribe codigo"].map((label) => (
+              {["{t.chipImage}", "{t.chipLogo}", "{t.chipAd}", "{t.chipCode}"].map((label) => (
                 <button key={label} onClick={() => setInput(label)} className="shrink-0 rounded-full border border-[#E5E7EB] bg-[#F7F7F8] px-3 py-1.5 text-xs font-medium text-[#6B7280] hover:text-black">
                   {label}
                 </button>
@@ -419,7 +509,7 @@ export default function DashboardPage() {
             </div>
 
             <div className="relative flex flex-col overflow-hidden rounded-2xl border border-[#E5E7EB] bg-[#F7F7F8] shadow-sm">
-              <textarea value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } }} rows={1} placeholder="Pidele a ALMA crear, editar, escribir o construir..." className="min-h-[118px] max-h-32 w-full resize-none bg-transparent px-4 pt-4 pb-16 pr-14 text-base leading-6 outline-none placeholder:text-gray-400 sm:min-h-[104px] sm:pb-12" />
+              <textarea value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } }} rows={1} placeholder="{t.prompt}" className="min-h-[118px] max-h-32 w-full resize-none bg-transparent px-4 pt-4 pb-16 pr-14 text-base leading-6 outline-none placeholder:text-gray-400 sm:min-h-[104px] sm:pb-12" />
 
               <div className="absolute bottom-4 left-4 flex items-center gap-2">
                 <input ref={fileInputRef} type="file" className="hidden" accept="image/*,.pdf,.docx,.txt,.csv,.xlsx,.xls" onChange={(e) => { const file = e.target.files?.[0]; if (file) analyzeFile(file); }} />
@@ -432,7 +522,7 @@ export default function DashboardPage() {
               <button onClick={sendMessage} disabled={loading} className="absolute bottom-4 right-4 rounded-lg bg-black p-1.5 text-white hover:bg-gray-800 disabled:opacity-40"><ArrowUp className="h-5 w-5" /></button>
             </div>
 
-            <p className="text-center text-[10px] text-gray-400">ALMA puede cometer errores. Verifica informacion importante.</p>
+            <p className="text-center text-[10px] text-gray-400">{t.disclaimer}</p>
           </div>
         </div>
         </>
@@ -441,6 +531,11 @@ export default function DashboardPage() {
     </main>
   );
 }
+
+
+
+
+
 
 
 

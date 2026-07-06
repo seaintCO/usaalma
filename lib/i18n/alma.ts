@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useMemo, useState } from "react";
 
@@ -48,6 +48,7 @@ export function useAlmaLanguage() {
   function setLanguage(next: AlmaLanguage) {
     setLanguageState(next);
     window.localStorage.setItem("alma_language", next);
+    window.dispatchEvent(new CustomEvent("alma-language-change", { detail: next }));
   }
 
   return { language, setLanguage, t: useMemo(() => almaDictionary[language], [language]) };

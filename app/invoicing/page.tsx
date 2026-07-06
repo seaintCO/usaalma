@@ -142,7 +142,7 @@ ${businessName}
   }
 
   return (
-    <main className="min-h-screen bg-[#F7F7F8] px-4 py-8 text-[#111111] md:px-8">
+    <main className="min-h-screen overflow-x-hidden bg-[#F7F7F8] px-4 py-8 text-[#111111] md:px-8">
       <div className="mx-auto max-w-7xl">
         <a href="/dashboard" className="print:hidden text-sm text-[#6B7280] hover:text-black">
           ← Volver a ALMA
@@ -221,11 +221,11 @@ ${businessName}
             <textarea value={terms} onChange={(e) => setTerms(e.target.value)} placeholder="Términos" className="w-full rounded-2xl bg-[#F7F7F8] p-4 outline-none" />
           </section>
 
-          <section id="invoice-preview" className="rounded-[2rem] border border-[#E5E7EB] bg-white p-8 shadow-sm print:rounded-none print:border-0 print:shadow-none">
+          <section id="invoice-preview" className="w-full overflow-hidden rounded-[2rem] border border-[#E5E7EB] bg-white p-5 shadow-sm print:rounded-none print:border-0 print:shadow-none md:p-8">
             <div className="flex flex-col justify-between gap-8 border-b border-[#E5E7EB] pb-8 md:flex-row">
               <div>
                 <div className="text-sm uppercase tracking-[0.25em] text-[#6B7280]">Invoice</div>
-                <h2 className="mt-3 text-4xl font-medium tracking-tight">{invoiceTitle}</h2>
+                <h2 className="mt-3 text-3xl font-medium tracking-tight md:text-4xl">{invoiceTitle}</h2>
                 <p className="mt-2 text-sm text-[#6B7280]">#{invoiceNumber}</p>
               </div>
 
@@ -251,7 +251,7 @@ ${businessName}
             </div>
 
             <div className="py-8">
-              <div className="grid grid-cols-[1fr_80px_120px_120px] border-b border-[#E5E7EB] pb-3 text-xs uppercase tracking-[0.2em] text-[#6B7280]">
+              <div className="grid grid-cols-[minmax(0,1fr)_52px_78px_78px] gap-2 border-b border-[#E5E7EB] pb-3 text-[10px] uppercase tracking-[0.14em] text-[#6B7280] md:grid-cols-[1fr_80px_120px_120px] md:text-xs md:tracking-[0.2em]">
                 <div>Description</div>
                 <div>Qty</div>
                 <div>Rate</div>
@@ -260,10 +260,10 @@ ${businessName}
 
               <div className="divide-y divide-[#E5E7EB]">
                 {items.map((item, index) => (
-                  <div key={index} className="grid grid-cols-[1fr_80px_120px_120px] items-center gap-2 py-4">
-                    <input value={item.description} onChange={(e) => updateItem(index, "description", e.target.value)} className="print:border-0 rounded-xl bg-[#F7F7F8] p-3 outline-none print:bg-white print:p-0" />
-                    <input type="number" value={item.quantity} onChange={(e) => updateItem(index, "quantity", Number(e.target.value))} className="print:border-0 rounded-xl bg-[#F7F7F8] p-3 outline-none print:bg-white print:p-0" />
-                    <input type="number" value={item.rate} onChange={(e) => updateItem(index, "rate", Number(e.target.value))} className="print:border-0 rounded-xl bg-[#F7F7F8] p-3 outline-none print:bg-white print:p-0" />
+                  <div key={index} className="grid grid-cols-[minmax(0,1fr)_52px_78px_78px] items-center gap-2 py-4 md:grid-cols-[1fr_80px_120px_120px]">
+                    <input value={item.description} onChange={(e) => updateItem(index, "description", e.target.value)} className="min-w-0 print:border-0 rounded-xl bg-[#F7F7F8] p-2 text-sm outline-none print:bg-white print:p-0 md:p-3" />
+                    <input type="number" value={item.quantity} onChange={(e) => updateItem(index, "quantity", Number(e.target.value))} className="min-w-0 print:border-0 rounded-xl bg-[#F7F7F8] p-2 text-sm outline-none print:bg-white print:p-0 md:p-3" />
+                    <input type="number" value={item.rate} onChange={(e) => updateItem(index, "rate", Number(e.target.value))} className="min-w-0 print:border-0 rounded-xl bg-[#F7F7F8] p-2 text-sm outline-none print:bg-white print:p-0 md:p-3" />
                     <div className="flex items-center justify-end gap-3">
                       <span>${(Number(item.quantity || 0) * Number(item.rate || 0)).toLocaleString()}</span>
                       <button onClick={() => removeItem(index)} className="print:hidden text-[#6B7280] hover:text-red-500">
@@ -319,6 +319,7 @@ ${businessName}
     </main>
   );
 }
+
 
 
 

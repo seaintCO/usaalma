@@ -370,9 +370,9 @@ export default function DashboardPage() {
             </div>
 
             <div className="relative flex flex-col overflow-hidden rounded-2xl border border-[#E5E7EB] bg-[#F7F7F8] shadow-sm">
-              <textarea value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } }} rows={1} placeholder="Pídele a ALMA crear, editar, escribir o construir..." className="max-h-32 w-full resize-none text-base leading-6 bg-transparent p-4 pb-12 text-base outline-none placeholder:text-gray-400" />
+              <textarea value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } }} rows={1} placeholder="Pídele a ALMA crear, editar, escribir o construir..." className="min-h-[118px] max-h-32 w-full resize-none bg-transparent px-4 pt-4 pb-16 pr-14 text-base leading-6 outline-none placeholder:text-gray-400 sm:min-h-[104px] sm:pb-12" />
 
-              <div className="absolute bottom-3 left-4 flex items-center gap-2">
+              <div className="absolute bottom-4 left-4 flex items-center gap-2">
                 <input ref={fileInputRef} type="file" className="hidden" accept="image/*,.pdf,.docx,.txt,.csv,.xlsx,.xls" onChange={(e) => { const file = e.target.files?.[0]; if (file) analyzeFile(file); }} />
                 <input ref={cameraInputRef} type="file" className="hidden" accept="image/*" capture="environment" onChange={(e) => { const file = e.target.files?.[0]; if (file) analyzeFile(file); }} />
                 <button onClick={() => fileInputRef.current?.click()} className="rounded-md p-1 text-[#6B7280] hover:bg-gray-200 hover:text-black" title="Upload file"><Paperclip className="h-5 w-5" /></button>
@@ -380,7 +380,7 @@ export default function DashboardPage() {
                 <button className="rounded-md p-1 text-[#6B7280] hover:bg-gray-200 hover:text-black"><Mic className="h-5 w-5" /></button>
               </div>
 
-              <button onClick={sendMessage} disabled={loading} className="absolute bottom-3 right-4 rounded-lg bg-black p-1.5 text-white hover:bg-gray-800 disabled:opacity-40"><ArrowUp className="h-5 w-5" /></button>
+              <button onClick={sendMessage} disabled={loading} className="absolute bottom-4 right-4 rounded-lg bg-black p-1.5 text-white hover:bg-gray-800 disabled:opacity-40"><ArrowUp className="h-5 w-5" /></button>
             </div>
 
             <p className="text-center text-[10px] text-gray-400">ALMA puede cometer errores. Verifica información importante.</p>
@@ -392,6 +392,7 @@ export default function DashboardPage() {
     </main>
   );
 }
+
 
 
 

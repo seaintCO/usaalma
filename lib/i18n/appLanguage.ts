@@ -8,20 +8,17 @@ export function useAppLanguage() {
   const [language, setLanguage] = useState<AppLanguage>("en");
 
   useEffect(() => {
-    const sync = () => {
-      const saved = window.localStorage.getItem("alma_language");
-      if (saved === "en" || saved === "es") setLanguage(saved);
-    };
+    const params = new URLSearchParams(window.location.search);
+    const fromUrl = params.get("lang");
+    const saved = window.localStorage.getItem("alma_language");
 
-    sync();
+    if (fromUrl === "en" || fromUrl === "es") {
+      setLanguage(fromUrl);
+      window.localStorage.setItem("alma_language", fromUrl);
+      return;
+    }
 
-    window.addEventListener("storage", sync);
-    window.addEventListener("alma-language-change", sync as EventListener);
-
-    return () => {
-      window.removeEventListener("storage", sync);
-      window.removeEventListener("alma-language-change", sync as EventListener);
-    };
+    if (saved === "en" || saved === "es") setLanguage(saved);
   }, []);
 
   return language;

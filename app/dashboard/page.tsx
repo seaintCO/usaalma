@@ -1,9 +1,9 @@
-"use client";
+﻿"use client";
 
 import {
   ArrowUp, Calendar, CheckCircle2, CreditCard, FileText, FolderOpen,
   Menu, Mic, Paperclip, PenSquare, PlusCircle, ReceiptText,
-  Search, Settings, Store, Users, ImageIcon, Camera, Activity, Rocket, Presentation } from "lucide-react";
+  Search, Settings, Store, Users, ImageIcon, Camera, Activity, Rocket, Presentation, Home } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import LaunchStudioPanel from "./LaunchStudioPanel";
 import TraderPanel from "./TraderPanel";
@@ -13,7 +13,7 @@ const moduleMap:any = {
   tasks: ["Tasks", CheckCircle2, "/tasks"],
   notes: ["Notes", FileText, "/notes"],
   crm: ["CRM", Users, "/crm"],
-  invoicing: ["Facturación", ReceiptText, "/invoicing"],
+  invoicing: ["FacturaciÃ³n", ReceiptText, "/invoicing"],
   documents: ["Documentos", FolderOpen, "/documents"],
   launchStudio: ["Launch Studio", Rocket, "/launch-studio"],
 };
@@ -39,7 +39,7 @@ function renderMessage(content:string) {
           alt="ALMA generated image"
         />
         <p className="text-[#6B7280]">
-          Imagen generada. Puedes pedirme cambios como: â€œhazlo mÃ¡s realistaâ€, â€œen 16:9â€, â€œfondo negroâ€, o â€œestilo anuncio premiumâ€.
+          Imagen generada. Puedes pedirme cambios como: Ã¢â‚¬Å“hazlo mÃƒÂ¡s realistaÃ¢â‚¬Â, Ã¢â‚¬Å“en 16:9Ã¢â‚¬Â, Ã¢â‚¬Å“fondo negroÃ¢â‚¬Â, o Ã¢â‚¬Å“estilo anuncio premiumÃ¢â‚¬Â.
         </p>
       </div>
     );
@@ -250,11 +250,11 @@ export default function DashboardPage() {
                 />
               ) : (
                 <button onClick={() => loadConversation(chat.id)} className="min-w-0 flex-1 truncate px-2 py-1.5 text-left text-[#6B7280] hover:text-black">
-                  {chat.title || "Nueva conversaciÃ³n"}
+                  {chat.title || "Nueva conversaciÃƒÂ³n"}
                 </button>
               )}
 
-              <button onClick={() => { setEditingId(chat.id); setEditingTitle(chat.title || "Nueva conversaciÃ³n"); }} className="hidden px-1 text-xs text-[#6B7280] group-hover:block">
+              <button onClick={() => { setEditingId(chat.id); setEditingTitle(chat.title || "Nueva conversaciÃƒÂ³n"); }} className="hidden px-1 text-xs text-[#6B7280] group-hover:block">
                 Editar
               </button>
               <button onClick={() => deleteConversation(chat.id)} className="hidden px-1 text-xs text-red-500 group-hover:block">
@@ -265,10 +265,10 @@ export default function DashboardPage() {
 
           <div className="mx-2 my-6 h-px bg-[#E5E7EB]" />
 
-          <h5 className="mb-2 px-2 text-xs font-medium text-[#6B7280]">MÓDULOS</h5>
+          <h5 className="mb-2 px-2 text-xs font-medium text-[#6B7280]">MÃ“DULOS</h5>
 
           {installedModules.length === 0 ? (
-            <p className="px-2 py-2 text-xs text-[#6B7280]">Instala MÓDULOS desde Marketplace.</p>
+            <p className="px-2 py-2 text-xs text-[#6B7280]">Instala MÃ“DULOS desde Marketplace.</p>
           ) : (
             installedModules.map((module:any) => {
               const item = moduleMap[module.module_key] || [module.name, Store, "/marketplace"];
@@ -335,9 +335,9 @@ export default function DashboardPage() {
           <div className="mx-auto max-w-3xl">
             {messages.length === 0 ? (
               <div className="mt-24 text-center md:mt-32">
-                <h1 className="mb-2 text-3xl font-normal tracking-tight md:text-4xl">Buenos días.</h1>
+                <h1 className="mb-2 text-3xl font-normal tracking-tight md:text-4xl">Buenos dÃ­as.</h1>
                 <h2 className="mb-4 text-3xl font-normal tracking-tight md:text-4xl">Soy ALMA.</h2>
-                <p className="text-lg text-[#6B7280]">Chat, imágenes, documentos, código y automatización en un solo lugar.</p>
+                <p className="text-lg text-[#6B7280]">Chat, imÃ¡genes, documentos, cÃ³digo y automatizaciÃ³n en un solo lugar.</p>
               </div>
             ) : (
               <div className="space-y-5">
@@ -362,7 +362,7 @@ export default function DashboardPage() {
         <div className="absolute bottom-0 w-full bg-gradient-to-t from-white via-white to-transparent px-3 pb-4 pt-10 md:px-4 md:pb-6">
           <div className="mx-auto flex w-full max-w-3xl flex-col gap-3">
             <div className="flex gap-2 overflow-x-auto pb-1 md:flex-wrap">
-              {["Crea una imagen premium", "Haz un logo", "Genera un anuncio 16:9", "Escribe código"].map((label) => (
+              {["Crea una imagen premium", "Haz un logo", "Genera un anuncio 16:9", "Escribe cÃ³digo"].map((label) => (
                 <button key={label} onClick={() => setInput(label)} className="shrink-0 rounded-full border border-[#E5E7EB] bg-[#F7F7F8] px-3 py-1.5 text-xs font-medium text-[#6B7280] hover:text-black">
                   {label}
                 </button>
@@ -370,7 +370,7 @@ export default function DashboardPage() {
             </div>
 
             <div className="relative flex flex-col overflow-hidden rounded-2xl border border-[#E5E7EB] bg-[#F7F7F8] shadow-sm">
-              <textarea value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } }} rows={1} placeholder="Pídele a ALMA crear, editar, escribir o construir..." className="min-h-[118px] max-h-32 w-full resize-none bg-transparent px-4 pt-4 pb-16 pr-14 text-base leading-6 outline-none placeholder:text-gray-400 sm:min-h-[104px] sm:pb-12" />
+              <textarea value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } }} rows={1} placeholder="PÃ­dele a ALMA crear, editar, escribir o construir..." className="min-h-[118px] max-h-32 w-full resize-none bg-transparent px-4 pt-4 pb-16 pr-14 text-base leading-6 outline-none placeholder:text-gray-400 sm:min-h-[104px] sm:pb-12" />
 
               <div className="absolute bottom-4 left-4 flex items-center gap-2">
                 <input ref={fileInputRef} type="file" className="hidden" accept="image/*,.pdf,.docx,.txt,.csv,.xlsx,.xls" onChange={(e) => { const file = e.target.files?.[0]; if (file) analyzeFile(file); }} />
@@ -383,7 +383,7 @@ export default function DashboardPage() {
               <button onClick={sendMessage} disabled={loading} className="absolute bottom-4 right-4 rounded-lg bg-black p-1.5 text-white hover:bg-gray-800 disabled:opacity-40"><ArrowUp className="h-5 w-5" /></button>
             </div>
 
-            <p className="text-center text-[10px] text-gray-400">ALMA puede cometer errores. Verifica información importante.</p>
+            <p className="text-center text-[10px] text-gray-400">ALMA puede cometer errores. Verifica informaciÃ³n importante.</p>
           </div>
         </div>
         </>
@@ -392,6 +392,8 @@ export default function DashboardPage() {
     </main>
   );
 }
+
+
 
 
 

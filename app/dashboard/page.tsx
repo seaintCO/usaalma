@@ -13,7 +13,7 @@ const moduleMap:any = {
   tasks: ["Tasks", CheckCircle2, "/tasks"],
   notes: ["Notes", FileText, "/notes"],
   crm: ["CRM", Users, "/crm"],
-  invoicing: ["FacturaciÃ³n", ReceiptText, "/invoicing"],
+  invoicing: ["Invoices", ReceiptText, "/invoicing"],
   documents: ["Documentos", FolderOpen, "/documents"],
   launchStudio: ["Launch Studio", Rocket, "/launch-studio"],
 };
@@ -57,7 +57,7 @@ export default function DashboardPage() {
   const cameraInputRef = useRef<HTMLInputElement | null>(null);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [history, setHistory] = useState<any[]>([]);
-  const [installedModules, setInstalledModules] = useState<any[]>([]);
+  const [installedCORE, setInstalledCORE] = useState<any[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState("");
@@ -69,10 +69,10 @@ export default function DashboardPage() {
     if (Array.isArray(data)) setHistory(data);
   }
 
-  async function loadInstalledModules() {
-    const res = await fetch("/api/modules/list");
+  async function loadInstalledCORE() {
+    const res = await fetch("/api/CORE/list");
     const data = await res.json();
-    if (Array.isArray(data)) setInstalledModules(data.filter((m:any) => m.installed));
+    if (Array.isArray(data)) setInstalledCORE(data.filter((m:any) => m.installed));
   }
 
   async function loadConversation(id:string) {
@@ -203,7 +203,7 @@ export default function DashboardPage() {
       }
 
       loadHistory();
-      loadInstalledModules();
+      loadInstalledCORE();
       setAuthReady(true);
     }
 
@@ -265,12 +265,12 @@ export default function DashboardPage() {
 
           <div className="mx-2 my-6 h-px bg-[#E5E7EB]" />
 
-          <h5 className="mb-2 px-2 text-xs font-medium text-[#6B7280]">MÃ“DULOS</h5>
+          <h5 className="mb-2 px-2 text-xs font-medium text-[#6B7280]">CORE</h5>
 
-          {installedModules.length === 0 ? (
-            <p className="px-2 py-2 text-xs text-[#6B7280]">Instala MÃ“DULOS desde Marketplace.</p>
+          {installedCORE.length === 0 ? (
+            <p className="px-2 py-2 text-xs text-[#6B7280]">Instala CORE desde Marketplace.</p>
           ) : (
-            installedModules.map((module:any) => {
+            installedCORE.map((module:any) => {
               const item = moduleMap[module.module_key] || [module.name, Store, "/marketplace"];
               const Icon = item[1];
               return (
@@ -285,7 +285,7 @@ export default function DashboardPage() {
           <div className="mx-2 my-6 h-px bg-[#E5E7EB]" />
 
           <a href="/fitness" className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[#6B7280] hover:bg-gray-200 hover:text-black"><Activity className="h-4 w-4" />Fitness</a>
-          <button onClick={() => { setActiveWorkspace("trader"); setSidebarOpen(false); }} className="flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left text-[#6B7280] hover:bg-gray-200 hover:text-black"><Activity className="h-4 w-4" />ALMA Trader</button>
+          <button onClick={() => { setActiveWorkspace("trader"); setSidebarOpen(false); }} className="flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left text-[#6B7280] hover:bg-gray-200 hover:text-black"><Activity className="h-4 w-4" />Trader</button>
           <a href="/images" className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[#6B7280] hover:bg-gray-200 hover:text-black"><ImageIcon className="h-4 w-4" />Images</a>
           <a href="/creative" className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[#6B7280] hover:bg-gray-200 hover:text-black"><Settings className="h-4 w-4" />Creative Studio</a>
           <button onClick={() => { setActiveWorkspace("launch"); setSidebarOpen(false); }} className="flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left text-[#6B7280] hover:bg-gray-200 hover:text-black"><Rocket className="h-4 w-4" />Launch Studio</button>
@@ -335,9 +335,9 @@ export default function DashboardPage() {
           <div className="mx-auto max-w-3xl">
             {messages.length === 0 ? (
               <div className="mt-24 text-center md:mt-32">
-                <h1 className="mb-2 text-3xl font-normal tracking-tight md:text-4xl">Buenos dÃ­as.</h1>
+                <h1 className="mb-2 text-3xl font-normal tracking-tight md:text-4xl">Buenos dias.</h1>
                 <h2 className="mb-4 text-3xl font-normal tracking-tight md:text-4xl">Soy ALMA.</h2>
-                <p className="text-lg text-[#6B7280]">Chat, imÃ¡genes, documentos, cÃ³digo y automatizaciÃ³n en un solo lugar.</p>
+                <p className="text-lg text-[#6B7280]">Chat, imagenes, documentos, codigo y automatizacion en un solo lugar.</p>
               </div>
             ) : (
               <div className="space-y-5">
@@ -362,7 +362,7 @@ export default function DashboardPage() {
         <div className="absolute bottom-0 w-full bg-gradient-to-t from-white via-white to-transparent px-3 pb-4 pt-10 md:px-4 md:pb-6">
           <div className="mx-auto flex w-full max-w-3xl flex-col gap-3">
             <div className="flex gap-2 overflow-x-auto pb-1 md:flex-wrap">
-              {["Crea una imagen premium", "Haz un logo", "Genera un anuncio 16:9", "Escribe cÃ³digo"].map((label) => (
+              {["Crea una imagen premium", "Haz un logo", "Genera un anuncio 16:9", "Escribe codigo"].map((label) => (
                 <button key={label} onClick={() => setInput(label)} className="shrink-0 rounded-full border border-[#E5E7EB] bg-[#F7F7F8] px-3 py-1.5 text-xs font-medium text-[#6B7280] hover:text-black">
                   {label}
                 </button>
@@ -370,7 +370,7 @@ export default function DashboardPage() {
             </div>
 
             <div className="relative flex flex-col overflow-hidden rounded-2xl border border-[#E5E7EB] bg-[#F7F7F8] shadow-sm">
-              <textarea value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } }} rows={1} placeholder="PÃ­dele a ALMA crear, editar, escribir o construir..." className="min-h-[118px] max-h-32 w-full resize-none bg-transparent px-4 pt-4 pb-16 pr-14 text-base leading-6 outline-none placeholder:text-gray-400 sm:min-h-[104px] sm:pb-12" />
+              <textarea value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } }} rows={1} placeholder="Pidele a ALMA crear, editar, escribir o construir..." className="min-h-[118px] max-h-32 w-full resize-none bg-transparent px-4 pt-4 pb-16 pr-14 text-base leading-6 outline-none placeholder:text-gray-400 sm:min-h-[104px] sm:pb-12" />
 
               <div className="absolute bottom-4 left-4 flex items-center gap-2">
                 <input ref={fileInputRef} type="file" className="hidden" accept="image/*,.pdf,.docx,.txt,.csv,.xlsx,.xls" onChange={(e) => { const file = e.target.files?.[0]; if (file) analyzeFile(file); }} />
@@ -383,7 +383,7 @@ export default function DashboardPage() {
               <button onClick={sendMessage} disabled={loading} className="absolute bottom-4 right-4 rounded-lg bg-black p-1.5 text-white hover:bg-gray-800 disabled:opacity-40"><ArrowUp className="h-5 w-5" /></button>
             </div>
 
-            <p className="text-center text-[10px] text-gray-400">ALMA puede cometer errores. Verifica informaciÃ³n importante.</p>
+            <p className="text-center text-[10px] text-gray-400">ALMA puede cometer errores. Verifica informacion importante.</p>
           </div>
         </div>
         </>
@@ -392,6 +392,9 @@ export default function DashboardPage() {
     </main>
   );
 }
+
+
+
 
 
 

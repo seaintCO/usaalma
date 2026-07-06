@@ -55,7 +55,7 @@ function InlineAppFrame({ title, src }: { title: string; src: string }) {
       <iframe
         title={title}
         src={src}
-        className="h-full min-h-screen w-full border-0 bg-[#F7F7F8]"
+        key={`${src}-${title}`} className="h-full min-h-screen w-full border-0 bg-[#F7F7F8]"
       />
     </div>
   );
@@ -314,6 +314,13 @@ export default function DashboardPage() {
     const activeBadge = <span className="text-[10px] font-medium text-green-600">{t.active.toUpperCase()}</span>;
     const proBadge = <span className="text-[10px] font-medium text-black">{t.pro.toUpperCase()}</span>;
 
+    const navClass = (key: string) =>
+      `flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left transition ${
+        activeWorkspace === key
+          ? "bg-gray-200 text-black"
+          : "text-[#6B7280] hover:bg-gray-200 hover:text-black"
+      }`;
+
     return (
       <aside className="flex h-full w-72 flex-col border-r border-[#E5E7EB] bg-[#F7F7F8] md:w-64">
         <div className="px-5 pb-4 pt-5">
@@ -377,12 +384,12 @@ export default function DashboardPage() {
           <div className="mb-6 space-y-1">
             <h5 className="mb-2 px-2 text-xs font-medium uppercase tracking-wide text-[#6B7280]">{t.core}</h5>
 
-            <button onClick={() => { setActiveWorkspace("apps"); setSidebarOpen(false); }} className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-[#6B7280] hover:bg-gray-200 hover:text-black"><span className="flex items-center gap-2.5"><Home className="h-4 w-4" />{t.home}</span>{activeBadge}</button>
-            <button onClick={() => { setActiveWorkspace("planner"); setSidebarOpen(false); }} className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-[#6B7280] hover:bg-gray-200 hover:text-black"><span className="flex items-center gap-2.5"><Calendar className="h-4 w-4" />{t.planner}</span>{activeBadge}</button>
-            <button onClick={() => { setActiveWorkspace("tasks"); setSidebarOpen(false); }} className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-[#6B7280] hover:bg-gray-200 hover:text-black"><span className="flex items-center gap-2.5"><CheckCircle2 className="h-4 w-4" />{t.tasks}</span>{activeBadge}</button>
-            <button onClick={() => { setActiveWorkspace("notes"); setSidebarOpen(false); }} className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-[#6B7280] hover:bg-gray-200 hover:text-black"><span className="flex items-center gap-2.5"><FileText className="h-4 w-4" />{t.notes}</span>{activeBadge}</button>
-            <button onClick={() => { setActiveWorkspace("documents"); setSidebarOpen(false); }} className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-[#6B7280] hover:bg-gray-200 hover:text-black"><span className="flex items-center gap-2.5"><FolderOpen className="h-4 w-4" />{t.documents}</span>{activeBadge}</button>
-            <button onClick={() => { setActiveWorkspace("fitness"); setSidebarOpen(false); }} className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-[#6B7280] hover:bg-gray-200 hover:text-black"><span className="flex items-center gap-2.5"><Activity className="h-4 w-4" />{t.fitness}</span>{activeBadge}</button>
+            <button onClick={() => { setActiveWorkspace("apps"); setSidebarOpen(false); }} className={navClass("apps")}><span className="flex items-center gap-2.5"><Home className="h-4 w-4" />{t.home}</span>{activeBadge}</button>
+            <button onClick={() => { setActiveWorkspace("planner"); setSidebarOpen(false); }} className={navClass("planner")}><span className="flex items-center gap-2.5"><Calendar className="h-4 w-4" />{t.planner}</span>{activeBadge}</button>
+            <button onClick={() => { setActiveWorkspace("tasks"); setSidebarOpen(false); }} className={navClass("tasks")}><span className="flex items-center gap-2.5"><CheckCircle2 className="h-4 w-4" />{t.tasks}</span>{activeBadge}</button>
+            <button onClick={() => { setActiveWorkspace("notes"); setSidebarOpen(false); }} className={navClass("notes")}><span className="flex items-center gap-2.5"><FileText className="h-4 w-4" />{t.notes}</span>{activeBadge}</button>
+            <button onClick={() => { setActiveWorkspace("documents"); setSidebarOpen(false); }} className={navClass("documents")}><span className="flex items-center gap-2.5"><FolderOpen className="h-4 w-4" />{t.documents}</span>{activeBadge}</button>
+            <button onClick={() => { setActiveWorkspace("fitness"); setSidebarOpen(false); }} className={navClass("fitness")}><span className="flex items-center gap-2.5"><Activity className="h-4 w-4" />{t.fitness}</span>{activeBadge}</button>
           </div>
 
           <div className="mx-2 my-6 h-px bg-[#E5E7EB]" />
@@ -390,8 +397,8 @@ export default function DashboardPage() {
           <div className="mb-6 space-y-1">
             <h5 className="mb-2 px-2 text-xs font-medium uppercase tracking-wide text-[#6B7280]">{t.business}</h5>
 
-            <button onClick={() => { setActiveWorkspace("crm"); setSidebarOpen(false); }} className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-[#6B7280] hover:bg-gray-200 hover:text-black"><span className="flex items-center gap-2.5"><Users className="h-4 w-4" />{t.crm}</span>{activeBadge}</button>
-            <button onClick={() => { setActiveWorkspace("invoicing"); setSidebarOpen(false); }} className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-[#6B7280] hover:bg-gray-200 hover:text-black"><span className="flex items-center gap-2.5"><ReceiptText className="h-4 w-4" />{t.invoices}</span>{activeBadge}</button>
+            <button onClick={() => { setActiveWorkspace("crm"); setSidebarOpen(false); }} className={navClass("crm")}><span className="flex items-center gap-2.5"><Users className="h-4 w-4" />{t.crm}</span>{activeBadge}</button>
+            <button onClick={() => { setActiveWorkspace("invoicing"); setSidebarOpen(false); }} className={navClass("invoicing")}><span className="flex items-center gap-2.5"><ReceiptText className="h-4 w-4" />{t.invoices}</span>{activeBadge}</button>
           </div>
 
           <div className="mx-2 my-6 h-px bg-[#E5E7EB]" />
@@ -399,11 +406,11 @@ export default function DashboardPage() {
           <div className="mb-6 space-y-1">
             <h5 className="mb-2 px-2 text-xs font-medium uppercase tracking-wide text-[#6B7280]">{t.ai}</h5>
 
-            <button onClick={() => { setActiveWorkspace("chat"); setSidebarOpen(false); }} className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-[#6B7280] hover:bg-gray-200 hover:text-black"><span className="flex items-center gap-2.5"><Mic className="h-4 w-4" />{t.alma}</span>{proBadge}</button>
-            <button onClick={() => { setActiveWorkspace("images"); setSidebarOpen(false); }} className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-[#6B7280] hover:bg-gray-200 hover:text-black"><span className="flex items-center gap-2.5"><ImageIcon className="h-4 w-4" />{t.images}</span>{proBadge}</button>
-            <button onClick={() => { setActiveWorkspace("creative"); setSidebarOpen(false); }} className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-[#6B7280] hover:bg-gray-200 hover:text-black"><span className="flex items-center gap-2.5"><Settings className="h-4 w-4" />{t.creativeStudio}</span>{proBadge}</button>
-            <button onClick={() => { setActiveWorkspace("launch"); setSidebarOpen(false); }} className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-[#6B7280] hover:bg-gray-200 hover:text-black"><span className="flex items-center gap-2.5"><Rocket className="h-4 w-4" />{t.launchStudio}</span>{proBadge}</button>
-            <button onClick={() => { setActiveWorkspace("trader"); setSidebarOpen(false); }} className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-[#6B7280] hover:bg-gray-200 hover:text-black"><span className="flex items-center gap-2.5"><Activity className="h-4 w-4" />{t.trader}</span>{proBadge}</button>
+            <button onClick={() => { setActiveWorkspace("chat"); setSidebarOpen(false); }} className={navClass("chat")}><span className="flex items-center gap-2.5"><Mic className="h-4 w-4" />{t.alma}</span>{proBadge}</button>
+            <button onClick={() => { setActiveWorkspace("images"); setSidebarOpen(false); }} className={navClass("images")}><span className="flex items-center gap-2.5"><ImageIcon className="h-4 w-4" />{t.images}</span>{proBadge}</button>
+            <button onClick={() => { setActiveWorkspace("creative"); setSidebarOpen(false); }} className={navClass("creative")}><span className="flex items-center gap-2.5"><Settings className="h-4 w-4" />{t.creativeStudio}</span>{proBadge}</button>
+            <button onClick={() => { setActiveWorkspace("launch"); setSidebarOpen(false); }} className={navClass("launch")}><span className="flex items-center gap-2.5"><Rocket className="h-4 w-4" />{t.launchStudio}</span>{proBadge}</button>
+            <button onClick={() => { setActiveWorkspace("trader"); setSidebarOpen(false); }} className={navClass("trader")}><span className="flex items-center gap-2.5"><Activity className="h-4 w-4" />{t.trader}</span>{proBadge}</button>
           </div>
 
           <div className="mx-2 my-6 h-px bg-[#E5E7EB]" />
@@ -411,9 +418,9 @@ export default function DashboardPage() {
           <div className="mb-6 space-y-1">
             <h5 className="mb-2 px-2 text-xs font-medium uppercase tracking-wide text-[#6B7280]">{t.platform}</h5>
 
-            <button onClick={() => { setActiveWorkspace("marketplace"); setSidebarOpen(false); }} className="flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left text-[#6B7280] hover:bg-gray-200 hover:text-black"><Store className="h-4 w-4" />{t.marketplace}</button>
-            <button onClick={() => { setActiveWorkspace("billing"); setSidebarOpen(false); }} className="flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left text-[#6B7280] hover:bg-gray-200 hover:text-black"><CreditCard className="h-4 w-4" />{t.billing}</button>
-            <button onClick={() => { setActiveWorkspace("settings"); setSidebarOpen(false); }} className="flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left text-[#6B7280] hover:bg-gray-200 hover:text-black"><Settings className="h-4 w-4" />{t.settings}</button>
+            <button onClick={() => { setActiveWorkspace("marketplace"); setSidebarOpen(false); }} className={activeWorkspace === "marketplace" ? "flex w-full items-center gap-2.5 rounded-lg bg-gray-200 px-2 py-1.5 text-left text-black" : "flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left text-[#6B7280] hover:bg-gray-200 hover:text-black"}><Store className="h-4 w-4" />{t.marketplace}</button>
+            <button onClick={() => { setActiveWorkspace("billing"); setSidebarOpen(false); }} className={activeWorkspace === "billing" ? "flex w-full items-center gap-2.5 rounded-lg bg-gray-200 px-2 py-1.5 text-left text-black" : "flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left text-[#6B7280] hover:bg-gray-200 hover:text-black"}><CreditCard className="h-4 w-4" />{t.billing}</button>
+            <button onClick={() => { setActiveWorkspace("settings"); setSidebarOpen(false); }} className={activeWorkspace === "settings" ? "flex w-full items-center gap-2.5 rounded-lg bg-gray-200 px-2 py-1.5 text-left text-black" : "flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left text-[#6B7280] hover:bg-gray-200 hover:text-black"}><Settings className="h-4 w-4" />{t.settings}</button>
           </div>
         </div>
       </aside>

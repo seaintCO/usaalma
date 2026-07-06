@@ -64,11 +64,10 @@ type AlmaLanguage = "en" | "es";
 
 const almaText = {
   en: {
+    language: "Language",
     newChat: "New Chat",
     search: "Search...",
     history: "History",
-    edit: "Edit",
-    delete: "Delete",
     core: "Core",
     business: "Business",
     ai: "AI",
@@ -100,14 +99,13 @@ const almaText = {
     chipLogo: "Make a logo",
     chipAd: "Generate a 16:9 ad",
     chipCode: "Write code",
-    loading: "{t.loading}"
+    loading: "Loading your workspace..."
   },
   es: {
+    language: "Idioma",
     newChat: "Nuevo Chat",
     search: "Buscar...",
     history: "Historial",
-    edit: "Editar",
-    delete: "Borrar",
     core: "Core",
     business: "Negocio",
     ai: "IA",
@@ -118,7 +116,7 @@ const almaText = {
     planner: "Planificador",
     tasks: "Tareas",
     notes: "Notas",
-    documents: "Documents",
+    documents: "Documentos",
     fitness: "Fitness",
     crm: "CRM",
     invoices: "Facturas",
@@ -130,15 +128,15 @@ const almaText = {
     marketplace: "Marketplace",
     billing: "Pagos",
     settings: "Configuracion",
-    greeting: "{t.greeting}",
-    identity: "{t.identity}",
-    subtitle: "{t.subtitle}",
-    prompt: "{t.prompt}",
-    disclaimer: "{t.disclaimer}",
-    chipImage: "{t.chipImage}",
-    chipLogo: "{t.chipLogo}",
-    chipAd: "{t.chipAd}",
-    chipCode: "{t.chipCode}",
+    greeting: "Buenos dias.",
+    identity: "Soy ALMA.",
+    subtitle: "Chat, imagenes, documentos, codigo y automatizacion en un solo lugar.",
+    prompt: "Pidele a ALMA crear, editar, escribir o construir...",
+    disclaimer: "ALMA puede cometer errores. Verifica informacion importante.",
+    chipImage: "Crea una imagen premium",
+    chipLogo: "Haz un logo",
+    chipAd: "Genera un anuncio 16:9",
+    chipCode: "Escribe codigo",
     loading: "Cargando tu espacio..."
   }
 };
@@ -515,7 +513,7 @@ export default function DashboardPage() {
         <div className="absolute bottom-0 w-full bg-gradient-to-t from-white via-white to-transparent px-3 pb-4 pt-10 md:px-4 md:pb-6">
           <div className="mx-auto flex w-full max-w-3xl flex-col gap-3">
             <div className="flex gap-2 overflow-x-auto pb-1 md:flex-wrap">
-              {["{t.chipImage}", "{t.chipLogo}", "{t.chipAd}", "{t.chipCode}"].map((label) => (
+              {[t.chipImage, t.chipLogo, t.chipAd, t.chipCode].map((label) => (
                 <button key={label} onClick={() => setInput(label)} className="shrink-0 rounded-full border border-[#E5E7EB] bg-[#F7F7F8] px-3 py-1.5 text-xs font-medium text-[#6B7280] hover:text-black">
                   {label}
                 </button>
@@ -523,7 +521,7 @@ export default function DashboardPage() {
             </div>
 
             <div className="relative flex flex-col overflow-hidden rounded-2xl border border-[#E5E7EB] bg-[#F7F7F8] shadow-sm">
-              <textarea value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } }} rows={1} placeholder="{t.prompt}" className="min-h-[118px] max-h-32 w-full resize-none bg-transparent px-4 pt-4 pb-16 pr-14 text-base leading-6 outline-none placeholder:text-gray-400 sm:min-h-[104px] sm:pb-12" />
+              <textarea value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } }} rows={1} placeholder={t.prompt} className="min-h-[118px] max-h-32 w-full resize-none bg-transparent px-4 pt-4 pb-16 pr-14 text-base leading-6 outline-none placeholder:text-gray-400 sm:min-h-[104px] sm:pb-12" />
 
               <div className="absolute bottom-4 left-4 flex items-center gap-2">
                 <input ref={fileInputRef} type="file" className="hidden" accept="image/*,.pdf,.docx,.txt,.csv,.xlsx,.xls" onChange={(e) => { const file = e.target.files?.[0]; if (file) analyzeFile(file); }} />

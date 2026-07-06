@@ -263,34 +263,98 @@ export default function DashboardPage() {
             </div>
           ))}
 
+                    <div className="mx-2 my-6 h-px bg-[#E5E7EB]" />
+
+          <div className="mb-6 space-y-1">
+            <h5 className="mb-2 px-2 text-xs font-medium uppercase tracking-wide text-[#6B7280]">CORE</h5>
+
+            <a href="/dashboard/apps" className="flex items-center justify-between rounded-lg px-2 py-1.5 text-[#6B7280] hover:bg-gray-200 hover:text-black">
+              <span className="flex items-center gap-2.5"><Home className="h-4 w-4" />Home</span>
+              <span className="text-[10px] text-green-600">FREE</span>
+            </a>
+
+            <a href="/planner" className="flex items-center justify-between rounded-lg px-2 py-1.5 text-[#6B7280] hover:bg-gray-200 hover:text-black">
+              <span className="flex items-center gap-2.5"><Calendar className="h-4 w-4" />Planner</span>
+              <span className="text-[10px] text-green-600">FREE</span>
+            </a>
+
+            <a href="/tasks" className="flex items-center justify-between rounded-lg px-2 py-1.5 text-[#6B7280] hover:bg-gray-200 hover:text-black">
+              <span className="flex items-center gap-2.5"><CheckCircle2 className="h-4 w-4" />Tasks</span>
+              <span className="text-[10px] text-green-600">FREE</span>
+            </a>
+
+            <a href="/notes" className="flex items-center justify-between rounded-lg px-2 py-1.5 text-[#6B7280] hover:bg-gray-200 hover:text-black">
+              <span className="flex items-center gap-2.5"><FileText className="h-4 w-4" />Notes</span>
+              <span className="text-[10px] text-green-600">FREE</span>
+            </a>
+
+            <a href="/documents" className="flex items-center justify-between rounded-lg px-2 py-1.5 text-[#6B7280] hover:bg-gray-200 hover:text-black">
+              <span className="flex items-center gap-2.5"><FolderOpen className="h-4 w-4" />Documents</span>
+              <span className="text-[10px] text-green-600">FREE</span>
+            </a>
+
+            <a href="/fitness" className="flex items-center justify-between rounded-lg px-2 py-1.5 text-[#6B7280] hover:bg-gray-200 hover:text-black">
+              <span className="flex items-center gap-2.5"><Activity className="h-4 w-4" />Fitness</span>
+              <span className="text-[10px] text-green-600">FREE</span>
+            </a>
+          </div>
+
           <div className="mx-2 my-6 h-px bg-[#E5E7EB]" />
 
-          <h5 className="mb-2 px-2 text-xs font-medium text-[#6B7280]">CORE</h5>
+          <div className="mb-6 space-y-1">
+            <h5 className="mb-2 px-2 text-xs font-medium uppercase tracking-wide text-[#6B7280]">BUSINESS</h5>
 
-          {installedCORE.length === 0 ? (
-            <p className="px-2 py-2 text-xs text-[#6B7280]">Instala CORE desde Marketplace.</p>
-          ) : (
-            installedCORE.map((module:any) => {
-              const item = moduleMap[module.module_key] || [module.name, Store, "/marketplace"];
-              const Icon = item[1];
-              return (
-                <a key={module.module_key} href={item[2]} className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[#6B7280] hover:bg-gray-200 hover:text-black">
-                  <Icon className="h-4 w-4" />
-                  {item[0]}
-                </a>
-              );
-            })
-          )}
+            <a href="/crm" className="flex items-center justify-between rounded-lg px-2 py-1.5 text-[#6B7280] hover:bg-gray-200 hover:text-black">
+              <span className="flex items-center gap-2.5"><Users className="h-4 w-4" />CRM</span>
+              <span className="text-[10px] text-green-600">FREE</span>
+            </a>
+
+            <a href="/invoicing" className="flex items-center justify-between rounded-lg px-2 py-1.5 text-[#6B7280] hover:bg-gray-200 hover:text-black">
+              <span className="flex items-center gap-2.5"><ReceiptText className="h-4 w-4" />Invoices</span>
+              <span className="text-[10px] text-green-600">FREE</span>
+            </a>
+          </div>
 
           <div className="mx-2 my-6 h-px bg-[#E5E7EB]" />
 
-          <a href="/fitness" className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[#6B7280] hover:bg-gray-200 hover:text-black"><Activity className="h-4 w-4" />Fitness</a>
-          <button onClick={() => { setActiveWorkspace("trader"); setSidebarOpen(false); }} className="flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left text-[#6B7280] hover:bg-gray-200 hover:text-black"><Activity className="h-4 w-4" />Trader</button>
-          <a href="/images" className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[#6B7280] hover:bg-gray-200 hover:text-black"><ImageIcon className="h-4 w-4" />Images</a>
-          <a href="/creative" className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[#6B7280] hover:bg-gray-200 hover:text-black"><Settings className="h-4 w-4" />Creative Studio</a>
-          <button onClick={() => { setActiveWorkspace("launch"); setSidebarOpen(false); }} className="flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left text-[#6B7280] hover:bg-gray-200 hover:text-black"><Rocket className="h-4 w-4" />Launch Studio</button>
-          <a href="/marketplace" className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[#6B7280] hover:bg-gray-200 hover:text-black"><Store className="h-4 w-4" />Marketplace</a>
-          <a href="/billing" className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[#6B7280] hover:bg-gray-200 hover:text-black"><CreditCard className="h-4 w-4" />Billing</a>
+          <div className="mb-6 space-y-1">
+            <h5 className="mb-2 px-2 text-xs font-medium uppercase tracking-wide text-[#6B7280]">AI</h5>
+
+            <button onClick={() => { setActiveWorkspace("chat"); setSidebarOpen(false); }} className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-[#6B7280] hover:bg-gray-200 hover:text-black">
+              <span className="flex items-center gap-2.5"><Mic className="h-4 w-4" />ALMA</span>
+              <span className="text-[10px] text-black">PRO</span>
+            </button>
+
+            <a href="/images" className="flex items-center justify-between rounded-lg px-2 py-1.5 text-[#6B7280] hover:bg-gray-200 hover:text-black">
+              <span className="flex items-center gap-2.5"><ImageIcon className="h-4 w-4" />Images</span>
+              <span className="text-[10px] text-black">PRO</span>
+            </a>
+
+            <a href="/creative" className="flex items-center justify-between rounded-lg px-2 py-1.5 text-[#6B7280] hover:bg-gray-200 hover:text-black">
+              <span className="flex items-center gap-2.5"><Settings className="h-4 w-4" />Creative Studio</span>
+              <span className="text-[10px] text-black">PRO</span>
+            </a>
+
+            <button onClick={() => { setActiveWorkspace("launch"); setSidebarOpen(false); }} className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-[#6B7280] hover:bg-gray-200 hover:text-black">
+              <span className="flex items-center gap-2.5"><Rocket className="h-4 w-4" />Launch Studio</span>
+              <span className="text-[10px] text-black">PRO</span>
+            </button>
+
+            <button onClick={() => { setActiveWorkspace("trader"); setSidebarOpen(false); }} className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-[#6B7280] hover:bg-gray-200 hover:text-black">
+              <span className="flex items-center gap-2.5"><Activity className="h-4 w-4" />Trader</span>
+              <span className="text-[10px] text-black">PRO</span>
+            </button>
+          </div>
+
+          <div className="mx-2 my-6 h-px bg-[#E5E7EB]" />
+
+          <div className="mb-6 space-y-1">
+            <h5 className="mb-2 px-2 text-xs font-medium uppercase tracking-wide text-[#6B7280]">PLATFORM</h5>
+
+            <a href="/marketplace" className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[#6B7280] hover:bg-gray-200 hover:text-black"><Store className="h-4 w-4" />Marketplace</a>
+            <a href="/billing" className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[#6B7280] hover:bg-gray-200 hover:text-black"><CreditCard className="h-4 w-4" />Billing</a>
+            <a href="/settings" className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[#6B7280] hover:bg-gray-200 hover:text-black"><Settings className="h-4 w-4" />Settings</a>
+          </div>
         </div>
       </aside>
     );
@@ -392,6 +456,7 @@ export default function DashboardPage() {
     </main>
   );
 }
+
 
 
 

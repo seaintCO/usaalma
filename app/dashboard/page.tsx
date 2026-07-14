@@ -200,6 +200,25 @@ export default function DashboardPage() {
     }
   }
 
+  function selectConversation(id: string, replace = false) {
+    const url = new URL(window.location.href);
+    url.searchParams.set("conversation", id);
+    window.history[replace ? "replaceState" : "pushState"]({}, "", url);
+    void loadConversation(id);
+  }
+
+  function startNewChat() {
+    setStreamEpoch((value) => value + 1);
+    conversationRequest.current?.abort();
+    const url = new URL(window.location.href);
+    url.searchParams.delete("conversation");
+    window.history.pushState({}, "", url);
+    setActiveWorkspace("chat");
+    setMessages([]);
+    setConversationId(null);
+    setSidebarOpen(false);
+  }
+
   async function renameConversation(id:string) {
     if (!editingTitle.trim()) return;
     await fetch("/api/conversation/rename", {
@@ -277,6 +296,14 @@ export default function DashboardPage() {
     }
 
     checkOnboarding();
+    const syncConversation = () => {
+      const id = new URLSearchParams(window.location.search).get("conversation");
+      if (id) void loadConversation(id);
+      else { conversationRequest.current?.abort(); setConversationId(null); setMessages([]); }
+    };
+    syncConversation();
+    window.addEventListener("popstate", syncConversation);
+    return () => window.removeEventListener("popstate", syncConversation);
   }, []);
 
   function Sidebar() {
@@ -321,7 +348,7 @@ export default function DashboardPage() {
 
         <div className="px-3">
           <button
-            onClick={() => { setStreamEpoch((value) => value + 1); setActiveWorkspace("chat"); setMessages([]); setConversationId(null); setSidebarOpen(false); }}
+            onClick={startNewChat}
             className="mb-4 flex w-full items-center justify-between rounded-xl border border-[#E5E7EB] bg-white px-3 py-2 text-sm font-medium shadow-sm"
           >
             <span className="flex items-center gap-2"><PlusCircle className="h-4 w-4 text-[#6B7280]" />{t.newChat}</span>
@@ -339,7 +366,7 @@ export default function DashboardPage() {
 
           {history.map((chat) => (
             <div key={chat.id} className="group flex items-center gap-1 rounded-lg hover:bg-gray-200">
-              <button onClick={() => loadConversation(chat.id)} className="min-w-0 flex-1 truncate px-2 py-1.5 text-left text-[#6B7280] hover:text-black">
+              <button onClick={() => selectConversation(chat.id)} className="min-w-0 flex-1 truncate px-2 py-1.5 text-left text-[#6B7280] hover:text-black">
                 {chat.title || t.newChat}
               </button>
               <button onClick={() => deleteConversation(chat.id)} className="hidden px-1 text-xs text-red-500 group-hover:block">
@@ -423,7 +450,7 @@ export default function DashboardPage() {
         <div className="flex h-14 items-center justify-between border-b border-[#E5E7EB] bg-white px-4 md:hidden">
           <button onClick={() => setSidebarOpen(true)} className="rounded-lg p-2 hover:bg-[#F7F7F8]"><Menu className="h-5 w-5" /></button>
           <span className="text-lg font-medium tracking-tight">ALMA</span>
-          <button onClick={() => { setStreamEpoch((value) => value + 1); setActiveWorkspace("chat"); setMessages([]); setConversationId(null); }} className="rounded-lg p-2 hover:bg-[#F7F7F8]"><PenSquare className="h-5 w-5" /></button>
+          <button onClick={startNewChat} className="rounded-lg p-2 hover:bg-[#F7F7F8]"><PenSquare className="h-5 w-5" /></button>
         </div>
 
         {activeWorkspace === "launch" ? (

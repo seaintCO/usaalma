@@ -5,8 +5,11 @@ alter table public.documents add column if not exists mime_type text; alter tabl
 alter table public.documents add column if not exists status text not null default 'ready'; alter table public.documents add column if not exists extracted_text text;
 alter table public.documents add column if not exists source text not null default 'manual'; alter table public.documents add column if not exists source_execution_id uuid references public.agent_executions(id) on delete set null;
 alter table public.documents add column if not exists error_message text; alter table public.documents add column if not exists updated_at timestamptz not null default now();
+alter table public.documents drop constraint if exists documents_type_check;
 alter table public.documents add constraint documents_type_check check(document_type in('uploaded_file','text'));
+alter table public.documents drop constraint if exists documents_status_check;
 alter table public.documents add constraint documents_status_check check(status in('uploaded','processing','ready','failed'));
+alter table public.documents drop constraint if exists documents_source_check;
 alter table public.documents add constraint documents_source_check check(source in('manual','upload','alma_chat','import'));
 create unique index if not exists documents_alma_execution_idx on public.documents(user_id,source_execution_id) where source='alma_chat' and source_execution_id is not null;
 create index if not exists documents_user_updated_idx on public.documents(user_id,updated_at desc);
@@ -15,4 +18,8 @@ alter table public.documents enable row level security;
 drop policy if exists "Users manage own documents" on public.documents; create policy "Users manage own documents" on public.documents for all to authenticated using(user_id=auth.uid()) with check(user_id=auth.uid());
 drop policy if exists "Users manage own alma documents" on storage.objects;
 create policy "Users manage own alma documents" on storage.objects for all to authenticated using(bucket_id='alma-documents' and (storage.foldername(name))[1]=auth.uid()::text) with check(bucket_id='alma-documents' and (storage.foldername(name))[1]=auth.uid()::text);
+create or replace function public.set_documents_updated_at() returns trigger language plpgsql set search_path=public as $$ begin new.updated_at=now(); return new; end $$;
+drop trigger if exists documents_updated_at on public.documents;
+create trigger documents_updated_at before update on public.documents for each row execute function public.set_documents_updated_at();
 commit;
+-- Deterministic migration version: 20260714005000.

@@ -11,6 +11,7 @@ create index if not exists notes_user_updated_idx on public.notes(user_id,update
 create index if not exists notes_user_search_idx on public.notes(user_id,lower(title),lower(content));
 create or replace function public.set_notes_updated_at() returns trigger language plpgsql set search_path=public as $$ begin new.updated_at=now(); return new; end $$;
 drop trigger if exists notes_updated_at on public.notes;
+drop trigger if exists notes_updated_at on public.notes;
 create trigger notes_updated_at before update on public.notes for each row execute function public.set_notes_updated_at();
 alter table public.notes enable row level security;
 drop policy if exists "Users manage own notes" on public.notes;
@@ -23,3 +24,4 @@ create policy "Users insert own notes" on public.notes for insert to authenticat
 create policy "Users update own notes" on public.notes for update to authenticated using(user_id=auth.uid()) with check(user_id=auth.uid());
 create policy "Users delete own notes" on public.notes for delete to authenticated using(user_id=auth.uid());
 commit;
+-- Deterministic migration version: 20260714003000.

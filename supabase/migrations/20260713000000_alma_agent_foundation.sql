@@ -315,3 +315,4 @@ with check (
 );
 
 commit;
+-- Deterministic migration version: 20260713000000.

@@ -2,8 +2,7 @@ import { createTaskTool } from "@/lib/tools/tasks/createTaskTool";
 import { TaskRepository } from "@/lib/db/repositories/tasks/task.repository";
 import { NoteRepository } from "@/lib/db/repositories/notes/note.repository";
 import { createNoteTool } from "@/lib/tools/notes/createNoteTool";
-import { createContactTool } from "@/lib/tools/crm/createContactTool";
-import { createInvoiceTool } from "@/lib/tools/invoices/createInvoiceTool";
+import { crmTool, invoiceTool } from "@/lib/tools/business/businessTools";
 import { createReceptionistTool } from "@/lib/tools/receptionist/createReceptionistTool";
 import { createDocumentTool } from "@/lib/tools/documents/createDocumentTool";
 import { createWorkspaceTool } from "@/lib/tools/workspaces/createWorkspaceTool";
@@ -25,7 +24,21 @@ export const toolDefinitions = [
   { type:"function", name:"delete_note", description:"Eliminar una sola nota por título exacto.", parameters:{type:"object",properties:{title:{type:"string"}},required:["title"],additionalProperties:false}},
   { type:"function", name:"get_note", description:"Cargar una nota real por título exacto para resumirla o responder preguntas.", parameters:{type:"object",properties:{title:{type:"string"}},required:["title"],additionalProperties:false}},
   { type:"function", name:"create_contact", description:"Crear contacto CRM.", parameters:{ type:"object", properties:{ name:{ type:"string" }, company:{ type:"string" }, email:{ type:"string" }, phone:{ type:"string" } }, required:["name"], additionalProperties:false } },
+  { type:"function", name:"create_company", description:"Create an owned CRM company.", parameters:{type:"object",properties:{name:{type:"string"},website:{type:"string"}},required:["name"],additionalProperties:false}},
+  { type:"function", name:"create_opportunity", description:"Create an owned CRM opportunity.", parameters:{type:"object",properties:{title:{type:"string"},stage:{type:"string"},value:{type:"number"}},required:["title"],additionalProperties:false}},
+  { type:"function", name:"list_crm", description:"List owned CRM contacts, companies and opportunities.", parameters:{type:"object",properties:{},additionalProperties:false}},
+  { type:"function", name:"update_opportunity_stage", description:"Move an owned opportunity to a pipeline stage.", parameters:{type:"object",properties:{id:{type:"string"},stage:{type:"string"}},required:["id","stage"],additionalProperties:false}},
+  { type:"function", name:"create_crm_activity", description:"Record an owned CRM note or activity.", parameters:{type:"object",properties:{content:{type:"string"},type:{type:"string"},opportunityId:{type:"string"},contactId:{type:"string"},companyId:{type:"string"}},required:["content"],additionalProperties:false}},
+  { type:"function", name:"create_crm_follow_up", description:"Create an owned CRM follow-up task.", parameters:{type:"object",properties:{title:{type:"string"},description:{type:"string"},dueAt:{type:"string"}},required:["title"],additionalProperties:false}},
   { type:"function", name:"create_invoice", description:"Crear factura.", parameters:{ type:"object", properties:{ clientName:{ type:"string" }, amount:{ type:"number" } }, required:["clientName","amount"], additionalProperties:false } },
+  { type:"function", name:"add_invoice_item", description:"Add a line item to an exact owned draft invoice number.", parameters:{type:"object",properties:{invoiceNumber:{type:"string"},description:{type:"string"},quantity:{type:"number"},unitPrice:{type:"number"}},required:["invoiceNumber","description"],additionalProperties:false}},
+  { type:"function", name:"update_invoice_item", description:"Update a line item on an exact owned draft invoice number.", parameters:{type:"object",properties:{invoiceNumber:{type:"string"},itemId:{type:"string"},description:{type:"string"},quantity:{type:"number"},unitPrice:{type:"number"}},required:["invoiceNumber","itemId","description"],additionalProperties:false}},
+  { type:"function", name:"set_invoice_amounts", description:"Set tax, discount, or due date for an exact owned draft invoice.", parameters:{type:"object",properties:{invoiceNumber:{type:"string"},taxRate:{type:"number"},discountRate:{type:"number"},dueDate:{type:"string"}},required:["invoiceNumber"],additionalProperties:false}},
+  { type:"function", name:"list_unpaid_invoices", description:"List owned unpaid invoices.", parameters:{type:"object",properties:{},additionalProperties:false}},
+  { type:"function", name:"get_invoice", description:"Retrieve an owned invoice by exact invoice number.", parameters:{type:"object",properties:{invoiceNumber:{type:"string"}},required:["invoiceNumber"],additionalProperties:false}},
+  { type:"function", name:"mark_invoice_paid", description:"Mark an exact owned invoice paid.", parameters:{type:"object",properties:{invoiceNumber:{type:"string"}},required:["invoiceNumber"],additionalProperties:false}},
+  { type:"function", name:"cancel_invoice", description:"Cancel an exact owned invoice.", parameters:{type:"object",properties:{invoiceNumber:{type:"string"}},required:["invoiceNumber"],additionalProperties:false}},
+  { type:"function", name:"duplicate_invoice", description:"Duplicate an exact owned invoice as a draft.", parameters:{type:"object",properties:{invoiceNumber:{type:"string"}},required:["invoiceNumber"],additionalProperties:false}},
   { type:"function", name:"create_receptionist", description:"Crear recepcionista IA.", parameters:{ type:"object", properties:{ businessName:{ type:"string" }, businessType:{ type:"string" }, phoneNumber:{ type:"string" }, greeting:{ type:"string" } }, required:["businessName"], additionalProperties:false } },
   { type:"function", name:"create_document", description:"Guardar documento o conocimiento.", parameters:{ type:"object", properties:{ title:{ type:"string" }, content:{ type:"string" } }, required:["title","content"], additionalProperties:false } },
   { type:"function", name:"create_workspace", description:"Crear workspace.", parameters:{ type:"object", properties:{ name:{ type:"string" }, type:{ type:"string" } }, required:["name"], additionalProperties:false } },
@@ -86,8 +99,14 @@ export async function executeTool(userId:string, name:string, args:any, context?
       if (!userHasModule(installed, "crm")) return blocked("CRM");
       const contactName = cleanString(args.name);
       if (!contactName) return { success:false, message:"Falta el nombre del contacto." };
-      return await logAndReturn(userId, name, args, await createContactTool(userId, contactName, cleanString(args.company), cleanString(args.email), cleanString(args.phone)));
+      return await logAndReturn(userId, name, args, await crmTool(userId, "create_contact", { name: contactName, company: cleanString(args.company), email: cleanString(args.email), phone: cleanString(args.phone) }, context?.executionId));
     }
+
+    if (["create_company","create_opportunity","list_crm","update_opportunity_stage","create_crm_activity"].includes(name)) {
+      if (!userHasModule(installed, "crm")) return blocked("CRM");
+      return await logAndReturn(userId, name, args, await crmTool(userId, name, args, context?.executionId));
+    }
+    if (name === "create_crm_follow_up") { if (!userHasModule(installed, "crm") || !userHasModule(installed, "tasks")) return blocked("CRM"); const title=cleanString(args.title); if(!title)return {success:false,message:"Missing follow-up title."}; return await logAndReturn(userId,name,args,await createTaskTool(userId,{title,description:cleanString(args.description)||undefined,dueAt:cleanString(args.dueAt)||undefined,sourceExecutionId:context?.executionId})); }
 
     if (name === "create_invoice") {
       if (!userHasModule(installed, "invoicing")) return blocked("Facturación");
@@ -95,7 +114,12 @@ export async function executeTool(userId:string, name:string, args:any, context?
       const amount = cleanNumber(args.amount);
       if (!clientName) return { success:false, message:"Falta el nombre del cliente." };
       if (amount <= 0) return { success:false, message:"Falta un monto válido." };
-      return await logAndReturn(userId, name, args, await createInvoiceTool(userId, clientName, amount));
+      return await logAndReturn(userId, name, args, await invoiceTool(userId, "create_invoice", { clientName, amount }, context?.executionId));
+    }
+
+    if (["add_invoice_item","update_invoice_item","set_invoice_amounts","list_unpaid_invoices","get_invoice","mark_invoice_paid","cancel_invoice","duplicate_invoice"].includes(name)) {
+      if (!userHasModule(installed, "invoicing")) return blocked("Facturación");
+      return await logAndReturn(userId, name, args, await invoiceTool(userId, name, args, context?.executionId));
     }
 
     if (name === "create_receptionist") {

@@ -1,3 +1,4 @@
+-- Deterministic migration version: 20260714001000.
 -- Stage 7 durable chat queue. Additive and safe to rerun; do not apply automatically.
 begin;
 
@@ -107,9 +108,11 @@ drop policy if exists "Users read own durable tool runs" on public.tool_runs;
 create policy "Users read own durable tool runs" on public.tool_runs for select to authenticated using (user_id=auth.uid());
 drop policy if exists "Users manage own conversation state" on public.conversation_user_state;
 create policy "Users read own conversation state" on public.conversation_user_state for select to authenticated using (user_id=auth.uid());
+drop policy if exists "Users mark own conversation read" on public.conversation_user_state;
 create policy "Users mark own conversation read" on public.conversation_user_state for insert to authenticated with check (
   user_id=auth.uid() and exists (select 1 from public.conversations c where c.id=conversation_id and c.user_id=auth.uid())
 );
+drop policy if exists "Users update own conversation read" on public.conversation_user_state;
 create policy "Users update own conversation read" on public.conversation_user_state for update to authenticated using (user_id=auth.uid()) with check (user_id=auth.uid());
 
 -- Service-role submission still needs referential ownership checks: foreign keys

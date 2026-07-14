@@ -13,4 +13,8 @@ create index if not exists planner_tasks_user_date_idx on public.planner_tasks(u
 alter table public.planner_tasks enable row level security;
 drop policy if exists "Users manage own planner tasks" on public.planner_tasks;
 create policy "Users manage own planner tasks" on public.planner_tasks for all to authenticated using(user_id=auth.uid()) with check(user_id=auth.uid());
+create or replace function public.set_planner_tasks_updated_at() returns trigger language plpgsql set search_path=public as $$ begin new.updated_at=now(); return new; end $$;
+drop trigger if exists planner_tasks_updated_at on public.planner_tasks;
+create trigger planner_tasks_updated_at before update on public.planner_tasks for each row execute function public.set_planner_tasks_updated_at();
 commit;
+-- Deterministic migration version: 20260714004000.

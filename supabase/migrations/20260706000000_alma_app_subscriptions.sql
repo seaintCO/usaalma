@@ -1,3 +1,5 @@
+begin;
+
 create table if not exists public.app_subscriptions (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null,
@@ -30,3 +32,6 @@ create policy "Users can update own app subscriptions"
 on public.app_subscriptions
 for update
 using (auth.uid() = user_id);
+commit;
+
+-- Deterministic migration version: 20260706000000.

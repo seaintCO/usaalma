@@ -1,4 +1,4 @@
-import OpenAI from "openai";
+﻿import OpenAI from "openai";
 
 export type AlmaAction =
   | "save_memory"
@@ -19,7 +19,7 @@ export async function classifyAction(message:string):Promise<{
   const client = new OpenAI({ apiKey:process.env.OPENAI_API_KEY });
 
   const result:any = await client.responses.create({
-    model:process.env.ALMA_ROUTER_MODEL || "gpt-5.5-mini",
+    model:process.env.ALMA_ROUTER_MODEL || "gpt-5.6-luna",
     input:`
 You are ALMA's autonomous action router.
 
@@ -48,3 +48,4 @@ ${message}
     return { action:"none", payload:{} };
   }
 }
+

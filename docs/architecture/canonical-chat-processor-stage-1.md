@@ -1,8 +1,8 @@
 # Canonical chat processor: Stage 1 branch inventory
 
 This inventory records the behavior presently owned by
-`app/api/chat/stream/route.ts`. Stage 1 adds contracts only; no route branch
-uses the processor yet.
+`app/api/chat/stream/route.ts`. Stage 1 added contracts only. Stage 2 moves
+one pure helper, without moving or changing any execution branch.
 
 ## Boundary before post-persistence execution
 
@@ -48,3 +48,20 @@ future durable worker can omit it and persist/return the terminal result.
 An idempotency key is part of the input contract now, but durable enforcement
 cannot be implemented until the explicitly deferred queue schema gives it a
 database uniqueness boundary.
+
+## Stage 2 helper boundary
+
+`lib/alma/chat/chatExecutionHelpers.ts` now owns
+`buildResponseLanguageInstruction`. It is the previous route language-policy
+function moved verbatim in behavior: explicit `en` and `es` selections remain
+authoritative, and automatic mode retains the existing message-text fallback.
+It is safe to centralize because it is deterministic and does not authenticate,
+persist, stream, call a provider, or mutate execution state.
+
+The route intentionally retains `startTrackedExecution` and
+`completeTrackedExecution`, because both write execution telemetry. It also
+retains all image, planner, router, finance, tool, model, memory, persistence,
+and error branches because moving any subset would split an execution branch
+between the route and the canonical processor. Plain-text stream formatting,
+including the conversation-id marker, remains route-specific to preserve the
+current frontend protocol.

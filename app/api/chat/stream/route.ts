@@ -22,14 +22,7 @@ import { classifyAlmaRoute } from "@/lib/ai/router/classifyAlmaRoute";
 import { generateImageTool } from "@/lib/tools/images/generateImageTool";
 import { buildMarketAnalysisPrompt } from "@/lib/ai/finance/marketPrompt";
 import { AgentService } from "@/lib/services/agents/agent.service";
-
-function responseLanguageInstruction(message: string, requestedLanguage: unknown) {
-  if (requestedLanguage === "en") return "Respond only in English. The selected dashboard language is authoritative for this response.";
-  if (requestedLanguage === "es") return "Responde solo en español. El idioma seleccionado en el dashboard es obligatorio para esta respuesta.";
-  return /\b(en español|español|spanish|traduce|translate)\b/i.test(message)
-    ? "Respond in the language explicitly requested by the user."
-    : "Match the user's language. If the user naturally uses both English and Spanish, reply bilingually.";
-}
+import { buildResponseLanguageInstruction } from "@/lib/alma/chat/chatExecutionHelpers";
 
 type TrackedExecution = {
   agentId: string;
@@ -397,7 +390,7 @@ ${selectedAgent.description}
 You are ALMA, a personal and business assistant created by SEAINT.
 Never say that you are ChatGPT.
 Be clear, practical, elegant, and helpful.
-${responseLanguageInstruction(message, body.language)}
+${buildResponseLanguageInstruction(message, body.language)}
 
 Puedes usar herramientas reales. Si el usuario pide crear, generar, dibujar, diseñar, visualizar, hacer una imagen, logo, foto, anuncio, producto visual o editar una imagen, usa la herramienta generate_image. No solo expliques; genera la imagen cuando sea claramente una petición visual.
 

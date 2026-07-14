@@ -1,7 +1,7 @@
 import { getRecentMemory, rememberEvent } from "@/lib/memory/almaMemory";
 import { chooseAlmaModel } from "@/lib/alma/modelRouter";
-import { planAlmaAction, detectImageSize, buildImageFollowupPrompt } from "@/lib/alma/brain";
-import { getAlmaContext, upsertAlmaContext, logAlmaExecution } from "@/lib/alma/context";
+import { planAlmaAction } from "@/lib/alma/brain";
+import { getAlmaContext } from "@/lib/alma/context";
 import OpenAI from "openai";
 import { getCurrentUser } from "@/lib/auth/user";
 import { buildContext } from "@/lib/ai/memory/context";
@@ -19,49 +19,43 @@ import { almaSystemPrompt } from "@/lib/ai/prompts/almaSystemPrompt";
 import { runPlannedExecution } from "@/lib/ai/planner/orchestrator";
 import { SubscriptionRepository } from "@/lib/db/repositories/billing/subscription.repository";
 import { classifyAlmaRoute } from "@/lib/ai/router/classifyAlmaRoute";
-import { generateImageTool } from "@/lib/tools/images/generateImageTool";
 import { buildMarketAnalysisPrompt } from "@/lib/ai/finance/marketPrompt";
 import { AgentService } from "@/lib/services/agents/agent.service";
 import { buildResponseLanguageInstruction } from "@/lib/alma/chat/chatExecutionHelpers";
+import {
+  completeChatRunTracking,
+  processImageChatRun,
+  resolveImageExecutionKind,
+  startChatRunTracking,
+  type ProcessImageChatRunInput,
+} from "@/lib/alma/chat/processChatRun";
 
-type TrackedExecution = {
-  agentId: string;
-  executionId: string;
-};
+function createImageStreamResponse(input: ProcessImageChatRunInput) {
+  const encoder = new TextEncoder();
+  const readable = new ReadableStream({
+    async start(controller) {
+      controller.enqueue(encoder.encode(`[CONVERSATION_ID:${input.conversationId}]\n`));
+      try {
+        await processImageChatRun({
+          ...input,
+          onProgress: async (event) => {
+            if (event.type === "status") controller.enqueue(encoder.encode(event.message));
+            if (event.type === "text_delta") controller.enqueue(encoder.encode(event.delta));
+            if (event.type === "image") controller.enqueue(encoder.encode(event.content));
+          },
+        });
+      } finally {
+        controller.close();
+      }
+    },
+  });
 
-async function startTrackedExecution(input: { userId: string; conversationId: string; intent: string; goal: string; plan: Record<string, unknown> }): Promise<TrackedExecution | null> {
-  try {
-    const tracked = await AgentService.startExecution({
-      userId: input.userId,
-      conversationId: input.conversationId,
-      triggerType: "chat",
-      intent: input.intent,
-      goal: input.goal,
-      plan: input.plan,
-    });
-    await AgentService.recordStep({ executionId: tracked.execution.id, sequence: 1, kind: "plan", input: input.plan });
-    return { agentId: tracked.agent.id, executionId: tracked.execution.id };
-  } catch {
-    // Compatibility adapter: existing chat remains available before the Phase 1 migration is deployed.
-    return null;
-  }
-}
-
-async function completeTrackedExecution(input: { tracked: TrackedExecution | null; userId: string; success: boolean; summary: string; result?: Record<string, unknown>; error?: string | null }) {
-  if (!input.tracked) return;
-  try {
-    await AgentService.completeExecution({
-      agentId: input.tracked.agentId,
-      executionId: input.tracked.executionId,
-      userId: input.userId,
-      success: input.success,
-      summary: input.summary,
-      result: input.result,
-      error: input.error,
-    });
-  } catch {
-    // Telemetry failure must never alter the streamed response.
-  }
+  return new Response(readable, {
+    headers: {
+      "Content-Type": "text/plain; charset=utf-8",
+      "Cache-Control": "no-cache",
+    },
+  });
 }
 
 export async function POST(req:Request) {
@@ -137,94 +131,28 @@ export async function POST(req:Request) {
     console.error("ALMA_MEMORY_SAVE_ERROR", error);
   }
 
-
-      const almaContext = await getAlmaContext(user.id, conversationId);
+  const almaContext = await getAlmaContext(user.id, conversationId);
   const almaPlan = planAlmaAction(message, almaContext);
   const almaIntent = almaPlan.intent;
-  const trackedExecution = await startTrackedExecution({
+
+  if (resolveImageExecutionKind({ almaIntent })) {
+    return createImageStreamResponse({
+      userId: user.id,
+      conversationId,
+      userMessage: message,
+      almaIntent,
+      almaPlan,
+      almaContext,
+    });
+  }
+
+  const trackedExecution = await startChatRunTracking({
     userId: user.id,
     conversationId,
     intent: almaIntent,
     goal: message,
     plan: almaPlan,
   });
-
-  const imagePrompt =
-    almaIntent === "image_followup"
-      ? buildImageFollowupPrompt(message, almaContext)
-      : message;
-
-  const imageSize = detectImageSize(message);
-
-  if (almaIntent === "image_generation" || almaIntent === "image_followup") {
-    const encoder = new TextEncoder();
-
-    const readable = new ReadableStream({
-      async start(controller) {
-        controller.enqueue(encoder.encode(`[CONVERSATION_ID:${conversationId}]\n`));
-
-        try {
-                    const result:any = await generateImageTool(user.id, imagePrompt, imageSize);
-
-          await upsertAlmaContext(user.id, conversationId, {
-            last_intent: almaIntent,
-            last_image_prompt: imagePrompt,
-            last_image_size: imageSize,
-            last_prompt: message,
-            metadata: {
-              tool: "creative",
-              mode: almaIntent
-            }
-          });
-
-          await logAlmaExecution({
-            userId: user.id,
-            conversationId,
-            userMessage: message,
-            intent: almaIntent,
-            plan: { ...almaPlan, imagePrompt, imageSize },
-            toolUsed: "generateImageTool",
-            result: { success: result?.success },
-            success: !!result?.success
-          });
-
-          await completeTrackedExecution({
-            tracked: trackedExecution,
-            userId: user.id,
-            success: Boolean(result?.success),
-            summary: result?.success ? "ALMA completed image generation." : "ALMA could not complete image generation.",
-            result: { intent: almaIntent, success: Boolean(result?.success) },
-            error: result?.success ? null : result?.message || result?.error || "Image generation failed",
-          });
-
-          if (result?.success && result?.image?.outputBase64) {
-            const reply = `[ALMA_IMAGE:${result.image.outputBase64}]`;
-            await MessageRepository.create(conversationId, user.id, "assistant", reply);
-            controller.enqueue(encoder.encode(reply));
-          } else {
-            const reply = result?.message || result?.error || "No se pudo generar la imagen.";
-            await MessageRepository.create(conversationId, user.id, "assistant", reply);
-            controller.enqueue(encoder.encode(reply));
-          }
-        } catch (err:any) {
-          console.error("ALMA_IMAGE_ERROR", err);
-          const reply = `ALMA tuvo un error generando la imagen: ${err?.message || "error desconocido"}`;
-          await MessageRepository.create(conversationId, user.id, "assistant", reply);
-          await completeTrackedExecution({ tracked: trackedExecution, userId: user.id, success: false, summary: "ALMA image generation failed.", error: err?.message || "Unknown image generation error" });
-          controller.enqueue(encoder.encode(reply));
-        } finally {
-          controller.close();
-        }
-      }
-    });
-
-    return new Response(readable, {
-      headers:{
-        "Content-Type":"text/plain; charset=utf-8",
-        "Cache-Control":"no-cache",
-      },
-    });
-  }
 
   let planned = null;
   try {
@@ -251,7 +179,7 @@ ${planned.steps.map((s:any, i:number) => `${i + 1}. ${s.label} — ${s.result?.m
         }
 
         await MessageRepository.create(conversationId, user.id, "assistant", reply);
-        await completeTrackedExecution({ tracked: trackedExecution, userId: user.id, success: true, summary: "ALMA completed a planned execution.", result: { intent: almaIntent, steps: planned.steps.length } });
+        await completeChatRunTracking({ tracked: trackedExecution, userId: user.id, success: true, summary: "ALMA completed a planned execution.", result: { intent: almaIntent, steps: planned.steps.length } });
         controller.close();
       }
     });
@@ -288,12 +216,12 @@ ${planned.steps.map((s:any, i:number) => `${i + 1}. ${s.label} — ${s.result?.m
 
           const reply = result.output_text || "No market analysis available.";
           await MessageRepository.create(conversationId, user.id, "assistant", reply);
-          await completeTrackedExecution({ tracked: trackedExecution, userId: user.id, success: true, summary: "ALMA completed market analysis.", result: { route: detectedIntent } });
+          await completeChatRunTracking({ tracked: trackedExecution, userId: user.id, success: true, summary: "ALMA completed market analysis.", result: { route: detectedIntent } });
           controller.enqueue(encoder.encode(reply));
         } catch {
           const reply = "ALMA could not generate market analysis right now.";
           await MessageRepository.create(conversationId, user.id, "assistant", reply);
-          await completeTrackedExecution({ tracked: trackedExecution, userId: user.id, success: false, summary: "ALMA market analysis failed.", error: reply });
+          await completeChatRunTracking({ tracked: trackedExecution, userId: user.id, success: false, summary: "ALMA market analysis failed.", error: reply });
           controller.enqueue(encoder.encode(reply));
         }
 
@@ -308,65 +236,16 @@ ${planned.steps.map((s:any, i:number) => `${i + 1}. ${s.label} — ${s.result?.m
       },
     });
   }
-  if (detectedIntent === "image_generate") {
-    const encoder = new TextEncoder();
-
-    const readable = new ReadableStream({
-      async start(controller) {
-        controller.enqueue(encoder.encode(`[CONVERSATION_ID:${conversationId}]\n`));
-        controller.enqueue(encoder.encode("Generando imagen premium...\n\n"));
-
-        try {
-          const result:any = await generateImageTool(user.id, message);
-
-          if (result?.success && result?.image?.outputBase64) {
-            const reply = `[ALMA_IMAGE:${result.image.outputBase64}]`;
-            await MessageRepository.create(conversationId, user.id, "assistant", reply);
-            controller.enqueue(encoder.encode(reply));
-          } else {
-            const reply = result?.message || "No se pudo generar la imagen.";
-            await MessageRepository.create(conversationId, user.id, "assistant", reply);
-            controller.enqueue(encoder.encode(reply));
-          }
-          await completeTrackedExecution({ tracked: trackedExecution, userId: user.id, success: Boolean(result?.success), summary: result?.success ? "ALMA completed image generation." : "ALMA could not complete image generation.", result: { route: detectedIntent, success: Boolean(result?.success) }, error: result?.success ? null : result?.message || "Image generation failed" });
-        } catch {
-          const reply = "ALMA tuvo un error generando la imagen.";
-          await MessageRepository.create(conversationId, user.id, "assistant", reply);
-          await completeTrackedExecution({ tracked: trackedExecution, userId: user.id, success: false, summary: "ALMA image generation failed.", error: reply });
-          controller.enqueue(encoder.encode(reply));
-        } finally {
-          controller.close();
-        }
-      }
-    });
-
-    return new Response(readable, {
-      headers:{
-        "Content-Type":"text/plain; charset=utf-8",
-        "Cache-Control":"no-cache",
-      },
-    });
-  }
-
-  if (detectedIntent === "image_edit") {
-    const reply = "Sube la imagen que quieres editar o dime cuál imagen de tu galería quieres cambiar. Luego puedo hacer cambios como fondo, estilo, color, realismo, formato 16:9 o 9:16.";
-    const encoder = new TextEncoder();
-
-    const readable = new ReadableStream({
-      async start(controller) {
-        controller.enqueue(encoder.encode(`[CONVERSATION_ID:${conversationId}]\n`));
-        controller.enqueue(encoder.encode(reply));
-        await MessageRepository.create(conversationId, user.id, "assistant", reply);
-        await completeTrackedExecution({ tracked: trackedExecution, userId: user.id, success: true, summary: "ALMA requested an image for editing.", result: { route: detectedIntent } });
-        controller.close();
-      }
-    });
-
-    return new Response(readable, {
-      headers:{
-        "Content-Type":"text/plain; charset=utf-8",
-        "Cache-Control":"no-cache",
-      },
+  if (resolveImageExecutionKind({ routeIntent: detectedIntent })) {
+    return createImageStreamResponse({
+      userId: user.id,
+      conversationId,
+      userMessage: message,
+      almaIntent,
+      almaPlan,
+      almaContext,
+      routeIntent: detectedIntent,
+      tracking: trackedExecution,
     });
   }
   const memoryContext = await buildContext(user.id, message);
@@ -474,10 +353,10 @@ ${memoryContext || "Sin memoria guardada todavía."}
           }
 
           await MessageRepository.create(conversationId, user.id, "assistant", fullReply);
-          await completeTrackedExecution({ tracked: trackedExecution, userId: user.id, success: true, summary: "ALMA completed a tool-assisted chat execution.", result: { toolCalls: toolCalls.length } });
+          await completeChatRunTracking({ tracked: trackedExecution, userId: user.id, success: true, summary: "ALMA completed a tool-assisted chat execution.", result: { toolCalls: toolCalls.length } });
         } catch {
           controller.enqueue(encoder.encode("\n\nALMA tuvo un error ejecutando la herramienta."));
-          await completeTrackedExecution({ tracked: trackedExecution, userId: user.id, success: false, summary: "ALMA tool-assisted chat execution failed.", error: "Streaming tool response failed" });
+          await completeChatRunTracking({ tracked: trackedExecution, userId: user.id, success: false, summary: "ALMA tool-assisted chat execution failed.", error: "Streaming tool response failed" });
         } finally {
           controller.close();
         }
@@ -516,10 +395,10 @@ ${memoryContext || "Sin memoria guardada todavía."}
         }
 
         await MessageRepository.create(conversationId, user.id, "assistant", fullReply);
-        await completeTrackedExecution({ tracked: trackedExecution, userId: user.id, success: true, summary: "ALMA completed a chat execution.", result: { route: "chat" } });
+        await completeChatRunTracking({ tracked: trackedExecution, userId: user.id, success: true, summary: "ALMA completed a chat execution.", result: { route: "chat" } });
       } catch {
         controller.enqueue(encoder.encode("\n\nALMA tuvo un error generando la respuesta."));
-        await completeTrackedExecution({ tracked: trackedExecution, userId: user.id, success: false, summary: "ALMA chat execution failed.", error: "Streaming response failed" });
+        await completeChatRunTracking({ tracked: trackedExecution, userId: user.id, success: false, summary: "ALMA chat execution failed.", error: "Streaming response failed" });
       } finally {
         controller.close();
       }

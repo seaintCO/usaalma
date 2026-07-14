@@ -58,10 +58,30 @@ authoritative, and automatic mode retains the existing message-text fallback.
 It is safe to centralize because it is deterministic and does not authenticate,
 persist, stream, call a provider, or mutate execution state.
 
-The route intentionally retains `startTrackedExecution` and
-`completeTrackedExecution`, because both write execution telemetry. It also
-retains all image, planner, router, finance, tool, model, memory, persistence,
-and error branches because moving any subset would split an execution branch
-between the route and the canonical processor. Plain-text stream formatting,
-including the conversation-id marker, remains route-specific to preserve the
-current frontend protocol.
+At the end of Stage 2, the route retained all image, planner, router, finance,
+tool, model, memory, persistence, and error branches because moving any subset
+would split an execution branch between the route and the canonical processor.
+Plain-text stream formatting, including the conversation-id marker, remains
+route-specific to preserve the current frontend protocol.
+
+## Stage 3 image execution boundary
+
+`processImageChatRun` in `lib/alma/chat/processChatRun.ts` now owns every
+image result branch: planned initial generation, planned follow-up generation,
+router image generation, and router image-edit guidance. It also owns image
+prompt/follow-up construction, aspect-ratio selection, image context/activity
+updates, assistant-message persistence, terminal execution completion, and
+image failure handling. Its optional progress callback emits `status`,
+`image`, and `text_delta` events for the route, while no callback is required
+for a durable caller.
+
+`startChatRunTracking` and `completeChatRunTracking` now live beside the
+processor. The route still calls them for non-image branches; planned image
+generation starts and completes its tracking entirely in the processor.
+
+The route intentionally retains only `createImageStreamResponse`, which emits
+the unchanged conversation marker and converts processor progress events into
+the existing plaintext bytes. It has no image provider, prompt, size,
+persistence, context, activity-log, edit-response, or execution-completion
+logic. Planner, finance, tools, and normal text streaming remain route-owned
+until their approved stages.

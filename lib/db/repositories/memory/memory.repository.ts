@@ -40,7 +40,7 @@ export class MemoryRepository {
 
     const supabase=await createClient();
 
-    await supabase
+    const { error } = await supabase
 
     .from("memories")
 
@@ -57,6 +57,8 @@ export class MemoryRepository {
       importance
 
     });
+
+    if (error) throw error;
 
   }
 

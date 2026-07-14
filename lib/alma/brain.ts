@@ -51,7 +51,8 @@ export function planAlmaAction(message:string, context?:any): AlmaPlan {
     };
   }
 
-  if (/\b(generate|create|make|draw|render|photo|image|picture|logo|visual|ad|photoshoot)\b/i.test(message)) {
+  const explicitVisualIntent = /\b(generate|create|make|design|show)\s+(?:an?\s+)?(?:image|visual|graphic|illustration|poster|logo|photo|picture|ad)\b|\b(?:image|visual|graphic|illustration|poster|logo|photo|picture|ad)\s+of\b|\b(genera|crea|diseña|muestra)\s+(?:una\s+)?(?:imagen|ilustración|póster|poster|gráfico|visual|foto|logo)\b/i.test(message);
+  if (explicitVisualIntent) {
     return {
       intent:"image_generation",
       tool:"creative",

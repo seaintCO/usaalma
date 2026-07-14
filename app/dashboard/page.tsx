@@ -4,7 +4,7 @@ import {
   ArrowUp, Calendar, CheckCircle2, CreditCard, FileText, FolderOpen,
   Menu, Mic, Paperclip, PenSquare, PlusCircle, ReceiptText,
   Search, Settings, Store, Users, ImageIcon, Camera, Activity, Rocket, Presentation, Home } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import LaunchStudioPanel from "./LaunchStudioPanel";
 import TraderPanel from "./TraderPanel";
 import ChatWorkspace, { type ChatMessage } from "@/components/dashboard-chat/ChatWorkspace";
@@ -146,6 +146,10 @@ export default function DashboardPage() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [authReady, setAuthReady] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
+  const [conversationLoading, setConversationLoading] = useState(false);
+  const [streamEpoch, setStreamEpoch] = useState(0);
+  const conversationCache = useRef(new Map<string, ChatMessage[]>());
+  const conversationRequest = useRef<AbortController | null>(null);
   const [history, setHistory] = useState<any[]>([]);
   const [installedCORE, setInstalledCORE] = useState<any[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -173,16 +177,25 @@ export default function DashboardPage() {
   }
 
   async function loadConversation(id:string) {
-    const res = await fetch("/api/conversation/load", {
-      method:"POST",
-      headers:{ "Content-Type":"application/json" },
-      body:JSON.stringify({ conversationId:id }),
-    });
-    const data = await res.json();
-    if (Array.isArray(data)) {
-      setMessages(data.map((message:any, index:number) => ({ ...message, id: message.id || `history-${id}-${index}` })));
-      setConversationId(id);
-      setSidebarOpen(false);
+    setStreamEpoch((value) => value + 1);
+    setConversationId(id);
+    setSidebarOpen(false);
+    conversationRequest.current?.abort();
+    const cached = conversationCache.current.get(id);
+    if (cached) { setMessages(cached); setConversationLoading(false); return; }
+    const controller = new AbortController();
+    conversationRequest.current = controller;
+    setConversationLoading(true);
+    try {
+      const res = await fetch("/api/conversation/load", { method:"POST", headers:{ "Content-Type":"application/json" }, body:JSON.stringify({ conversationId:id }), signal:controller.signal });
+      const data = await res.json();
+      if (!controller.signal.aborted && Array.isArray(data)) {
+        const loaded = data.map((message:any, index:number) => ({ ...message, id: message.id || `history-${id}-${index}` }));
+        conversationCache.current.set(id, loaded);
+        setMessages(loaded);
+      }
+    } finally {
+      if (!controller.signal.aborted) setConversationLoading(false);
     }
   }
 
@@ -305,7 +318,7 @@ export default function DashboardPage() {
 
         <div className="px-3">
           <button
-            onClick={() => { setActiveWorkspace("chat"); setMessages([]); setConversationId(null); setSidebarOpen(false); }}
+            onClick={() => { setStreamEpoch((value) => value + 1); setActiveWorkspace("chat"); setMessages([]); setConversationId(null); setSidebarOpen(false); }}
             className="mb-4 flex w-full items-center justify-between rounded-xl border border-[#E5E7EB] bg-white px-3 py-2 text-sm font-medium shadow-sm"
           >
             <span className="flex items-center gap-2"><PlusCircle className="h-4 w-4 text-[#6B7280]" />{t.newChat}</span>
@@ -407,7 +420,7 @@ export default function DashboardPage() {
         <div className="flex h-14 items-center justify-between border-b border-[#E5E7EB] bg-white px-4 md:hidden">
           <button onClick={() => setSidebarOpen(true)} className="rounded-lg p-2 hover:bg-[#F7F7F8]"><Menu className="h-5 w-5" /></button>
           <span className="text-lg font-medium tracking-tight">ALMA</span>
-          <button onClick={() => { setActiveWorkspace("chat"); setMessages([]); setConversationId(null); }} className="rounded-lg p-2 hover:bg-[#F7F7F8]"><PenSquare className="h-5 w-5" /></button>
+          <button onClick={() => { setStreamEpoch((value) => value + 1); setActiveWorkspace("chat"); setMessages([]); setConversationId(null); }} className="rounded-lg p-2 hover:bg-[#F7F7F8]"><PenSquare className="h-5 w-5" /></button>
         </div>
 
         {activeWorkspace === "launch" ? (
@@ -440,7 +453,7 @@ export default function DashboardPage() {
           <InlineAppFrame title="Billing" src={`/billing?lang=${language}`} />
         ) : activeWorkspace === "settings" ? (
           <InlineAppFrame title="Settings" src={`/settings?lang=${language}`} />
-        ) : <ChatWorkspace messages={messages} setMessages={setMessages} conversationId={conversationId} setConversationId={setConversationId} language={language} setLanguage={updateLanguage} onComplete={() => { void loadHistory(); }} onAnalyzeFile={analyzeFile} />}
+        ) : <ChatWorkspace messages={messages} setMessages={setMessages} conversationId={conversationId} setConversationId={setConversationId} language={language} setLanguage={updateLanguage} streamEpoch={streamEpoch} loadingConversation={conversationLoading} onComplete={() => { void loadHistory(); }} onAnalyzeFile={analyzeFile} />}
       </section>
     </main>
   );

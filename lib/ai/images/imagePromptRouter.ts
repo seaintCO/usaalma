@@ -54,11 +54,11 @@ ${prompt}`;
   if (selected === "product") {
     return `${base}
 Create a premium commercial product advertisement.
-Studio lighting.
-Sharp reflections.
-Luxury campaign quality.
-Realistic shadows.
-High-end ecommerce/product photography.
+Commercial studio lighting with physically plausible reflections and realistic shadows.
+Accurate lens and frame geometry, realistic material properties, natural imperfections, and non-plastic textures.
+Product details, label, packaging, proportions, and colors must be accurate and preserved.
+Use professional product-photography camera and lens language; luxury campaign quality.
+No fake lettering, no unnecessary text, no generic AI concept-art appearance.
 
 User request:
 ${prompt}`;

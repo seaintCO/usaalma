@@ -1,5 +1,12 @@
 import OpenAI from "openai";
 
+export function extractExplicitMemory(message: string) {
+  const match = message.match(/(?:remember(?: this)?(?: forever)?|recuerda(?: esto)?(?: para siempre)?)\.?\s*(?:my |mi )?(?:favorite|favorito|favorita)\s+([^.!?]+?)\s+(?:is|es)\s+([^.!?]+)[.!?]?$/i);
+  if (!match) return null;
+  const key = `favorite ${match[1].trim()}`.replace(/^favorite favorito /i, "favorite ");
+  return { memories: [{ category: "preference", key, value: match[2].trim(), importance: 10 }] };
+}
+
 export async function extractMemory(message:string) {
   if (!process.env.OPENAI_API_KEY) {
     return { memories: [] };

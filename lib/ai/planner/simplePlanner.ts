@@ -28,11 +28,8 @@ export function createSimplePlan(message:string):AlmaPlan {
   const text = message.toLowerCase();
 
   if (
-    text.includes("launch") ||
-    text.includes("lanzar") ||
-    text.includes("empresa") ||
-    text.includes("business") ||
-    text.includes("company")
+    /\b(set up|launch) (my |a )?(business|company)\b/.test(text) ||
+    /\b(configurar|lanzar) (mi |una )?(empresa|negocio)\b/.test(text)
   ) {
     const businessName = detectBusinessName(message);
     const businessType = detectBusinessType(message);

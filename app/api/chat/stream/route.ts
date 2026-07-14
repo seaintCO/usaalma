@@ -8,7 +8,7 @@ import { buildContext } from "@/lib/ai/memory/context";
 import { buildIntegrationContext } from "@/lib/ai/integrations/context";
 import { ConversationRepository } from "@/lib/db/repositories/conversation.repository";
 import { MessageRepository } from "@/lib/db/repositories/message.repository";
-import { extractMemory } from "@/lib/ai/extractors/memoryExtractor";
+import { extractExplicitMemory, extractMemory } from "@/lib/ai/extractors/memoryExtractor";
 import { saveExtractedMemory } from "@/lib/ai/memory/saveMemory";
 import { executeTool, toolDefinitions } from "@/lib/ai/tools/registry";
 import { safeJsonParse } from "@/lib/ai/tools/utils";
@@ -132,10 +132,17 @@ export async function POST(req:Request) {
 
   await MessageRepository.create(conversationId, user.id, "user", message);
 
+  const explicitMemory = extractExplicitMemory(message);
   try {
-    const extracted = await extractMemory(message);
+    const extracted = explicitMemory ?? await extractMemory(message);
     await saveExtractedMemory(user.id, extracted);
-  } catch {}
+  } catch (error) {
+    if (explicitMemory) {
+      const reply = body.language === "es" ? "ALMA no pudo guardar ese recuerdo. Inténtalo de nuevo." : "ALMA could not save that memory. Please try again.";
+      return new Response(reply, { status: 503 });
+    }
+    console.error("ALMA_MEMORY_SAVE_ERROR", error);
+  }
 
 
       const almaContext = await getAlmaContext(user.id, conversationId);
@@ -369,7 +376,7 @@ ${planned.steps.map((s:any, i:number) => `${i + 1}. ${s.label} — ${s.result?.m
       },
     });
   }
-  const memoryContext = await buildContext(user.id);
+  const memoryContext = await buildContext(user.id, message);
   const integrationContext = await buildIntegrationContext(user.id);
   const documentContext = await buildRelevantDocumentContext(user.id, message);
   const workspaceContext = await buildWorkspaceContext(user.id);

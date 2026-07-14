@@ -19,7 +19,7 @@ export async function classifyAction(message:string):Promise<{
   const client = new OpenAI({ apiKey:process.env.OPENAI_API_KEY });
 
   const result:any = await client.responses.create({
-    model:process.env.ALMA_ROUTER_MODEL || "gpt-4.1-mini",
+    model:(await import("@/lib/ai/models")).OPENAI_MODELS.router,
     input:`
 You are ALMA's autonomous action router.
 

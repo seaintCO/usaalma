@@ -21,7 +21,7 @@ Make it realistic, premium, clean, high-converting, with professional lighting, 
   const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
   const response = await client.responses.create({
-    model: process.env.ALMA_MODEL || "gpt-4o-mini",
+    model: (await import("@/lib/ai/models")).OPENAI_MODELS.fast,
     input: `You are ALMA Nocturai, an elite AI creative director.
 
 Write one elite image-generation prompt.

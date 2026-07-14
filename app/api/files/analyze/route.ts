@@ -55,7 +55,7 @@ export async function POST(req: Request) {
     const dataUrl = `data:${file.type};base64,${buffer.toString("base64")}`;
 
     const result:any = await client.responses.create({
-      model: process.env.ALMA_MODEL || "gpt-4.1",
+      model: (await import("@/lib/ai/models")).OPENAI_MODELS.deep,
       input: [{
         role: "user",
         content: [
@@ -75,7 +75,7 @@ export async function POST(req: Request) {
   }
 
   const result:any = await client.responses.create({
-    model: process.env.ALMA_MODEL || "gpt-4.1",
+    model: (await import("@/lib/ai/models")).OPENAI_MODELS.deep,
     input: `
 Analyze this uploaded file like ChatGPT.
 

@@ -27,7 +27,7 @@ export async function POST(req:Request) {
     const client = new OpenAI({ apiKey:process.env.OPENAI_API_KEY });
 
     const response = await client.responses.create({
-      model:process.env.ALMA_MODEL || "gpt-4.1",
+      model:(await import("@/lib/ai/models")).OPENAI_MODELS.deep,
       input:`Summarize these Gmail messages clearly. Include what matters, who sent it, and suggested follow-ups.\n\n${JSON.stringify(emails, null, 2)}`
     });
 

@@ -25,7 +25,7 @@ export async function askALMA(data:{ userId:string; message:string }) {
     apiKey: process.env.OPENAI_API_KEY,
   });
 
-  const model = process.env.ALMA_MODEL || "gpt-4.1";
+  const model = (await import("@/lib/ai/models")).OPENAI_MODELS.deep;
 
   const systemPrompt = `
 Eres ALMA, un asistente personal y empresarial creado por SEAINT.

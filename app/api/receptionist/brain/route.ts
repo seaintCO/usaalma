@@ -17,7 +17,7 @@ export async function POST(req:Request) {
   const client = new OpenAI({ apiKey:process.env.OPENAI_API_KEY });
 
   const completion = await client.chat.completions.create({
-    model: process.env.ALMA_TEXT_MODEL || "gpt-4.1-mini",
+    model: (await import("@/lib/ai/models")).OPENAI_MODELS.text,
     messages:[
       {
         role:"system",

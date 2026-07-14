@@ -9,7 +9,7 @@ export async function generateOpenAIImage(prompt:string, size?:string) {
   const client = new OpenAI({ apiKey:process.env.OPENAI_API_KEY });
 
   const result:any = await client.images.generate({
-    model:process.env.ALMA_IMAGE_MODEL || "gpt-image-1",
+    model:(await import("@/lib/ai/models")).OPENAI_MODELS.image,
     prompt:buildImagePrompt(prompt),
     size:normalizeImageSize(size),
     quality:"high",

@@ -116,7 +116,7 @@ Rules:
         "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`
       },
       body: JSON.stringify({
-        model: process.env.OPENAI_MODEL || "gpt-4o-mini",
+        model: (await import("@/lib/ai/models")).OPENAI_MODELS.launch,
         temperature: 0.8,
         messages: [
           { role: "system", content: system },

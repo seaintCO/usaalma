@@ -14,7 +14,7 @@ export async function generateBrandKit(input:{ brandName:string; industry?:strin
   const client = new OpenAI({ apiKey:process.env.OPENAI_API_KEY });
 
   const response = await client.responses.create({
-    model:process.env.ALMA_MODEL || "gpt-4.1",
+    model:(await import("@/lib/ai/models")).OPENAI_MODELS.deep,
     text:{
       format:{
         type:"json_schema",

@@ -8,7 +8,7 @@ export async function createEmbedding(text:string) {
   });
 
   const response = await client.embeddings.create({
-    model: "text-embedding-3-small",
+    model: (await import("@/lib/ai/models")).OPENAI_MODELS.embedding,
     input: text,
   });
 

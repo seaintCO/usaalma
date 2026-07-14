@@ -10,7 +10,7 @@ export async function extractMemory(message:string) {
   });
 
   const response = await client.responses.create({
-    model: process.env.ALMA_MODEL || "gpt-4.1",
+    model: (await import("@/lib/ai/models")).OPENAI_MODELS.deep,
     text: {
       format: {
         type: "json_schema",

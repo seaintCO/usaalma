@@ -22,7 +22,7 @@ export async function editOpenAIImage(input:{
   );
 
   const result:any = await client.images.edit({
-    model:"gpt-image-1",
+    model:(await import("@/lib/ai/models")).OPENAI_MODELS.image,
     image:file,
     prompt:input.prompt,
     size:"1024x1024",

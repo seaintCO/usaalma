@@ -18,7 +18,7 @@ export async function POST(req:Request) {
       "Authorization":`Bearer ${process.env.OPENAI_API_KEY}`
     },
     body:JSON.stringify({
-      model: process.env.OPENAI_VISION_MODEL || "gpt-4o-mini",
+      model: (await import("@/lib/ai/models")).OPENAI_MODELS.vision,
       messages:[
         {
           role:"user",

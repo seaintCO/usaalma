@@ -8,6 +8,7 @@ import { useEffect, useRef, useState } from "react";
 import LaunchStudioPanel from "./LaunchStudioPanel";
 import TraderPanel from "./TraderPanel";
 import ChatWorkspace, { type ChatMessage } from "@/components/dashboard-chat/ChatWorkspace";
+import OperatingDashboard from "@/components/dashboard-home/OperatingDashboard";
 
 const moduleMap:any = {
   planner: ["Planner", Calendar, "/planner"],
@@ -423,7 +424,7 @@ export default function DashboardPage() {
           <div className="mb-6 space-y-1">
             <h5 className="mb-2 px-2 text-xs font-medium uppercase tracking-wide text-[#6B7280]">{t.core}</h5>
 
-            <button onClick={() => { setActiveWorkspace("apps"); setSidebarOpen(false); }} className={navClass("apps")}><span className="flex items-center gap-2.5"><Home className="h-4 w-4" />{t.home}</span>{activeBadge}</button>
+            <button onClick={() => { setActiveWorkspace("home"); setSidebarOpen(false); }} className={navClass("home")}><span className="flex items-center gap-2.5"><Home className="h-4 w-4" />{t.home}</span>{activeBadge}</button>
             <button onClick={() => { setActiveWorkspace("planner"); setSidebarOpen(false); }} className={navClass("planner")}><span className="flex items-center gap-2.5"><Calendar className="h-4 w-4" />{t.planner}</span>{activeBadge}</button>
             <button onClick={() => { setActiveWorkspace("tasks"); setSidebarOpen(false); }} className={navClass("tasks")}><span className="flex items-center gap-2.5"><CheckCircle2 className="h-4 w-4" />{t.tasks}</span>{activeBadge}</button>
             <button onClick={() => { setActiveWorkspace("notes"); setSidebarOpen(false); }} className={navClass("notes")}><span className="flex items-center gap-2.5"><FileText className="h-4 w-4" />{t.notes}</span>{activeBadge}</button>
@@ -496,7 +497,7 @@ export default function DashboardPage() {
           <button onClick={startNewChat} className="rounded-lg p-2 hover:bg-[#F7F7F8]"><PenSquare className="h-5 w-5" /></button>
         </div>
 
-        {activeWorkspace === "launch" ? (
+        {activeWorkspace === "home" ? <OperatingDashboard language={language} onAsk={() => setActiveWorkspace("chat")} /> : activeWorkspace === "launch" ? (
           <LaunchStudioPanel />
         ) : activeWorkspace === "trader" ? (
           <TraderPanel />

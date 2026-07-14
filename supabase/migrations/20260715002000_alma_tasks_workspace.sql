@@ -13,6 +13,22 @@ update public.tasks set status = case when completed then 'completed' else 'open
 alter table public.tasks alter column status set default 'open';
 alter table public.tasks alter column status set not null;
 alter table public.tasks drop constraint if exists tasks_priority_check;
+update public.tasks
+set priority = case
+  when priority is null or trim(priority) = '' then 'medium'
+  when lower(trim(priority)) = 'low' then 'low'
+  when lower(trim(priority)) in ('medium', 'normal', 'standard') then 'medium'
+  when lower(trim(priority)) = 'high' then 'high'
+  when lower(trim(priority)) in ('urgent', 'critical') then 'urgent'
+  else 'medium'
+end
+where priority is null
+   or trim(priority) = ''
+   or priority <> lower(trim(priority))
+   or lower(trim(priority)) not in ('low', 'medium', 'high', 'urgent');
+
+alter table public.tasks
+alter column priority set default 'medium';
 alter table public.tasks add constraint tasks_priority_check check (priority in ('low','medium','high','urgent'));
 alter table public.tasks drop constraint if exists tasks_status_check;
 alter table public.tasks add constraint tasks_status_check check (status in ('open','in_progress','completed','cancelled'));
@@ -39,3 +55,4 @@ create policy "Users update own tasks" on public.tasks for update to authenticat
 create policy "Users delete own tasks" on public.tasks for delete to authenticated using (user_id=auth.uid());
 commit;
 -- Deterministic migration version: 20260714002000.
+

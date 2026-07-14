@@ -1,0 +1,2 @@
+import { NextResponse } from "next/server";import { getCurrentUser } from "@/lib/auth/user";import { PlannerRepository } from "@/lib/db/repositories/planner/planner.repository";
+export async function GET(request:Request){const u=await getCurrentUser();if(!u)return NextResponse.json({error:"Unauthorized"},{status:401});const p=new URL(request.url).searchParams;return NextResponse.json(await PlannerRepository.list(u.id,p.get("from")||new Date().toISOString().slice(0,10),p.get("to")||new Date().toISOString().slice(0,10)))}

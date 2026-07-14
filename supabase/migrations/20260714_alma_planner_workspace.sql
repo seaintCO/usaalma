@@ -1,0 +1,16 @@
+begin;
+alter table public.planner_tasks add column if not exists task_id uuid references public.tasks(id) on delete set null;
+alter table public.planner_tasks add column if not exists duration_minutes integer not null default 30;
+alter table public.planner_tasks add column if not exists color text not null default 'gray';
+alter table public.planner_tasks add column if not exists reminder_minutes integer;
+alter table public.planner_tasks add column if not exists recurrence_rule text;
+alter table public.planner_tasks add column if not exists status text not null default 'scheduled';
+alter table public.planner_tasks add column if not exists completed_at timestamptz;
+alter table public.planner_tasks add column if not exists updated_at timestamptz not null default now();
+alter table public.planner_tasks drop constraint if exists planner_tasks_status_check;
+alter table public.planner_tasks add constraint planner_tasks_status_check check(status in('scheduled','completed','cancelled'));
+create index if not exists planner_tasks_user_date_idx on public.planner_tasks(user_id,task_date,task_time);
+alter table public.planner_tasks enable row level security;
+drop policy if exists "Users manage own planner tasks" on public.planner_tasks;
+create policy "Users manage own planner tasks" on public.planner_tasks for all to authenticated using(user_id=auth.uid()) with check(user_id=auth.uid());
+commit;

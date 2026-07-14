@@ -1,0 +1,18 @@
+begin;
+alter table public.documents add column if not exists document_type text not null default 'text';
+alter table public.documents add column if not exists file_name text; alter table public.documents add column if not exists file_path text;
+alter table public.documents add column if not exists mime_type text; alter table public.documents add column if not exists file_size bigint;
+alter table public.documents add column if not exists status text not null default 'ready'; alter table public.documents add column if not exists extracted_text text;
+alter table public.documents add column if not exists source text not null default 'manual'; alter table public.documents add column if not exists source_execution_id uuid references public.agent_executions(id) on delete set null;
+alter table public.documents add column if not exists error_message text; alter table public.documents add column if not exists updated_at timestamptz not null default now();
+alter table public.documents add constraint documents_type_check check(document_type in('uploaded_file','text'));
+alter table public.documents add constraint documents_status_check check(status in('uploaded','processing','ready','failed'));
+alter table public.documents add constraint documents_source_check check(source in('manual','upload','alma_chat','import'));
+create unique index if not exists documents_alma_execution_idx on public.documents(user_id,source_execution_id) where source='alma_chat' and source_execution_id is not null;
+create index if not exists documents_user_updated_idx on public.documents(user_id,updated_at desc);
+insert into storage.buckets(id,name,public) values('alma-documents','alma-documents',false) on conflict(id) do update set public=false;
+alter table public.documents enable row level security;
+drop policy if exists "Users manage own documents" on public.documents; create policy "Users manage own documents" on public.documents for all to authenticated using(user_id=auth.uid()) with check(user_id=auth.uid());
+drop policy if exists "Users manage own alma documents" on storage.objects;
+create policy "Users manage own alma documents" on storage.objects for all to authenticated using(bucket_id='alma-documents' and (storage.foldername(name))[1]=auth.uid()::text) with check(bucket_id='alma-documents' and (storage.foldername(name))[1]=auth.uid()::text);
+commit;

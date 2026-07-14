@@ -58,11 +58,29 @@ declare v_run public.chat_runs; begin
   return v_run; end $$;
 
 create or replace function public.complete_chat_run(p_id uuid, p_token uuid)
-returns boolean language plpgsql security definer set search_path = public as $$ begin
-  update public.chat_runs set status='completed', lease_expires_at=null, updated_at=now() where id=p_id and claim_token=p_token and status='running'; return found; end $$;
+returns boolean language plpgsql security definer set search_path = public as $$
+declare v_execution_id uuid; begin
+  update public.chat_runs set status='completed', lease_expires_at=null, updated_at=now()
+   where id=p_id and claim_token=p_token and status='running' returning execution_id into v_execution_id;
+  if not found then return false; end if;
+  update public.agent_executions set status='completed', completed_at=now(), lease_expires_at=null
+   where id=v_execution_id and claim_token=p_token and status='running';
+  return found;
+end $$;
 create or replace function public.fail_chat_run(p_id uuid, p_token uuid, p_error text, p_retry boolean default true)
-returns boolean language plpgsql security definer set search_path = public as $$ begin
-  update public.chat_runs set status=case when p_retry and attempts < max_attempts then 'retryable' else 'failed' end, last_error=p_error, available_at=now()+interval '30 seconds', claim_token=null, lease_expires_at=null, updated_at=now() where id=p_id and claim_token=p_token and status='running'; return found; end $$;
+returns boolean language plpgsql security definer set search_path = public as $$
+declare v_execution_id uuid; v_retry boolean; begin
+  update public.chat_runs set status=case when p_retry and attempts < max_attempts then 'retryable' else 'failed' end,
+   last_error=p_error, available_at=now()+interval '30 seconds', claim_token=null, lease_expires_at=null, updated_at=now()
+   where id=p_id and claim_token=p_token and status='running'
+   returning execution_id, status='retryable' into v_execution_id, v_retry;
+  if not found then return false; end if;
+  update public.agent_executions set status=case when v_retry then 'queued' else 'failed' end,
+   error=case when v_retry then error else p_error end, completed_at=case when v_retry then null else now() end,
+   claim_token=null, lease_expires_at=null
+   where id=v_execution_id and claim_token=p_token and status='running';
+  return found;
+end $$;
 
 alter table public.chat_runs enable row level security;
 alter table public.conversation_user_state enable row level security;
@@ -70,4 +88,80 @@ drop policy if exists "Users read own chat runs" on public.chat_runs;
 create policy "Users read own chat runs" on public.chat_runs for select to authenticated using (user_id=auth.uid());
 drop policy if exists "Users manage own conversation state" on public.conversation_user_state;
 create policy "Users manage own conversation state" on public.conversation_user_state for all to authenticated using (user_id=auth.uid()) with check (user_id=auth.uid());
+
+-- Durable worker boundary: clients may observe owned state, but only service
+-- role / claim-token RPCs may mutate queue or execution lifecycle records.
+drop policy if exists "Users manage own agent executions" on public.agent_executions;
+drop policy if exists "Users manage own agent execution steps" on public.agent_execution_steps;
+drop policy if exists "Users read own durable executions" on public.agent_executions;
+drop policy if exists "Users read own durable execution steps" on public.agent_execution_steps;
+create policy "Users read own durable executions" on public.agent_executions for select to authenticated using (user_id = auth.uid());
+create policy "Users read own durable execution steps" on public.agent_execution_steps for select to authenticated using (
+  exists (select 1 from public.agent_executions e where e.id=execution_id and e.user_id=auth.uid())
+);
+drop policy if exists "Users read own durable messages" on public.messages;
+create policy "Users read own durable messages" on public.messages for select to authenticated using (
+  user_id=auth.uid() and (execution_id is null or exists (select 1 from public.agent_executions e where e.id=execution_id and e.user_id=auth.uid()))
+);
+drop policy if exists "Users read own durable tool runs" on public.tool_runs;
+create policy "Users read own durable tool runs" on public.tool_runs for select to authenticated using (user_id=auth.uid());
+drop policy if exists "Users manage own conversation state" on public.conversation_user_state;
+create policy "Users read own conversation state" on public.conversation_user_state for select to authenticated using (user_id=auth.uid());
+create policy "Users mark own conversation read" on public.conversation_user_state for insert to authenticated with check (
+  user_id=auth.uid() and exists (select 1 from public.conversations c where c.id=conversation_id and c.user_id=auth.uid())
+);
+create policy "Users update own conversation read" on public.conversation_user_state for update to authenticated using (user_id=auth.uid()) with check (user_id=auth.uid());
+
+-- Service-role submission still needs referential ownership checks: foreign keys
+-- prove that parents exist, not that every parent belongs to the same user.
+create or replace function public.assert_durable_chat_ownership()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  if tg_table_name = 'agent_executions' then
+    if not exists (select 1 from public.agents a where a.id = new.agent_id and a.user_id = new.user_id)
+      or (new.conversation_id is not null and not exists (select 1 from public.conversations c where c.id = new.conversation_id and c.user_id = new.user_id))
+      or (new.user_message_id is not null and not exists (select 1 from public.messages m where m.id = new.user_message_id and m.user_id = new.user_id and (new.conversation_id is null or m.conversation_id = new.conversation_id))) then
+      raise exception 'durable execution parents must belong to its user' using errcode = '42501';
+    end if;
+  elsif tg_table_name = 'chat_runs' then
+    if not exists (select 1 from public.agents a where a.id = new.agent_id and a.user_id = new.user_id)
+      or not exists (select 1 from public.conversations c where c.id = new.conversation_id and c.user_id = new.user_id)
+      or not exists (select 1 from public.agent_executions e where e.id = new.execution_id and e.user_id = new.user_id and e.agent_id = new.agent_id and e.conversation_id = new.conversation_id)
+      or not exists (select 1 from public.messages m where m.id = new.user_message_id and m.user_id = new.user_id and m.conversation_id = new.conversation_id and m.role = 'user') then
+      raise exception 'chat run parents must belong to its user' using errcode = '42501';
+    end if;
+  elsif tg_table_name = 'messages' and new.execution_id is not null then
+    if not exists (select 1 from public.agent_executions e where e.id = new.execution_id and e.user_id = new.user_id and e.conversation_id = new.conversation_id) then
+      raise exception 'execution-linked message must belong to its execution user and conversation' using errcode = '42501';
+    end if;
+  elsif tg_table_name = 'tool_runs' and new.execution_id is not null then
+    if not exists (select 1 from public.agent_executions e where e.id = new.execution_id and e.user_id = new.user_id) then
+      raise exception 'tool run execution must belong to its user' using errcode = '42501';
+    end if;
+  elsif tg_table_name = 'agent_execution_steps' then
+    if not exists (select 1 from public.agent_executions e where e.id = new.execution_id) then
+      raise exception 'execution step must belong to an execution' using errcode = '42501';
+    end if;
+  end if;
+  return new;
+end $$;
+
+drop trigger if exists assert_agent_execution_durable_ownership on public.agent_executions;
+create trigger assert_agent_execution_durable_ownership before insert or update on public.agent_executions for each row execute function public.assert_durable_chat_ownership();
+drop trigger if exists assert_chat_run_durable_ownership on public.chat_runs;
+create trigger assert_chat_run_durable_ownership before insert or update on public.chat_runs for each row execute function public.assert_durable_chat_ownership();
+drop trigger if exists assert_message_durable_ownership on public.messages;
+create trigger assert_message_durable_ownership before insert or update on public.messages for each row execute function public.assert_durable_chat_ownership();
+drop trigger if exists assert_tool_run_durable_ownership on public.tool_runs;
+create trigger assert_tool_run_durable_ownership before insert or update on public.tool_runs for each row execute function public.assert_durable_chat_ownership();
+drop trigger if exists assert_execution_step_durable_ownership on public.agent_execution_steps;
+create trigger assert_execution_step_durable_ownership before insert or update on public.agent_execution_steps for each row execute function public.assert_durable_chat_ownership();
+
+revoke all on function public.claim_chat_run(integer) from public, anon, authenticated;
+revoke all on function public.complete_chat_run(uuid,uuid) from public, anon, authenticated;
+revoke all on function public.fail_chat_run(uuid,uuid,text,boolean) from public, anon, authenticated;
+revoke all on function public.assert_durable_chat_ownership() from public, anon, authenticated;
+grant execute on function public.claim_chat_run(integer) to service_role;
+grant execute on function public.complete_chat_run(uuid,uuid) to service_role;
+grant execute on function public.fail_chat_run(uuid,uuid,text,boolean) to service_role;
 commit;

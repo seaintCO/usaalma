@@ -1,5 +1,6 @@
 import { createTaskTool } from "@/lib/tools/tasks/createTaskTool";
 import { TaskRepository } from "@/lib/db/repositories/tasks/task.repository";
+import { NoteRepository } from "@/lib/db/repositories/notes/note.repository";
 import { createNoteTool } from "@/lib/tools/notes/createNoteTool";
 import { createContactTool } from "@/lib/tools/crm/createContactTool";
 import { createInvoiceTool } from "@/lib/tools/invoices/createInvoiceTool";
@@ -19,6 +20,10 @@ export const toolDefinitions = [
   { type:"function", name:"list_tasks", description:"Mostrar tareas reales del usuario.", parameters:{type:"object",properties:{status:{type:"string",enum:["open","completed","overdue","today","all"]}},additionalProperties:false}},
   { type:"function", name:"update_task_status", description:"Completar, reabrir o cancelar una sola tarea por título exacto.", parameters:{type:"object",properties:{title:{type:"string"},status:{type:"string",enum:["completed","open","cancelled"]}},required:["title","status"],additionalProperties:false}},
   { type:"function", name:"create_note", description:"Crear una nota.", parameters:{ type:"object", properties:{ title:{ type:"string" }, content:{ type:"string" } }, required:["title","content"], additionalProperties:false } },
+  { type:"function", name:"list_notes", description:"Mostrar notas reales del usuario.", parameters:{type:"object",properties:{query:{type:"string"}},additionalProperties:false}},
+  { type:"function", name:"update_note", description:"Actualizar una sola nota por título exacto.", parameters:{type:"object",properties:{title:{type:"string"},content:{type:"string"}},required:["title","content"],additionalProperties:false}},
+  { type:"function", name:"delete_note", description:"Eliminar una sola nota por título exacto.", parameters:{type:"object",properties:{title:{type:"string"}},required:["title"],additionalProperties:false}},
+  { type:"function", name:"get_note", description:"Cargar una nota real por título exacto para resumirla o responder preguntas.", parameters:{type:"object",properties:{title:{type:"string"}},required:["title"],additionalProperties:false}},
   { type:"function", name:"create_contact", description:"Crear contacto CRM.", parameters:{ type:"object", properties:{ name:{ type:"string" }, company:{ type:"string" }, email:{ type:"string" }, phone:{ type:"string" } }, required:["name"], additionalProperties:false } },
   { type:"function", name:"create_invoice", description:"Crear factura.", parameters:{ type:"object", properties:{ clientName:{ type:"string" }, amount:{ type:"number" } }, required:["clientName","amount"], additionalProperties:false } },
   { type:"function", name:"create_receptionist", description:"Crear recepcionista IA.", parameters:{ type:"object", properties:{ businessName:{ type:"string" }, businessType:{ type:"string" }, phoneNumber:{ type:"string" }, greeting:{ type:"string" } }, required:["businessName"], additionalProperties:false } },
@@ -71,8 +76,11 @@ export async function executeTool(userId:string, name:string, args:any, context?
       const title = cleanString(args.title);
       const content = cleanString(args.content);
       if (!title) return { success:false, message:"Falta el título de la nota." };
-      return await logAndReturn(userId, name, args, await createNoteTool(userId, title, content));
+      return await logAndReturn(userId, name, args, await createNoteTool(userId, title, content, context?.executionId));
     }
+    if (name === "list_notes") { if (!userHasModule(installed, "notes")) return blocked("Notes"); const notes=await NoteRepository.list(userId,{query:cleanString(args.query)||undefined}); return {success:true,message:notes.length?notes.map((note:any)=>note.title).join("\n"):"No notes found.",notes}; }
+    if (name === "update_note" || name === "delete_note") { if (!userHasModule(installed, "notes")) return blocked("Notes"); const title=cleanString(args.title); const matches=title?await NoteRepository.findExactTitle(userId,title):[]; if(matches.length!==1)return {success:false,message:matches.length?"More than one note matches. Please clarify the exact note.":"No matching note was found."}; if(name==="delete_note"){await NoteRepository.delete(userId,matches[0].id);return {success:true,message:`Note deleted: ${matches[0].title}`};} const note=await NoteRepository.update(userId,matches[0].id,{content:cleanString(args.content)});return {success:true,message:`Note updated: ${note.title}`,note}; }
+    if (name === "get_note") { if (!userHasModule(installed, "notes")) return blocked("Notes"); const title=cleanString(args.title); const matches=title?await NoteRepository.findExactTitle(userId,title):[]; if(matches.length!==1)return {success:false,message:matches.length?"More than one note matches. Please clarify the exact note.":"No matching note was found."}; return {success:true,message:`Note content for ${matches[0].title}: ${matches[0].content}`,note:matches[0]}; }
 
     if (name === "create_contact") {
       if (!userHasModule(installed, "crm")) return blocked("CRM");

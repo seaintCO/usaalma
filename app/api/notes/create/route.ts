@@ -11,7 +11,7 @@ export async function POST(req:Request) {
 
   if (!body.title) return NextResponse.json({ error:"Missing title" }, { status:400 });
 
-  const note = await NoteRepository.create(user.id, body.title, body.content ?? "");
+  const note = await NoteRepository.create(user.id, { title: body.title, content: body.content ?? "", source: "manual" });
 
   return NextResponse.json(note);
 }

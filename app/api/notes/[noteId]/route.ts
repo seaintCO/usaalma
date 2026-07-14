@@ -1,0 +1,5 @@
+import { NextResponse } from "next/server";
+import { getCurrentUser } from "@/lib/auth/user";
+import { NoteRepository } from "@/lib/db/repositories/notes/note.repository";
+export async function PATCH(request:Request,ctx:{params:Promise<{noteId:string}>}){const user=await getCurrentUser();if(!user)return NextResponse.json({error:"Unauthorized"},{status:401});const {noteId}=await ctx.params;const body=await request.json();try{return NextResponse.json(await NoteRepository.update(user.id,noteId,{title:body.title,content:body.content}));}catch{return NextResponse.json({error:"Note not found or could not be saved"},{status:404});}}
+export async function DELETE(_request:Request,ctx:{params:Promise<{noteId:string}>}){const user=await getCurrentUser();if(!user)return NextResponse.json({error:"Unauthorized"},{status:401});const {noteId}=await ctx.params;try{await NoteRepository.delete(user.id,noteId);return NextResponse.json({success:true});}catch{return NextResponse.json({error:"Note not found or could not be deleted"},{status:404});}}

@@ -1,0 +1,25 @@
+-- Stage A3: canonical user-owned notes. Do not apply automatically.
+begin;
+alter table public.notes add column if not exists source text not null default 'manual';
+alter table public.notes add column if not exists source_execution_id uuid references public.agent_executions(id) on delete set null;
+alter table public.notes add column if not exists archived boolean not null default false;
+alter table public.notes add column if not exists updated_at timestamptz not null default now();
+alter table public.notes drop constraint if exists notes_source_check;
+alter table public.notes add constraint notes_source_check check (source in ('manual','alma_chat','import'));
+create unique index if not exists notes_alma_execution_idx on public.notes(user_id,source_execution_id) where source='alma_chat' and source_execution_id is not null;
+create index if not exists notes_user_updated_idx on public.notes(user_id,updated_at desc) where archived=false;
+create index if not exists notes_user_search_idx on public.notes(user_id,lower(title),lower(content));
+create or replace function public.set_notes_updated_at() returns trigger language plpgsql set search_path=public as $$ begin new.updated_at=now(); return new; end $$;
+drop trigger if exists notes_updated_at on public.notes;
+create trigger notes_updated_at before update on public.notes for each row execute function public.set_notes_updated_at();
+alter table public.notes enable row level security;
+drop policy if exists "Users manage own notes" on public.notes;
+drop policy if exists "Users read own notes" on public.notes;
+drop policy if exists "Users insert own notes" on public.notes;
+drop policy if exists "Users update own notes" on public.notes;
+drop policy if exists "Users delete own notes" on public.notes;
+create policy "Users read own notes" on public.notes for select to authenticated using(user_id=auth.uid());
+create policy "Users insert own notes" on public.notes for insert to authenticated with check(user_id=auth.uid());
+create policy "Users update own notes" on public.notes for update to authenticated using(user_id=auth.uid()) with check(user_id=auth.uid());
+create policy "Users delete own notes" on public.notes for delete to authenticated using(user_id=auth.uid());
+commit;

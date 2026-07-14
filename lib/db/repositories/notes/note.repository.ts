@@ -1,29 +1,3 @@
 import { createClient } from "@/lib/supabase/server";
-
-export class NoteRepository {
-  static async list(userId:string) {
-    const supabase = await createClient();
-
-    const { data } = await supabase
-      .from("notes")
-      .select("*")
-      .eq("user_id", userId)
-      .order("created_at", { ascending:false });
-
-    return data ?? [];
-  }
-
-  static async create(userId:string, title:string, content:string) {
-    const supabase = await createClient();
-
-    const { data, error } = await supabase
-      .from("notes")
-      .insert({ user_id:userId, title, content })
-      .select()
-      .single();
-
-    if (error) throw error;
-
-    return data;
-  }
-}
+export type NoteInput={title:string;content:string;source?:"manual"|"alma_chat"|"import";sourceExecutionId?:string|null};
+export class NoteRepository { static async list(userId:string, opts:{query?:string;archived?:boolean}={}){const s=await createClient();let q=s.from("notes").select("*").eq("user_id",userId).eq("archived",opts.archived??false).order("updated_at",{ascending:false});if(opts.query?.trim())q=q.or(`title.ilike.%${opts.query.trim()}%,content.ilike.%${opts.query.trim()}%`);const{data,error}=await q;if(error)throw error;return data??[];}static async get(userId:string,id:string){const s=await createClient();const{data,error}=await s.from("notes").select("*").eq("user_id",userId).eq("id",id).maybeSingle();if(error)throw error;return data;}static async create(userId:string,input:NoteInput){const s=await createClient();const{data,error}=await s.from("notes").insert({user_id:userId,title:input.title,content:input.content,source:input.source??"manual",source_execution_id:input.sourceExecutionId??null}).select().single();if(error)throw error;return data;}static async createForChat(userId:string,input:NoteInput){if(!input.sourceExecutionId)return this.create(userId,{...input,source:"alma_chat"});const s=await createClient();const{data}=await s.from("notes").select("*").eq("user_id",userId).eq("source","alma_chat").eq("source_execution_id",input.sourceExecutionId).maybeSingle();return data??this.create(userId,{...input,source:"alma_chat"});}static async update(userId:string,id:string,input:Partial<NoteInput>){const s=await createClient();const patch:any={};if(input.title!==undefined)patch.title=input.title;if(input.content!==undefined)patch.content=input.content;const{data,error}=await s.from("notes").update(patch).eq("user_id",userId).eq("id",id).select().single();if(error)throw error;return data;}static async archive(userId:string,id:string,archived=true){const s=await createClient();const{data,error}=await s.from("notes").update({archived}).eq("user_id",userId).eq("id",id).select().single();if(error)throw error;return data;}static async delete(userId:string,id:string){const s=await createClient();const{error}=await s.from("notes").delete().eq("user_id",userId).eq("id",id);if(error)throw error;}static async findExactTitle(userId:string,title:string){return (await this.list(userId,{archived:false,query:title})).filter((note:any)=>note.title.trim().toLowerCase()===title.trim().toLowerCase());}}

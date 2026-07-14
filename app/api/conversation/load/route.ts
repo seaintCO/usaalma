@@ -26,8 +26,12 @@ if(!body.conversationId){
 const messages=await MessageRepository.list(body.conversationId);
 
 const cleanMessages=messages.map((m:any)=>({
+  id: m.id,
   role:m.role,
-  content:m.content
+  content:m.content,
+  status: m.status,
+  executionId: m.execution_id ?? undefined,
+  createdAt: m.created_at,
 }));
 
 return NextResponse.json(cleanMessages);

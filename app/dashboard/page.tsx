@@ -178,6 +178,30 @@ export default function DashboardPage() {
     if (Array.isArray(data)) setInstalledCORE(data.filter((m:any) => m.installed));
   }
 
+  function mergeConversationState(persisted: ChatMessage[], runs: any[]): ChatMessage[] {
+    const withoutLegacyDrafts = persisted.filter((message) => !(message.role === "assistant" && /ALMA is thinking|ALMA est.{1,2} pensando/i.test(message.content)));
+    const byExecution = new Map<string, ChatMessage>();
+    const byId = new Map<string, ChatMessage>();
+    for (const message of withoutLegacyDrafts) {
+      byId.set(message.id, message);
+      if (message.executionId) byExecution.set(message.executionId, message);
+    }
+    for (const run of runs) {
+      const persistedAssistant = run.assistantMessage;
+      if (persistedAssistant) {
+        const message: ChatMessage = { id: persistedAssistant.id, role: "assistant", content: persistedAssistant.content ?? "", status: run.status === "failed" ? "error" : run.status === "completed" ? undefined : "streaming", runId: run.runId, executionId: run.executionId, createdAt: persistedAssistant.created_at };
+        const existing = byExecution.get(run.executionId);
+        if (existing) byId.delete(existing.id);
+        byExecution.set(run.executionId, message); byId.set(message.id, message);
+      } else if (run.status === "queued" || run.status === "running") {
+        const existing = byExecution.get(run.executionId);
+        if (!existing) { const draft: ChatMessage = { id: `draft-${run.executionId}`, role: "assistant", content: "", status: "streaming", runId: run.runId, executionId: run.executionId, createdAt: run.updatedAt }; byExecution.set(run.executionId, draft); byId.set(draft.id, draft); }
+      } else if (run.status === "failed" && !byExecution.has(run.executionId)) {
+        const failed: ChatMessage = { id: `draft-${run.executionId}`, role: "assistant", content: language === "es" ? "ALMA no pudo completar la respuesta." : "ALMA could not complete the response.", status: "error", runId: run.runId, executionId: run.executionId, createdAt: run.updatedAt }; byExecution.set(run.executionId, failed); byId.set(failed.id, failed);
+      }
+    }
+    return [...byId.values()].sort((a, b) => String(a.createdAt ?? "").localeCompare(String(b.createdAt ?? "")));
+  }
   async function loadConversation(id:string) {
     setStreamEpoch((value) => value + 1);
     setConversationId(id);
@@ -186,17 +210,21 @@ export default function DashboardPage() {
     setSidebarOpen(false);
     conversationRequest.current?.abort();
     const cached = conversationCache.current.get(id);
-    if (cached) { setMessages(cached); setConversationLoading(false); return; }
     const controller = new AbortController();
     conversationRequest.current = controller;
     setConversationLoading(true);
     try {
-      const res = await fetch("/api/conversation/load", { method:"POST", headers:{ "Content-Type":"application/json" }, body:JSON.stringify({ conversationId:id }), signal:controller.signal });
-      const data = await res.json();
-      if (!controller.signal.aborted && Array.isArray(data)) {
-        const loaded = data.map((message:any, index:number) => ({ ...message, id: message.id || `history-${id}-${index}` }));
-        conversationCache.current.set(id, loaded);
-        setMessages(loaded);
+      const [messageResponse, runResponse] = await Promise.all([
+        cached ? Promise.resolve(null) : fetch("/api/conversation/load", { method:"POST", headers:{ "Content-Type":"application/json" }, body:JSON.stringify({ conversationId:id }), signal:controller.signal }),
+        fetch(`/api/chat/conversations/${id}/runs`, { signal: controller.signal }),
+      ]);
+      const data = messageResponse ? await messageResponse.json() : cached;
+      const runs = runResponse.ok ? await runResponse.json() : [];
+      if (!controller.signal.aborted && Array.isArray(data) && Array.isArray(runs)) {
+        const loaded = data.filter((message:any) => typeof message.id === "string");
+        const merged = mergeConversationState(loaded, runs);
+        conversationCache.current.set(id, merged);
+        setMessages(merged);
       }
     } finally {
       if (!controller.signal.aborted) setConversationLoading(false);
@@ -498,7 +526,7 @@ export default function DashboardPage() {
           <InlineAppFrame title="Billing" src={`/billing?lang=${language}`} />
         ) : activeWorkspace === "settings" ? (
           <InlineAppFrame title="Settings" src={`/settings?lang=${language}`} />
-        ) : <ChatWorkspace messages={messages} setMessages={setMessages} conversationId={conversationId} setConversationId={setConversationId} language={language} setLanguage={updateLanguage} streamEpoch={streamEpoch} loadingConversation={conversationLoading} durableEnabled={durableChatEnabled} onComplete={() => { void loadHistory(); }} onAnalyzeFile={analyzeFile} />}
+        ) : <ChatWorkspace messages={messages} setMessages={setMessages} conversationId={conversationId} setConversationId={setConversationId} language={language} setLanguage={updateLanguage} streamEpoch={streamEpoch} loadingConversation={conversationLoading} durableEnabled={durableChatEnabled} onComplete={(completedConversationId) => { if (completedConversationId) conversationCache.current.delete(completedConversationId); void loadHistory(); }} onAnalyzeFile={analyzeFile} />}
       </section>
     </main>
   );

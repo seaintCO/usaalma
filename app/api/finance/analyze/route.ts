@@ -16,7 +16,7 @@ export async function POST(req: Request) {
   const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
   const result:any = await client.responses.create({
-    model: process.env.ALMA_MODEL || "gpt-5.5",
+    model: process.env.ALMA_MODEL || "gpt-4.1",
     input: buildMarketAnalysisPrompt(symbol || "Market", question || "Give me daily market analysis and key levels.")
   });
 

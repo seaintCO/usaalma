@@ -241,42 +241,42 @@ export default function DashboardPage() {
     setLoading(true);
     setMessages((prev) => [...prev, { role:"assistant", content:"ALMA is thinking..." }]);
 
-    const res = await fetch("/api/chat/stream", {
-      method:"POST",
-      headers:{ "Content-Type":"application/json" },
-      body:JSON.stringify({ message:userMessage, conversationId }),
-    });
-
-    if (!res.body) {
-      setLoading(false);
-      return;
-    }
-
-    const reader = res.body.getReader();
-    const decoder = new TextDecoder();
-    let fullReply = "";
-
-    while (true) {
-      const { value, done } = await reader.read();
-      if (done) break;
-
-      const chunk = decoder.decode(value);
-      const match = chunk.match(/\[CONVERSATION_ID:(.*?)\]\n/);
-      const cleanChunk = chunk.replace(/\[CONVERSATION_ID:.*?\]\n/, "");
-
-      if (match?.[1]) setConversationId(match[1]);
-
-      fullReply += cleanChunk;
-
-      setMessages((prev) => {
-        const updated = [...prev];
-        updated[updated.length - 1] = { role:"assistant", content:fullReply };
-        return updated;
+    try {
+      const res = await fetch("/api/chat/stream", {
+        method:"POST",
+        headers:{ "Content-Type":"application/json" },
+        body:JSON.stringify({ message:userMessage, conversationId, language }),
       });
-    }
 
-    setLoading(false);
-    loadHistory();
+      if (!res.ok || !res.body) {
+        const error = (await res.text()) || "ALMA could not start a response.";
+        setMessages((prev) => [...prev.slice(0, -1), { role:"assistant", content:error }]);
+        return;
+      }
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let fullReply = "";
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value, { stream:true });
+        const match = chunk.match(/\[CONVERSATION_ID:(.*?)\]\n/);
+        const cleanChunk = chunk.replace(/\[CONVERSATION_ID:.*?\]\n/, "");
+        if (match?.[1]) setConversationId(match[1]);
+        fullReply += cleanChunk;
+        setMessages((prev) => [...prev.slice(0, -1), { role:"assistant", content:fullReply }]);
+      }
+
+      fullReply += decoder.decode();
+    } catch {
+      setMessages((prev) => [...prev.slice(0, -1), { role:"assistant", content:"ALMA could not reach the server. Please try again." }]);
+    } finally {
+      setLoading(false);
+      void loadHistory();
+    }
   }
 
   useEffect(() => {

@@ -23,6 +23,14 @@ import { generateImageTool } from "@/lib/tools/images/generateImageTool";
 import { buildMarketAnalysisPrompt } from "@/lib/ai/finance/marketPrompt";
 import { AgentService } from "@/lib/services/agents/agent.service";
 
+function responseLanguageInstruction(message: string, requestedLanguage: unknown) {
+  if (requestedLanguage === "en") return "Respond in English unless the user explicitly asks for Spanish.";
+  if (requestedLanguage === "es") return "Responde en español salvo que el usuario pida explícitamente inglés.";
+  return /\b(en español|español|spanish|traduce|translate)\b/i.test(message)
+    ? "Respond in the language explicitly requested by the user."
+    : "Match the user's language. If the user naturally uses both English and Spanish, reply bilingually.";
+}
+
 type TrackedExecution = {
   agentId: string;
   executionId: string;
@@ -68,9 +76,14 @@ export async function POST(req:Request) {
 
   if (!user) return new Response("Unauthorized", { status:401 });
 
-  const body = await req.json();
-  const message = body.message;
-  let conversationId = body.conversationId;
+  let body: { message?: unknown; conversationId?: unknown; language?: unknown };
+  try {
+    body = await req.json();
+  } catch {
+    return new Response("Invalid JSON request body", { status: 400 });
+  }
+  const message = typeof body.message === "string" ? body.message.trim() : "";
+  let conversationId = typeof body.conversationId === "string" ? body.conversationId : "";
 
   if (process.env.NEXT_PUBLIC_DEMO_MODE === "true") {
     const encoder = new TextEncoder();
@@ -100,7 +113,12 @@ export async function POST(req:Request) {
 
   if (!message) return new Response("Mensaje vacío", { status:400 });
 
-  const subscription = await SubscriptionRepository.get(user.id);
+  let subscription;
+  try {
+    subscription = await SubscriptionRepository.get(user.id);
+  } catch {
+    return new Response("Subscription service is unavailable. Please try again shortly.", { status: 503 });
+  }
   if (!subscription || !["active", "trialing"].includes(subscription.status)) {
     return new Response("Tu suscripción no está activa. Ve a Billing para activar ALMA.", { status:402 });
   }
@@ -208,7 +226,12 @@ export async function POST(req:Request) {
     });
   }
 
-  const planned = await runPlannedExecution(user.id, message);
+  let planned = null;
+  try {
+    planned = await runPlannedExecution(user.id, message);
+  } catch (error) {
+    console.error("ALMA_PLANNER_ERROR", error);
+  }
 
   if (planned) {
     const encoder = new TextEncoder();
@@ -241,7 +264,12 @@ ${planned.steps.map((s:any, i:number) => `${i + 1}. ${s.label} — ${s.result?.m
     });
   }
 
-  const detectedIntent = await classifyAlmaRoute(message);
+  let detectedIntent = "chat" as Awaited<ReturnType<typeof classifyAlmaRoute>>;
+  try {
+    detectedIntent = await classifyAlmaRoute(message);
+  } catch (error) {
+    console.error("ALMA_ROUTER_ERROR", error);
+  }
 
   if (detectedIntent === "finance_analysis") {
     const encoder = new TextEncoder();
@@ -365,6 +393,7 @@ Idioma principal: español.
 Idioma secundario: inglés.
 Nunca digas que eres ChatGPT.
 Sé clara, práctica, elegante y útil.
+${responseLanguageInstruction(message, body.language)}
 
 Puedes usar herramientas reales. Si el usuario pide crear, generar, dibujar, diseñar, visualizar, hacer una imagen, logo, foto, anuncio, producto visual o editar una imagen, usa la herramienta generate_image. No solo expliques; genera la imagen cuando sea claramente una petición visual.
 

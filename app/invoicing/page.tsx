@@ -22,7 +22,7 @@ export default function InvoicingPage() {
   const [clientAddress, setClientAddress] = useState("");
 
   const [invoiceTitle, setInvoiceTitle] = useState("Professional Invoice");
-  const [invoiceNumber, setInvoiceNumber] = useState(`INV-${Date.now().toString().slice(-6)}`);
+  const [invoiceNumber, setInvoiceNumber] = useState("INV-DRAFT");
   const [dueDate, setDueDate] = useState("");
 
   const [items, setItems] = useState<Item[]>([

@@ -16,7 +16,7 @@ export async function summarizeGmailTool(userId:string, query:string = "in:inbox
   const client = new OpenAI({ apiKey:process.env.OPENAI_API_KEY });
 
   const response = await client.responses.create({
-    model:process.env.ALMA_MODEL || "gpt-5.5",
+    model:process.env.ALMA_MODEL || "gpt-4.1",
     input:`Summarize these Gmail messages for the user. Include important items and suggested next actions.\n\n${JSON.stringify(emails, null, 2)}`
   });
 

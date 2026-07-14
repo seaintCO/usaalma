@@ -22,7 +22,7 @@ export default function OnboardingPage() {
 
     const data = await res.json();
 
-    if (data.url) window.location.href = data.url;
+    if (data.url) window.location.assign(data.url);
     else {
       setLoading("");
       alert(data.error || "Could not start checkout.");

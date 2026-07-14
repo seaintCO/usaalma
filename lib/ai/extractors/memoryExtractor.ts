@@ -10,7 +10,7 @@ export async function extractMemory(message:string) {
   });
 
   const response = await client.responses.create({
-    model: process.env.ALMA_MODEL || "gpt-5.5",
+    model: process.env.ALMA_MODEL || "gpt-4.1",
     text: {
       format: {
         type: "json_schema",

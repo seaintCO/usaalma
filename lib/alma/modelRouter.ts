@@ -1,3 +1,5 @@
+import { OPENAI_MODELS } from "@/lib/ai/models";
+
 export type AlmaMode = "auto" | "fast" | "deep";
 
 export function detectComplexity(message:string) {
@@ -16,8 +18,8 @@ export function detectComplexity(message:string) {
 }
 
 export function chooseAlmaModel(message:string, mode:AlmaMode = "auto") {
-  const fastModel = process.env.ALMA_FAST_MODEL || "gpt-5.5-instant";
-  const deepModel = process.env.ALMA_DEEP_MODEL || process.env.ALMA_REASONING_MODEL || "gpt-5.5";
+  const fastModel = OPENAI_MODELS.fast;
+  const deepModel = OPENAI_MODELS.deep;
 
   if (mode === "fast") return fastModel;
   if (mode === "deep") return deepModel;

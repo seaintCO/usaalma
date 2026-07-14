@@ -18,7 +18,7 @@ export async function classifyAlmaRoute(message:string):Promise<AlmaRoute> {
   const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
   const result:any = await client.responses.create({
-    model: process.env.ALMA_ROUTER_MODEL || "gpt-5.6-luna",
+    model: process.env.ALMA_ROUTER_MODEL || "gpt-4.1-mini",
     input: `
 Classify the user's intent for ALMA.
 

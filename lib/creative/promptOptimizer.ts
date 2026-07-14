@@ -10,7 +10,7 @@ export async function optimizeCreativePrompt(input:{
   const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
   const response = await client.responses.create({
-    model: process.env.ALMA_MODEL || "gpt-5.5",
+    model: process.env.ALMA_MODEL || "gpt-4.1",
     input: `
 You are ALMA Creative Director.
 

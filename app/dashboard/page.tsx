@@ -151,6 +151,7 @@ export default function DashboardPage() {
   const conversationCache = useRef(new Map<string, ChatMessage[]>());
   const conversationRequest = useRef<AbortController | null>(null);
   const [history, setHistory] = useState<any[]>([]);
+  const [conversationStatuses, setConversationStatuses] = useState<Record<string, { active?: boolean; unread?: boolean; failed?: boolean }>>({});
   const [installedCORE, setInstalledCORE] = useState<any[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -180,6 +181,8 @@ export default function DashboardPage() {
   async function loadConversation(id:string) {
     setStreamEpoch((value) => value + 1);
     setConversationId(id);
+    setConversationStatuses((current) => ({ ...current, [id]: { ...current[id], unread: false } }));
+    void fetch(`/api/chat/conversations/${id}/read`, { method: "POST" }).catch(() => { void loadConversationStatuses(); });
     setSidebarOpen(false);
     conversationRequest.current?.abort();
     const cached = conversationCache.current.get(id);
@@ -198,6 +201,12 @@ export default function DashboardPage() {
     } finally {
       if (!controller.signal.aborted) setConversationLoading(false);
     }
+  }
+  async function loadConversationStatuses() {
+    const res = await fetch("/api/chat/conversation-status");
+    if (!res.ok) return;
+    const data = await res.json();
+    setConversationStatuses(Object.fromEntries(data.map((item:any) => [item.conversationId, item])));
   }
 
   function selectConversation(id: string, replace = false) {
@@ -284,6 +293,7 @@ export default function DashboardPage() {
       }
 
       loadHistory();
+      loadConversationStatuses();
       loadInstalledCORE();
       const durableRes = await fetch("/api/chat/runs/config");
       if (durableRes.ok) setDurableChatEnabled(Boolean((await durableRes.json()).durableChatEnabled));
@@ -305,6 +315,11 @@ export default function DashboardPage() {
     window.addEventListener("popstate", syncConversation);
     return () => window.removeEventListener("popstate", syncConversation);
   }, []);
+  useEffect(() => {
+    if (!Object.values(conversationStatuses).some((status) => status.active)) return;
+    const timer = setInterval(() => { void loadConversationStatuses(); }, 3000);
+    return () => clearInterval(timer);
+  }, [conversationStatuses]);
 
   function Sidebar() {
     const activeBadge = <span className="text-[10px] font-medium text-green-600">{t.active.toUpperCase()}</span>;
@@ -367,7 +382,7 @@ export default function DashboardPage() {
           {history.map((chat) => (
             <div key={chat.id} className="group flex items-center gap-1 rounded-lg hover:bg-gray-200">
               <button onClick={() => selectConversation(chat.id)} className="min-w-0 flex-1 truncate px-2 py-1.5 text-left text-[#6B7280] hover:text-black">
-                {chat.title || t.newChat}
+                <span className="flex items-center gap-1.5"><span className="truncate">{chat.title || t.newChat}</span>{conversationStatuses[chat.id]?.failed ? <span aria-label="Response failed" className="h-2 w-2 rounded-full bg-red-500" /> : conversationStatuses[chat.id]?.active ? <span aria-label="Generating response" className="h-2 w-2 animate-pulse rounded-full bg-blue-500" /> : conversationStatuses[chat.id]?.unread && conversationId !== chat.id ? <span aria-label="Unread response" className="h-2 w-2 rounded-full bg-black" /> : null}</span>
               </button>
               <button onClick={() => deleteConversation(chat.id)} className="hidden px-1 text-xs text-red-500 group-hover:block">
                 Delete

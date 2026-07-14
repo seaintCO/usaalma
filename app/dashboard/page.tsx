@@ -4,9 +4,10 @@ import {
   ArrowUp, Calendar, CheckCircle2, CreditCard, FileText, FolderOpen,
   Menu, Mic, Paperclip, PenSquare, PlusCircle, ReceiptText,
   Search, Settings, Store, Users, ImageIcon, Camera, Activity, Rocket, Presentation, Home } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import LaunchStudioPanel from "./LaunchStudioPanel";
 import TraderPanel from "./TraderPanel";
+import ChatWorkspace, { type ChatMessage } from "@/components/dashboard-chat/ChatWorkspace";
 
 const moduleMap:any = {
   planner: ["Planner", Calendar, "/planner"],
@@ -142,12 +143,8 @@ const almaText = {
 };
 
 export default function DashboardPage() {
-  const [input, setInput] = useState("");
-  const [messages, setMessages] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [authReady, setAuthReady] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const cameraInputRef = useRef<HTMLInputElement | null>(null);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [history, setHistory] = useState<any[]>([]);
   const [installedCORE, setInstalledCORE] = useState<any[]>([]);
@@ -157,6 +154,11 @@ export default function DashboardPage() {
   const [activeWorkspace, setActiveWorkspace] = useState<string>("chat");
   const [language, setLanguage] = useState<AlmaLanguage>("en");
   const t = almaText[language];
+
+  function updateLanguage(next: AlmaLanguage) {
+    setLanguage(next);
+    localStorage.setItem("alma_language", next);
+  }
 
   async function loadHistory() {
     const res = await fetch("/api/conversation/list");
@@ -178,7 +180,7 @@ export default function DashboardPage() {
     });
     const data = await res.json();
     if (Array.isArray(data)) {
-      setMessages(data);
+      setMessages(data.map((message:any, index:number) => ({ ...message, id: message.id || `history-${id}-${index}` })));
       setConversationId(id);
       setSidebarOpen(false);
     }
@@ -210,8 +212,7 @@ export default function DashboardPage() {
   }
 
   async function analyzeFile(file:File) {
-    setMessages((prev) => [...prev, { role:"user", content:`Analyze uploaded file: ${file.name}` }]);
-    setLoading(true);
+    setMessages((prev) => [...prev, { id:`file-${Date.now()}-user`, role:"user", content:`Analyze uploaded file: ${file.name}` }]);
 
     const form = new FormData();
     form.append("file", file);
@@ -225,58 +226,10 @@ export default function DashboardPage() {
     const data = await res.json();
 
     setMessages((prev) => [...prev, {
-      role:"assistant",
+      id:`file-${Date.now()}-assistant`, role:"assistant",
       content:data.answer || data.error || "I could not analyze this file."
     }]);
 
-    setLoading(false);
-  }
-
-  async function sendMessage() {
-    if (!input.trim() || loading) return;
-
-    const userMessage = input.trim();
-    setInput("");
-    setMessages((prev) => [...prev, { role:"user", content:userMessage }]);
-    setLoading(true);
-    setMessages((prev) => [...prev, { role:"assistant", content:"ALMA is thinking..." }]);
-
-    try {
-      const res = await fetch("/api/chat/stream", {
-        method:"POST",
-        headers:{ "Content-Type":"application/json" },
-        body:JSON.stringify({ message:userMessage, conversationId, language }),
-      });
-
-      if (!res.ok || !res.body) {
-        const error = (await res.text()) || "ALMA could not start a response.";
-        setMessages((prev) => [...prev.slice(0, -1), { role:"assistant", content:error }]);
-        return;
-      }
-
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let fullReply = "";
-
-      while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
-
-        const chunk = decoder.decode(value, { stream:true });
-        const match = chunk.match(/\[CONVERSATION_ID:(.*?)\]\n/);
-        const cleanChunk = chunk.replace(/\[CONVERSATION_ID:.*?\]\n/, "");
-        if (match?.[1]) setConversationId(match[1]);
-        fullReply += cleanChunk;
-        setMessages((prev) => [...prev.slice(0, -1), { role:"assistant", content:fullReply }]);
-      }
-
-      fullReply += decoder.decode();
-    } catch {
-      setMessages((prev) => [...prev.slice(0, -1), { role:"assistant", content:"ALMA could not reach the server. Please try again." }]);
-    } finally {
-      setLoading(false);
-      void loadHistory();
-    }
   }
 
   useEffect(() => {
@@ -335,14 +288,14 @@ export default function DashboardPage() {
           <div className="mt-4 grid grid-cols-2 gap-2 rounded-2xl border border-[#E5E7EB] bg-white p-1 shadow-sm">
             <button
               type="button"
-              onClick={() => setLanguage("en")}
+              onClick={() => updateLanguage("en")}
               className={`rounded-xl px-3 py-1.5 text-xs font-medium ${language === "en" ? "bg-black text-white" : "text-[#6B7280] hover:text-black"}`}
             >
               EN
             </button>
             <button
               type="button"
-              onClick={() => setLanguage("es")}
+              onClick={() => updateLanguage("es")}
               className={`rounded-xl px-3 py-1.5 text-xs font-medium ${language === "es" ? "bg-black text-white" : "text-[#6B7280] hover:text-black"}`}
             >
               ES
@@ -487,65 +440,7 @@ export default function DashboardPage() {
           <InlineAppFrame title="Billing" src={`/billing?lang=${language}`} />
         ) : activeWorkspace === "settings" ? (
           <InlineAppFrame title="Settings" src={`/settings?lang=${language}`} />
-        ) : (
-        <>
-        <div className="flex-1 overflow-y-auto pb-72 md:pb-44 scroll-smooth pb-64 scroll-smooth pb-44 px-4 pb-44 pt-8 md:px-6 md:pt-16">
-          <div className="mx-auto max-w-3xl">
-            {messages.length === 0 ? (
-              <div className="mt-24 text-center md:mt-32">
-                <h1 className="mb-2 text-3xl font-normal tracking-tight md:text-4xl">{t.greeting}</h1>
-                <h2 className="mb-4 text-3xl font-normal tracking-tight md:text-4xl">{t.identity}</h2>
-                <p className="text-lg text-[#6B7280]">{t.subtitle}</p>
-              </div>
-            ) : (
-              <div className="space-y-5">
-                {messages.map((msg, index) => (
-                  <div key={index} className={msg.role === "user" ? "ml-auto max-w-[95%] md:max-w-[90%] rounded-2xl bg-black p-3 text-sm md:p-4 text-white md:max-w-[80%]" : "max-w-[95%] md:max-w-[90%] rounded-2xl border border-[#E5E7EB] bg-[#F7F7F8] p-3 text-sm md:p-4 leading-6 md:max-w-[80%]"}>
-                    {renderMessage(msg.content || "")}
-                  </div>
-                ))}
-                {loading && (
-<div className="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm mb-4">
-<div className="flex items-center gap-2 text-sm font-medium">
-<div className="animate-spin h-4 w-4 rounded-full border-2 border-neutral-300 border-t-black"></div>
-<span>ALMA is thinking...</span>
-</div>
-</div>
-) && <div className="max-w-[95%] md:max-w-[90%] rounded-2xl border border-[#E5E7EB] bg-[#F7F7F8] p-3 text-sm md:p-4 text-[#6B7280] md:max-w-[80%]">ALMA is thinking...</div>}
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className="absolute bottom-0 w-full bg-gradient-to-t from-white via-white to-transparent px-3 pb-4 pt-10 md:px-4 md:pb-6">
-          <div className="mx-auto flex w-full max-w-3xl flex-col gap-3">
-            <div className="flex gap-2 overflow-x-auto pb-1 md:flex-wrap">
-              {[t.chipImage, t.chipLogo, t.chipAd, t.chipCode].map((label) => (
-                <button key={label} onClick={() => setInput(label)} className="shrink-0 rounded-full border border-[#E5E7EB] bg-[#F7F7F8] px-3 py-1.5 text-xs font-medium text-[#6B7280] hover:text-black">
-                  {label}
-                </button>
-              ))}
-            </div>
-
-            <div className="relative flex flex-col overflow-hidden rounded-2xl border border-[#E5E7EB] bg-[#F7F7F8] shadow-sm">
-              <textarea value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } }} rows={1} placeholder={t.prompt} className="min-h-[118px] max-h-32 w-full resize-none bg-transparent px-4 pt-4 pb-16 pr-14 text-base leading-6 outline-none placeholder:text-gray-400 sm:min-h-[104px] sm:pb-12" />
-
-              <div className="absolute bottom-4 left-4 flex items-center gap-2">
-                <input ref={fileInputRef} type="file" className="hidden" accept="image/*,.pdf,.docx,.txt,.csv,.xlsx,.xls" onChange={(e) => { const file = e.target.files?.[0]; if (file) analyzeFile(file); }} />
-                <input ref={cameraInputRef} type="file" className="hidden" accept="image/*" capture="environment" onChange={(e) => { const file = e.target.files?.[0]; if (file) analyzeFile(file); }} />
-                <button onClick={() => fileInputRef.current?.click()} className="rounded-md p-1 text-[#6B7280] hover:bg-gray-200 hover:text-black" title="Upload file"><Paperclip className="h-5 w-5" /></button>
-                <button onClick={() => cameraInputRef.current?.click()} className="rounded-md p-1 text-[#6B7280] hover:bg-gray-200 hover:text-black" title="Take photo"><Camera className="h-5 w-5" /></button>
-                <button className="rounded-md p-1 text-[#6B7280] hover:bg-gray-200 hover:text-black"><Mic className="h-5 w-5" /></button>
-              </div>
-
-              <button onClick={sendMessage} disabled={loading} className="absolute bottom-4 right-4 rounded-lg bg-black p-1.5 text-white hover:bg-gray-800 disabled:opacity-40"><ArrowUp className="h-5 w-5" /></button>
-            </div>
-
-            <p className="text-center text-[10px] text-gray-400">{t.disclaimer}</p>
-          </div>
-        </div>
-        </>
-        )}
+        ) : <ChatWorkspace messages={messages} setMessages={setMessages} conversationId={conversationId} setConversationId={setConversationId} language={language} setLanguage={updateLanguage} onComplete={() => { void loadHistory(); }} onAnalyzeFile={analyzeFile} />}
       </section>
     </main>
   );

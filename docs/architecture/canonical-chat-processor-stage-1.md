@@ -79,9 +79,28 @@ for a durable caller.
 processor. The route still calls them for non-image branches; planned image
 generation starts and completes its tracking entirely in the processor.
 
-The route intentionally retains only `createImageStreamResponse`, which emits
-the unchanged conversation marker and converts processor progress events into
-the existing plaintext bytes. It has no image provider, prompt, size,
-persistence, context, activity-log, edit-response, or execution-completion
-logic. Planner, finance, tools, and normal text streaming remain route-owned
-until their approved stages.
+At the end of Stage 3, the route retained only `createImageStreamResponse`,
+which emitted the unchanged conversation marker and converted processor
+progress events into existing plaintext bytes. It had no image provider,
+prompt, size, persistence, context, activity-log, edit-response, or
+execution-completion logic.
+
+## Stage 4 planner and tool execution boundary
+
+`processPlannerAndToolChatRun` now owns the universal Alma context/plan
+evaluation, simple planner execution, router classification and fail-open
+fallback, finance responses, router image handoff, Responses API tool
+discovery, tool invocation, execution-step recording, tool-response streaming,
+assistant persistence, and terminal tracking. It delegates image execution to
+the Stage 3 processor rather than recreating it.
+
+The processor emits the existing transport-neutral progress events and can run
+without a callback. Within one invocation, it de-duplicates tool calls by call
+id before any tool side effect occurs. Its existing idempotency key input is
+reserved for the later durable-run database boundary.
+
+The route now only authenticates and validates, resolves/persists the
+conversation and user message, preserves the compatibility memory write, emits
+the legacy plaintext conversation marker, translates processor events, and
+performs the still-deferred normal freeform model stream. No planner, router,
+finance, image, or tool-assisted branch remains in the route.

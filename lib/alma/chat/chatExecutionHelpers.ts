@@ -1,4 +1,10 @@
 import "server-only";
+import type { ChatRunLanguage } from "./processChatRun";
+
+export function normalizeChatRunLanguage(value: unknown): ChatRunLanguage {
+  if (value === "en" || value === "es") return value;
+  return "auto";
+}
 
 /**
  * Builds the response-language policy used by the chat compatibility route.

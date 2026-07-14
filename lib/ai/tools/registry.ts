@@ -167,7 +167,7 @@ export async function executeTool(userId:string, name:string, args:any, context?
       if (!userHasModule(installed, "image_generator")) return blocked("Image Generator");
       const prompt = cleanString(args.prompt);
       if (!prompt) return { success:false, message:"Falta el prompt de la imagen." };
-      return await logAndReturn(userId, name, args, await generateImageTool(userId, prompt));
+      return await logAndReturn(userId, name, args, await generateImageTool(userId, prompt, undefined, { executionId: context?.executionId }));
     }
 
     if (name === "summarize_gmail") {

@@ -1,0 +1,3 @@
+import { requirePaidUser } from "@/lib/api/requirePaidUser";
+import { ImageRepository } from "@/lib/db/repositories/images/image.repository";
+export async function GET(_request:Request,context:{params:Promise<{id:string}>}){const{user,error}=await requirePaidUser();if(error)return error;const image=await ImageRepository.get(user.id,(await context.params).id);if(!image?.image_base64)return new Response("Not found",{status:404});return new Response(Buffer.from(image.image_base64,"base64"),{headers:{"content-type":image.mime_type??"image/png","content-disposition":`attachment; filename="alma-${image.id}.png"`}});}

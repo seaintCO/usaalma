@@ -11,9 +11,7 @@ export async function POST(request: Request) {
   const { data: message, error } = await admin.from("messages").select("content").eq("id", run.user_message_id).eq("user_id", run.user_id).single();
   if (error || !message) return new Response("User message not found", { status: 404 });
   const result = await runDurableChatRun({ userId: run.user_id, agentId: run.agent_id, conversationId: run.conversation_id, executionId: run.execution_id, userMessageId: run.user_message_id, userMessage: message.content, idempotencyKey: run.idempotency_key, language: "auto" });
-  const rpc = result.ok ? "complete_chat_run" : "fail_chat_run";
-  const args = result.ok ? { p_id: run.id, p_token: run.claim_token } : { p_id: run.id, p_token: run.claim_token, p_error: result.message, p_retry: result.code !== "execution_in_progress" };
-  const { error: finishError } = await admin.rpc(rpc, args);
-  if (finishError) throw finishError;
+  // The Edge worker exclusively owns claim-token lifecycle transitions. This
+  // endpoint only invokes the canonical processor and reports its result.
   return Response.json({ runId: run.id, ok: result.ok });
 }

@@ -25,3 +25,11 @@ export function reflectOnResult(result:any) {
     message:null,
   };
 }
+
+export function summarizeReflection(result:any) {
+  const reflection = reflectOnResult(result);
+  return {
+    success: reflection.ok,
+    summary: reflection.ok ? "ALMA verified the result." : reflection.message || "ALMA needs another step.",
+  };
+}

@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { redactExecutionData, redactExecutionText } from "@/lib/alma/security/redactExecutionData";
 
 export async function getAlmaContext(userId:string, conversationId:string) {
   const supabase = await createClient();
@@ -39,9 +40,9 @@ export async function logAlmaExecution(input:any) {
     conversation_id: input.conversationId,
     intent: input.intent,
     status: input.status || "completed",
-    steps: input.steps || [],
-    result: input.result || {},
-    error: input.error || null,
+    steps: redactExecutionData(input.steps || []),
+    result: redactExecutionData(input.result || {}),
+    error: redactExecutionText(input.error),
     completed_at: input.completedAt || new Date().toISOString(),
   });
 }

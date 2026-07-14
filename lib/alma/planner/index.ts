@@ -1,4 +1,5 @@
 import { planAlmaAction, detectImageSize, buildImageFollowupPrompt } from "@/lib/alma/brain";
+import type { AgentStepKind } from "@/lib/alma/types";
 
 export function createAlmaPlan(message:string, workspace:any) {
   const plan = planAlmaAction(message, workspace?.almaContext);
@@ -14,9 +15,9 @@ export function createAlmaPlan(message:string, workspace:any) {
     imageSize,
     imagePrompt,
     steps: [
-      { label:"Receive request", status:"done" },
-      { label:"Load workspace", status:"done" },
-      { label:"Plan action", status:"done", tool:plan.tool, action:plan.action },
+      { label:"Receive request", status:"done", kind:"plan" as AgentStepKind },
+      { label:"Load workspace", status:"done", kind:"plan" as AgentStepKind },
+      { label:"Plan action", status:"done", kind:"plan" as AgentStepKind, tool:plan.tool, action:plan.action },
     ],
   };
 }

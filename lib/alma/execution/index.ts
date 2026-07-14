@@ -1,5 +1,6 @@
 import { generateImageTool } from "@/lib/tools/images/generateImageTool";
 import { upsertAlmaContext, logAlmaExecution } from "@/lib/alma/context";
+import { AgentService } from "@/lib/services/agents/agent.service";
 
 export async function executeAlmaPlan(input:any) {
   const { userId, conversationId, message, plan } = input;
@@ -31,6 +32,22 @@ export async function executeAlmaPlan(input:any) {
       result: { success: result?.success },
       error: result?.success ? null : result?.message || result?.error || "Image generation failed",
     });
+
+    if (input.executionId) {
+      try {
+        await AgentService.recordStep({
+          executionId: input.executionId,
+          sequence: plan.steps.length + 1,
+          kind: "tool",
+          toolName: "generate_image",
+          success: Boolean(result?.success),
+          output: { success: Boolean(result?.success) },
+          error: result?.success ? null : result?.message || result?.error || "Image generation failed",
+        });
+      } catch {
+        // Agent execution telemetry must not change the visible image result.
+      }
+    }
 
     return {
       type:"image",

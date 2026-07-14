@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { requirePaidUser } from "@/lib/api/requirePaidUser";
 import { createClient } from "@/lib/supabase/server";
 import { classifyAction } from "@/lib/ai/actions/classifyAction";
+import { AgentService } from "@/lib/services/agents/agent.service";
+import { redactExecutionText } from "@/lib/alma/security/redactExecutionData";
 
 export async function POST(req:Request) {
   const { user, error } = await requirePaidUser();
@@ -22,6 +24,18 @@ export async function POST(req:Request) {
       category:routed.payload.category || "general",
       updated_at:new Date().toISOString(),
     }, { onConflict:"user_id,memory_key" });
+
+    try {
+      await AgentService.mirrorMemory(
+        user.id,
+        routed.payload.category || "general",
+        routed.payload.memory_key || "note",
+        routed.payload.memory_value || message,
+        5
+      );
+    } catch {
+      // Legacy action behavior stays available before the migration is applied.
+    }
 
     result = "Saved to ALMA memory.";
   }
@@ -71,8 +85,8 @@ export async function POST(req:Request) {
   await supabase.from("alma_action_logs").insert({
     user_id:user.id,
     action_type:routed.action,
-    input:message,
-    result,
+    input:redactExecutionText(message),
+    result:redactExecutionText(result),
     status:"completed",
   });
 

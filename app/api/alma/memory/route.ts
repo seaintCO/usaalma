@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requirePaidUser } from "@/lib/api/requirePaidUser";
 import { createClient } from "@/lib/supabase/server";
+import { AgentService } from "@/lib/services/agents/agent.service";
 
 export async function GET() {
   const { user, error } = await requirePaidUser();
@@ -39,6 +40,12 @@ export async function POST(req:Request) {
     .single();
 
   if (dbError) return NextResponse.json({ error:dbError.message }, { status:500 });
+
+  try {
+    await AgentService.mirrorMemory(user.id, body.category || "general", body.memory_key, body.memory_value, 5);
+  } catch {
+    // Keep the current memory API available until the Phase 1 migration is deployed.
+  }
 
   return NextResponse.json({ success:true, memory:data });
 }

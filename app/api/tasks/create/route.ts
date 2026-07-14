@@ -11,7 +11,7 @@ export async function POST(req:Request) {
 
   if (!body.title) return NextResponse.json({ error:"Missing title" }, { status:400 });
 
-  const task = await TaskRepository.create(user.id, body.title);
+  const task = await TaskRepository.create(user.id, { title: body.title, description: body.description, priority: body.priority, dueAt: body.dueAt, status: body.status, source: "manual" });
 
   return NextResponse.json(task);
 }

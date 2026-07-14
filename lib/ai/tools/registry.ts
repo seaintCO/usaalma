@@ -1,4 +1,5 @@
 import { createTaskTool } from "@/lib/tools/tasks/createTaskTool";
+import { TaskRepository } from "@/lib/db/repositories/tasks/task.repository";
 import { createNoteTool } from "@/lib/tools/notes/createNoteTool";
 import { createContactTool } from "@/lib/tools/crm/createContactTool";
 import { createInvoiceTool } from "@/lib/tools/invoices/createInvoiceTool";
@@ -14,7 +15,9 @@ import { ToolRunRepository } from "@/lib/db/repositories/tools/toolRun.repositor
 import { getInstalledModuleKeys, userHasModule } from "@/lib/ai/modules/permissions";
 
 export const toolDefinitions = [
-  { type:"function", name:"create_task", description:"Crear una tarea.", parameters:{ type:"object", properties:{ title:{ type:"string" } }, required:["title"], additionalProperties:false } },
+  { type:"function", name:"create_task", description:"Crear una tarea.", parameters:{ type:"object", properties:{ title:{ type:"string" }, description:{type:"string"}, priority:{type:"string",enum:["low","medium","high","urgent"]}, dueAt:{type:"string"} }, required:["title"], additionalProperties:false } },
+  { type:"function", name:"list_tasks", description:"Mostrar tareas reales del usuario.", parameters:{type:"object",properties:{status:{type:"string",enum:["open","completed","overdue","today","all"]}},additionalProperties:false}},
+  { type:"function", name:"update_task_status", description:"Completar, reabrir o cancelar una sola tarea por título exacto.", parameters:{type:"object",properties:{title:{type:"string"},status:{type:"string",enum:["completed","open","cancelled"]}},required:["title","status"],additionalProperties:false}},
   { type:"function", name:"create_note", description:"Crear una nota.", parameters:{ type:"object", properties:{ title:{ type:"string" }, content:{ type:"string" } }, required:["title","content"], additionalProperties:false } },
   { type:"function", name:"create_contact", description:"Crear contacto CRM.", parameters:{ type:"object", properties:{ name:{ type:"string" }, company:{ type:"string" }, email:{ type:"string" }, phone:{ type:"string" } }, required:["name"], additionalProperties:false } },
   { type:"function", name:"create_invoice", description:"Crear factura.", parameters:{ type:"object", properties:{ clientName:{ type:"string" }, amount:{ type:"number" } }, required:["clientName","amount"], additionalProperties:false } },
@@ -39,7 +42,7 @@ function blocked(moduleName:string) {
   return { success:false, message:`Este módulo no está instalado todavía. Instala ${moduleName} desde Marketplace.` };
 }
 
-export async function executeTool(userId:string, name:string, args:any) {
+export async function executeTool(userId:string, name:string, args:any, context?:{executionId?:string}) {
   try {
     const installed = await getInstalledModuleKeys(userId);
 
@@ -47,7 +50,20 @@ export async function executeTool(userId:string, name:string, args:any) {
       if (!userHasModule(installed, "tasks")) return blocked("Tasks");
       const title = cleanString(args.title);
       if (!title) return { success:false, message:"Falta el título de la tarea." };
-      return await logAndReturn(userId, name, args, await createTaskTool(userId, title));
+      return await logAndReturn(userId, name, args, await createTaskTool(userId, { title, description:cleanString(args.description)||undefined, priority:["low","medium","high","urgent"].includes(args.priority)?args.priority:undefined, dueAt:cleanString(args.dueAt)||undefined, sourceExecutionId:context?.executionId }));
+    }
+    if (name === "list_tasks") {
+      if (!userHasModule(installed, "tasks")) return blocked("Tasks");
+      const tasks = await TaskRepository.list(userId, { status:["open","completed","overdue","today","all"].includes(args.status) ? args.status : "open" });
+      return { success:true, message:tasks.length ? tasks.map((task:any)=>`${task.title} (${task.status})`).join("\n") : "No tasks found.", tasks };
+    }
+    if (name === "update_task_status") {
+      if (!userHasModule(installed, "tasks")) return blocked("Tasks");
+      const title=cleanString(args.title); const status=cleanString(args.status);
+      const matches=title ? await TaskRepository.findExactTitle(userId,title) : [];
+      if (matches.length !== 1) return { success:false, message:matches.length ? "More than one task matches. Please clarify the exact task." : "No matching task was found." };
+      const task=await TaskRepository.update(userId,matches[0].id,{status:status==="completed"||status==="cancelled"?status:"open"});
+      return { success:true, message:`Task ${task.status}: ${task.title}`, task };
     }
 
     if (name === "create_note") {

@@ -251,7 +251,7 @@ ${memoryContext || "Sin memoria guardada todavía."}
           toolResult = { success: false, message: "This tool action is already running." };
         }
       } else {
-        toolResult = await executeTool(input.userId, call.name, args);
+        toolResult = await executeTool(input.userId, call.name, args, { executionId: tracking.executionId });
         await AgentService.finishStep({ stepId: claimed.step.id, success: Boolean(toolResult?.success), output: { result: toolResult }, error: toolResult?.success ? null : toolResult?.message || null });
       }
     } else {

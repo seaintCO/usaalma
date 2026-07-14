@@ -38,4 +38,12 @@ export class AgentService {
       error: input.error,
     });
   }
+
+  static async claimStep(input: { executionId: string; sequence: number; kind: "plan" | "tool" | "approval" | "verification" | "reflection"; toolName?: string; input?: Record<string, unknown> }) {
+    return AgentExecutionRepository.claimStep(input);
+  }
+
+  static async finishStep(input: { stepId: string; success: boolean; output?: Record<string, unknown>; error?: string | null }) {
+    return AgentExecutionRepository.finishStep(input.stepId, input.success ? "completed" : "failed", input.output, input.error);
+  }
 }

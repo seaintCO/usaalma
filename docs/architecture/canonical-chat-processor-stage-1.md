@@ -123,3 +123,40 @@ authenticates and validates, enforces subscription, resolves/persists the
 conversation and user message, performs the existing compatibility memory
 write, invokes the canonical processor, emits `[CONVERSATION_ID:<id>]`, and
 converts progress events into the existing plaintext chunks.
+
+## Stage 6 durable-run hardening and deferred migration
+
+`CanonicalChatRunInvocation` now separates interactive requests from durable
+requests. Durable calls require the stable user, agent, conversation,
+execution, user-message, and idempotency identifiers. Before work begins, the
+processor inspects the persisted execution: terminal executions return their
+stored result, `running` executions return an in-progress result, and only a
+persisted `pending` execution can be atomically claimed to `running`.
+
+Existing `agent_execution_steps` already has a unique `(execution_id,
+sequence)` constraint. The processor uses it as a database-backed claim before
+a tool or image side effect. A completed step's persisted output is reused;
+another running claimant does not execute the side effect. No process-local
+Set or Map is used for durable idempotency. `agent_memories` already upserts on
+`(agent_id, memory_key)`, so normalized memory retries are safe.
+
+The current schema cannot yet provide complete durable exactly-once behavior.
+The future queue migration must add, without applying it in this stage:
+
+- `chat_runs` with a unique idempotency key, execution foreign key, queued /
+  claimed / terminal status, attempt count, claim token, lease expiry, and
+  retry/error timestamps.
+- `agent_executions.idempotency_key`, `user_message_id`, queued/claim/lease
+  fields, a `queued` status, and a unique user/agent/idempotency constraint.
+- `messages.execution_id`, `status`, `updated_at`, `idempotency_key`, and a
+  unique execution/role key so one assistant draft can be updated/finalized.
+- `agent_execution_steps.step_key` plus a unique execution/step-key index;
+  the current sequence claim is only a compatibility bridge.
+- `tool_runs.execution_id`, `execution_step_id`, `idempotency_key`, and a
+  unique execution/step constraint for external side-effect receipts.
+- execution-linked activity-log uniqueness for lifecycle events, indexes for
+  execution/status claims, and service-role-only worker RLS policies.
+
+Until that migration exists, a durable worker must only invoke already-created
+`pending` executions and must treat missing execution/message linkage as a
+hard deployment blocker rather than attempting a retry.

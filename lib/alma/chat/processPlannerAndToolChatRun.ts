@@ -32,6 +32,7 @@ export type PlannerToolChatRunInput = {
   userMessage: string;
   language: "en" | "es" | "auto";
   idempotencyKey?: string;
+  tracking?: ChatRunTrackingContext;
   onProgress?: ChatRunProgressCallback;
 };
 
@@ -108,7 +109,7 @@ export async function processPlannerAndToolChatRun(input: PlannerToolChatRunInpu
     return { handled: true, result };
   }
 
-  const tracking = await startChatRunTracking({
+  const tracking = input.tracking ?? await startChatRunTracking({
     userId: input.userId,
     conversationId: input.conversationId,
     intent: almaPlan.intent,
@@ -237,22 +238,26 @@ ${memoryContext || "Sin memoria guardada todavía."}
   const toolCalls = (firstResponse.output || []).filter((item: any) => item.type === "function_call");
   if (!toolCalls.length) return { handled: false, systemPrompt, tracking };
 
-  const executedCallIds = new Set<string>();
   const toolResults: any[] = [];
-  for (const call of toolCalls) {
-    const callId = String(call.call_id || `${call.name}:${call.arguments || ""}`);
-    if (executedCallIds.has(callId)) continue;
-    executedCallIds.add(callId);
+  for (const [toolIndex, call] of toolCalls.entries()) {
     const args = call.arguments ? safeJsonParse(call.arguments) : {};
-    const toolResult = await executeTool(input.userId, call.name, args);
-    toolResults.push({ type: "function_call_output", call_id: call.call_id, output: JSON.stringify(toolResult) });
+    let toolResult: any;
     if (tracking) {
-      try {
-        await AgentService.recordStep({ executionId: tracking.executionId, sequence: toolResults.length + 1, kind: "tool", toolName: call.name, success: Boolean(toolResult?.success), input: args, output: { success: Boolean(toolResult?.success) }, error: toolResult?.success ? null : toolResult?.message || null });
-      } catch (error) {
-        console.error("ALMA_TOOL_STEP_ERROR", error);
+      const claimed = await AgentService.claimStep({ executionId: tracking.executionId, sequence: toolIndex + 2, kind: "tool", toolName: call.name, input: args });
+      if (!claimed.claimed) {
+        if (claimed.step.status === "completed") {
+          toolResult = (claimed.step.output as { result?: unknown })?.result ?? { success: false, message: "A prior tool result is unavailable." };
+        } else {
+          toolResult = { success: false, message: "This tool action is already running." };
+        }
+      } else {
+        toolResult = await executeTool(input.userId, call.name, args);
+        await AgentService.finishStep({ stepId: claimed.step.id, success: Boolean(toolResult?.success), output: { result: toolResult }, error: toolResult?.success ? null : toolResult?.message || null });
       }
+    } else {
+      toolResult = await executeTool(input.userId, call.name, args);
     }
+    toolResults.push({ type: "function_call_output", call_id: call.call_id, output: JSON.stringify(toolResult) });
   }
 
   let fullReply = "";

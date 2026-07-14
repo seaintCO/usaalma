@@ -9,6 +9,7 @@ import {
 import { logAlmaExecution, upsertAlmaContext } from "@/lib/alma/context";
 import { MessageRepository } from "@/lib/db/repositories/message.repository";
 import { AgentService } from "@/lib/services/agents/agent.service";
+import { AgentExecutionRepository } from "@/lib/db/repositories/agents/agentExecution.repository";
 import { generateImageTool } from "@/lib/tools/images/generateImageTool";
 
 /**
@@ -63,7 +64,7 @@ export type ChatRunProgressEvent =
   | { type: "text_delta"; delta: string }
   | { type: "image"; content: string; mimeType?: string }
   | { type: "completed"; result: ChatRunSuccessResult }
-  | { type: "failed"; error: ChatRunFailureResult };
+  | { type: "failed"; error: ChatRunFailureResult | ChatRunInProgressResult };
 
 export type ChatRunProgressCallback = (
   event: ChatRunProgressEvent,
@@ -102,7 +103,41 @@ export type ChatRunFailureResult = {
   message: string;
 };
 
-export type ChatRunResult = ChatRunSuccessResult | ChatRunFailureResult;
+export type ChatRunInProgressResult = {
+  ok: false;
+  responseType: "text";
+  route: "chat";
+  tracking: ChatRunTrackingContext;
+  code: "execution_in_progress";
+  message: string;
+};
+
+export type ChatRunResult = ChatRunSuccessResult | ChatRunFailureResult | ChatRunInProgressResult;
+
+export type DurableChatRunInvocation = {
+  invocationMode: "durable";
+  userId: string;
+  agentId: string;
+  conversationId: string;
+  executionId: string;
+  userMessageId: string;
+  userMessage: string;
+  idempotencyKey: string;
+  language: ChatRunLanguage;
+  onProgress?: ChatRunProgressCallback;
+};
+
+export type InteractiveChatRunInvocation = {
+  invocationMode?: "interactive";
+  userId: string;
+  conversationId: string;
+  userMessage: string;
+  idempotencyKey?: string;
+  language: ChatRunLanguage;
+  onProgress?: ChatRunProgressCallback;
+};
+
+export type CanonicalChatRunInvocation = DurableChatRunInvocation | InteractiveChatRunInvocation;
 
 export type ImageExecutionKind =
   | "alma_image_generation"
@@ -294,6 +329,35 @@ export async function processImageChatRun(
     ? undefined
     : detectImageSize(input.userMessage);
 
+  let imageStepId: string | null = null;
+  if (tracked) {
+    const claimed = await AgentService.claimStep({
+      executionId: tracked.executionId,
+      sequence: 2,
+      kind: "tool",
+      toolName: "generateImageTool",
+      input: { kind, imagePrompt, imageSize },
+    });
+    if (!claimed.claimed) {
+      const output = claimed.step.output as { reply?: string; generated?: boolean };
+      if (claimed.step.status === "completed" && output.reply) {
+        await emitProgress(input.onProgress, output.generated
+          ? { type: "image", content: output.reply }
+          : { type: "text_delta", delta: output.reply });
+        return finishSuccess({ responseType: "image", route: responseRoute, finalContent: output.reply, image: { generated: Boolean(output.generated) } }, "ALMA reused a completed image generation.", { route: responseRoute, reused: true });
+      }
+      return {
+        ok: false,
+        responseType: "text",
+        route: "chat",
+        tracking: tracked,
+        code: "execution_in_progress",
+        message: "This image generation is already running.",
+      };
+    }
+    imageStepId = claimed.step.id;
+  }
+
   if (kind === "router_image_generate") {
     await emitProgress(input.onProgress, {
       type: "status",
@@ -329,6 +393,9 @@ export async function processImageChatRun(
     }
 
     await persistAssistant(reply);
+    if (imageStepId) {
+      await AgentService.finishStep({ stepId: imageStepId, success: Boolean(result?.success), output: { reply, generated: Boolean(result?.image?.outputBase64) }, error: result?.success ? null : resultError || result?.message || null });
+    }
     await emitProgress(input.onProgress, result?.success && result?.image?.outputBase64
       ? { type: "image", content: reply }
       : { type: "text_delta", delta: reply });
@@ -369,6 +436,9 @@ export async function processImageChatRun(
       await persistAssistant(reply);
       await emitProgress(input.onProgress, { type: "text_delta", delta: reply });
     }
+    if (imageStepId) {
+      await AgentService.finishStep({ stepId: imageStepId, success: false, output: { reply }, error: errorMessage });
+    }
 
     return finishFailure(
       {
@@ -383,14 +453,28 @@ export async function processImageChatRun(
   }
 }
 
-export type ProcessCanonicalChatRunInput = {
-  userId: string;
-  conversationId: string;
-  userMessage: string;
-  language: ChatRunLanguage;
-  idempotencyKey?: string;
-  onProgress?: ChatRunProgressCallback;
-};
+export type ProcessCanonicalChatRunInput = CanonicalChatRunInvocation;
+
+async function prepareDurableInvocation(input: DurableChatRunInvocation): Promise<ChatRunResult | ChatRunTrackingContext> {
+  const execution = await AgentExecutionRepository.findForDurableRun({ id: input.executionId, userId: input.userId, agentId: input.agentId });
+  if (!execution) throw new Error("Durable execution was not found for this agent and user.");
+  const tracking = { agentId: input.agentId, executionId: input.executionId };
+  if (["completed", "failed", "cancelled"].includes(execution.status)) {
+    const persisted = (execution.result ?? {}) as Record<string, unknown>;
+    const finalContent = typeof persisted.finalContent === "string" ? persisted.finalContent : execution.error || "ALMA completed this execution.";
+    return execution.status === "completed"
+      ? { ok: true, responseType: "text", route: "chat", finalContent, assistantMessageId: typeof persisted.assistantMessageId === "string" ? persisted.assistantMessageId : undefined, tracking }
+      : { ok: false, responseType: "text", route: "chat", finalContent, tracking, code: "stream_failed", message: finalContent };
+  }
+  if (execution.status === "running") {
+    return { ok: false, responseType: "text", route: "chat", tracking, code: "execution_in_progress", message: "This execution is already running." };
+  }
+  const claimed = await AgentExecutionRepository.claimPending(input.executionId, input.userId, input.agentId);
+  if (!claimed) {
+    return { ok: false, responseType: "text", route: "chat", tracking, code: "execution_in_progress", message: "This execution is already running." };
+  }
+  return tracking;
+}
 
 /**
  * The top-level server-only ALMA chat processor. Planner, tool, finance, and
@@ -400,8 +484,10 @@ export type ProcessCanonicalChatRunInput = {
 export async function processCanonicalChatRun(
   input: ProcessCanonicalChatRunInput,
 ): Promise<ChatRunResult> {
+  const durable = input.invocationMode === "durable" ? await prepareDurableInvocation(input) : null;
+  if (durable && "ok" in durable) return durable;
   const { processPlannerAndToolChatRun } = await import("./processPlannerAndToolChatRun");
-  const routed = await processPlannerAndToolChatRun(input);
+  const routed = await processPlannerAndToolChatRun({ ...input, tracking: durable && "executionId" in durable ? durable : undefined });
   if (routed.handled) return routed.result;
 
   let assistantPersisted = false;
@@ -443,7 +529,7 @@ export async function processCanonicalChatRun(
       userId: input.userId,
       success: true,
       summary: "ALMA completed a chat execution.",
-      result: { route: "chat" },
+      result: { route: "chat", finalContent: fullReply, assistantMessageId: result.assistantMessageId ?? null },
     });
     await emitProgress(input.onProgress, { type: "completed", result });
     return result;
@@ -483,4 +569,9 @@ export async function processCanonicalChatRun(
     if (persistenceError) throw persistenceError;
     return failure;
   }
+}
+
+/** Server-only durable-worker entry point; deliberately has no progress callback. */
+export async function runDurableChatRun(input: Omit<DurableChatRunInvocation, "onProgress" | "invocationMode">) {
+  return processCanonicalChatRun({ ...input, invocationMode: "durable" });
 }

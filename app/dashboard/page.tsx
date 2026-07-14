@@ -157,6 +157,7 @@ export default function DashboardPage() {
   const [editingTitle, setEditingTitle] = useState("");
   const [activeWorkspace, setActiveWorkspace] = useState<string>("chat");
   const [language, setLanguage] = useState<AlmaLanguage>("en");
+  const [durableChatEnabled, setDurableChatEnabled] = useState(false);
   const t = almaText[language];
 
   function updateLanguage(next: AlmaLanguage) {
@@ -265,6 +266,8 @@ export default function DashboardPage() {
 
       loadHistory();
       loadInstalledCORE();
+      const durableRes = await fetch("/api/chat/runs/config");
+      if (durableRes.ok) setDurableChatEnabled(Boolean((await durableRes.json()).durableChatEnabled));
       setAuthReady(true);
     }
 
@@ -453,7 +456,7 @@ export default function DashboardPage() {
           <InlineAppFrame title="Billing" src={`/billing?lang=${language}`} />
         ) : activeWorkspace === "settings" ? (
           <InlineAppFrame title="Settings" src={`/settings?lang=${language}`} />
-        ) : <ChatWorkspace messages={messages} setMessages={setMessages} conversationId={conversationId} setConversationId={setConversationId} language={language} setLanguage={updateLanguage} streamEpoch={streamEpoch} loadingConversation={conversationLoading} onComplete={() => { void loadHistory(); }} onAnalyzeFile={analyzeFile} />}
+        ) : <ChatWorkspace messages={messages} setMessages={setMessages} conversationId={conversationId} setConversationId={setConversationId} language={language} setLanguage={updateLanguage} streamEpoch={streamEpoch} loadingConversation={conversationLoading} durableEnabled={durableChatEnabled} onComplete={() => { void loadHistory(); }} onAnalyzeFile={analyzeFile} />}
       </section>
     </main>
   );

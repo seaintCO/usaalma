@@ -12,7 +12,9 @@ export async function buildContext(userId: string, query = "") {
     // Keep existing users functional until the Phase 1 migration is applied.
   }
   const unique = new Map<string, Memory>();
-  for (const memory of [...agent, ...legacy]) unique.set(`${memory.memory_key}:${memory.memory_value}`, memory);
+  // Agent memories are canonical; legacy records only fill keys absent there.
+  for (const memory of agent) unique.set(memory.memory_key, memory);
+  for (const memory of legacy) if (!unique.has(memory.memory_key)) unique.set(memory.memory_key, memory);
   const terms = query.toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? [];
   const relevance = (memory: Memory) => (memory.importance ?? 5) + terms.reduce((score, term) => score + (memory.memory_key.toLowerCase().includes(term) || memory.memory_value.toLowerCase().includes(term) ? 10 : 0), 0);
   return [...unique.values()]

@@ -1,9 +1,21 @@
 import OpenAI from "openai";
 
 export function extractExplicitMemory(message: string) {
+  const text = message.trim().replace(/^(?:remember(?: this)?(?: forever| permanently)?|update my preference|recuerda(?: esto)?(?: para siempre)?|guarda esto|actualiza mi preferencia)\s*[:,-]?\s*/i, "");
+  const rules: Array<[string, RegExp, string]> = [
+    ["favorite_coffee", /(?:my favorite coffee is|mi caf[eé] favorito es|mi caf[eé] favorita es)\s+(.+?)[.!?]?$/i, "preference"],
+    ["preferred_meeting_time", /(?:my preferred meeting time is|i now prefer meetings at|i prefer meetings at|prefiero reuniones a las|mi hora preferida para reuniones es)\s+(.+?)[.!?]?$/i, "preference"],
+    ["preferred_language", /(?:my preferred language is|i prefer (?:to speak|responses? in)|mi idioma preferido es|prefiero (?:hablar|respuestas? en))\s+(.+?)[.!?]?$/i, "preference"],
+    ["business_priorities", /(?:my business priorities are|my priorities are|mis prioridades(?: de negocio)? son)\s+(.+?)[.!?]?$/i, "business"],
+    ["health_goals", /(?:my health goals are|my health goal is|mis metas de salud son|mi meta de salud es)\s+(.+?)[.!?]?$/i, "health"],
+  ];
+  for (const [key, pattern, category] of rules) {
+    const match = text.match(pattern);
+    if (match?.[1]?.trim()) return { memories: [{ category, key, value: match[1].trim(), importance: 10 }] };
+  }
   const match = message.match(/(?:remember(?: this)?(?: forever)?|recuerda(?: esto)?(?: para siempre)?)\.?\s*(?:my |mi )?(?:favorite|favorito|favorita)\s+([^.!?]+?)\s+(?:is|es)\s+([^.!?]+)[.!?]?$/i);
   if (!match) return null;
-  const key = `favorite ${match[1].trim()}`.replace(/^favorite favorito /i, "favorite ");
+  const key = /coffee|caf[eé]/i.test(match[1]) ? "favorite_coffee" : `favorite ${match[1].trim()}`;
   return { memories: [{ category: "preference", key, value: match[2].trim(), importance: 10 }] };
 }
 

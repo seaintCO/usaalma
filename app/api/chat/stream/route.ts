@@ -1,14 +1,11 @@
-import OpenAI from "openai";
 import { getCurrentUser } from "@/lib/auth/user";
 import { ConversationRepository } from "@/lib/db/repositories/conversation.repository";
 import { MessageRepository } from "@/lib/db/repositories/message.repository";
 import { extractExplicitMemory, extractMemory } from "@/lib/ai/extractors/memoryExtractor";
 import { saveExtractedMemory } from "@/lib/ai/memory/saveMemory";
 import { SubscriptionRepository } from "@/lib/db/repositories/billing/subscription.repository";
-import { chooseAlmaModel } from "@/lib/alma/modelRouter";
 import { normalizeChatRunLanguage } from "@/lib/alma/chat/chatExecutionHelpers";
-import { completeChatRunTracking } from "@/lib/alma/chat/processChatRun";
-import { processPlannerAndToolChatRun } from "@/lib/alma/chat/processPlannerAndToolChatRun";
+import { processCanonicalChatRun } from "@/lib/alma/chat/processChatRun";
 
 function createChatStreamResponse(input: { userId: string; conversationId: string; message: string; language: "en" | "es" | "auto" }) {
   const encoder = new TextEncoder();
@@ -16,7 +13,7 @@ function createChatStreamResponse(input: { userId: string; conversationId: strin
     async start(controller) {
       controller.enqueue(encoder.encode(`[CONVERSATION_ID:${input.conversationId}]\n`));
       try {
-        const processor = await processPlannerAndToolChatRun({
+        await processCanonicalChatRun({
           userId: input.userId,
           conversationId: input.conversationId,
           userMessage: input.message,
@@ -27,32 +24,6 @@ function createChatStreamResponse(input: { userId: string; conversationId: strin
             if (event.type === "image") controller.enqueue(encoder.encode(event.content));
           },
         });
-        if (processor.handled) return;
-
-        const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-        const stream = await client.responses.create({
-          model: chooseAlmaModel(input.message, "auto"),
-          stream: true,
-          input: [
-            { role: "system", content: processor.systemPrompt },
-            { role: "user", content: input.message },
-          ],
-        });
-        let fullReply = "";
-        try {
-          for await (const event of stream as any) {
-            if (event.type === "response.output_text.delta") {
-              fullReply += event.delta;
-              controller.enqueue(encoder.encode(event.delta));
-            }
-          }
-          await MessageRepository.create(input.conversationId, input.userId, "assistant", fullReply);
-          await completeChatRunTracking({ tracked: processor.tracking, userId: input.userId, success: true, summary: "ALMA completed a chat execution.", result: { route: "chat" } });
-        } catch {
-          const reply = input.language === "en" ? "\n\nALMA had an error generating the response." : "\n\nALMA tuvo un error generando la respuesta.";
-          controller.enqueue(encoder.encode(reply));
-          await completeChatRunTracking({ tracked: processor.tracking, userId: input.userId, success: false, summary: "ALMA chat execution failed.", error: "Streaming response failed" });
-        }
       } catch (error) {
         console.error("ALMA_CHAT_PROCESSOR_ERROR", error);
         const reply = input.language === "en" ? "ALMA could not process that request right now." : "ALMA no pudo procesar esa solicitud ahora.";

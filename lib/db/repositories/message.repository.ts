@@ -16,7 +16,7 @@ content:string
 
 const supabase=await createClient();
 
-await supabase
+const { data, error } = await supabase
 
 .from("messages")
 
@@ -30,7 +30,15 @@ role,
 
 content
 
-});
+})
+
+.select()
+
+.single();
+
+if (error) throw error;
+
+return data;
 
 }
 

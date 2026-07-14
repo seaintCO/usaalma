@@ -1,4 +1,5 @@
 import "server-only";
+import OpenAI from "openai";
 import {
   buildImageFollowupPrompt,
   detectImageSize,
@@ -379,5 +380,107 @@ export async function processImageChatRun(
       },
       "ALMA image generation failed.",
     );
+  }
+}
+
+export type ProcessCanonicalChatRunInput = {
+  userId: string;
+  conversationId: string;
+  userMessage: string;
+  language: ChatRunLanguage;
+  idempotencyKey?: string;
+  onProgress?: ChatRunProgressCallback;
+};
+
+/**
+ * The top-level server-only ALMA chat processor. Planner, tool, finance, and
+ * image branches are delegated to their existing canonical processor; this
+ * function owns the one remaining freeform Responses API execution path.
+ */
+export async function processCanonicalChatRun(
+  input: ProcessCanonicalChatRunInput,
+): Promise<ChatRunResult> {
+  const { processPlannerAndToolChatRun } = await import("./processPlannerAndToolChatRun");
+  const routed = await processPlannerAndToolChatRun(input);
+  if (routed.handled) return routed.result;
+
+  let assistantPersisted = false;
+  try {
+    const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    const stream = await client.responses.create({
+      model: (await import("@/lib/alma/modelRouter")).chooseAlmaModel(input.userMessage, "auto"),
+      stream: true,
+      input: [
+        { role: "system", content: routed.systemPrompt },
+        { role: "user", content: input.userMessage },
+      ],
+    });
+    let fullReply = "";
+    for await (const event of stream as any) {
+      if (event.type === "response.output_text.delta") {
+        fullReply += event.delta;
+        await emitProgress(input.onProgress, { type: "text_delta", delta: event.delta });
+      }
+    }
+
+    const assistantMessage = await MessageRepository.create(
+      input.conversationId,
+      input.userId,
+      "assistant",
+      fullReply,
+    );
+    assistantPersisted = true;
+    const result: ChatRunSuccessResult = {
+      ok: true,
+      responseType: "text",
+      route: "chat",
+      finalContent: fullReply,
+      assistantMessageId: typeof assistantMessage?.id === "string" ? assistantMessage.id : undefined,
+      tracking: routed.tracking,
+    };
+    await completeChatRunTracking({
+      tracked: routed.tracking,
+      userId: input.userId,
+      success: true,
+      summary: "ALMA completed a chat execution.",
+      result: { route: "chat" },
+    });
+    await emitProgress(input.onProgress, { type: "completed", result });
+    return result;
+  } catch (error) {
+    console.error("ALMA_CHAT_EXECUTION_ERROR", error);
+    const reply = input.language === "en"
+      ? "ALMA had an error generating the response."
+      : "ALMA tuvo un error generando la respuesta.";
+    let persistenceError: unknown = null;
+    if (!assistantPersisted) {
+      try {
+        await MessageRepository.create(input.conversationId, input.userId, "assistant", reply);
+        assistantPersisted = true;
+        await emitProgress(input.onProgress, { type: "text_delta", delta: `\n\n${reply}` });
+      } catch (persistError) {
+        persistenceError = persistError;
+        console.error("ALMA_ASSISTANT_PERSISTENCE_ERROR", persistError);
+      }
+    }
+    const failure: ChatRunFailureResult = {
+      ok: false,
+      responseType: "text",
+      route: "chat",
+      finalContent: reply,
+      tracking: routed.tracking,
+      code: "stream_failed",
+      message: reply,
+    };
+    await completeChatRunTracking({
+      tracked: routed.tracking,
+      userId: input.userId,
+      success: false,
+      summary: "ALMA chat execution failed.",
+      error: error instanceof Error ? error.message : "Streaming response failed",
+    });
+    await emitProgress(input.onProgress, { type: "failed", error: failure });
+    if (persistenceError) throw persistenceError;
+    return failure;
   }
 }

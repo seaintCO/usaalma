@@ -104,3 +104,22 @@ conversation and user message, preserves the compatibility memory write, emits
 the legacy plaintext conversation marker, translates processor events, and
 performs the still-deferred normal freeform model stream. No planner, router,
 finance, image, or tool-assisted branch remains in the route.
+
+## Stage 5 canonical normal-chat boundary
+
+`processCanonicalChatRun` in `processChatRun.ts` is now the single server-only
+entry point for every assistant response. It delegates planner/tool/image work
+to the existing canonical processor and owns normal Responses API streaming,
+delta callbacks, final text accumulation, assistant persistence and metadata,
+localized terminal failure persistence, and execution completion/failure.
+
+`MessageRepository.create` now returns the inserted message and throws its
+Supabase error. This keeps both user and assistant persistence strict instead
+of treating a failed database write as success. Telemetry completion remains
+fail-open.
+
+The compatibility route is transport-only after its request boundary: it
+authenticates and validates, enforces subscription, resolves/persists the
+conversation and user message, performs the existing compatibility memory
+write, invokes the canonical processor, emits `[CONVERSATION_ID:<id>]`, and
+converts progress events into the existing plaintext chunks.

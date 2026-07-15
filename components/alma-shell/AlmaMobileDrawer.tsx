@@ -14,6 +14,7 @@ export default function AlmaMobileDrawer({
   selectedConversationId,
   statuses,
   deleteLabel,
+  showConversations = true,
   onMobileClose,
   onBrandClick,
   onLanguageChange,
@@ -23,6 +24,7 @@ export default function AlmaMobileDrawer({
   onHome,
   onAskAlma,
   onWorkspaceNavigate,
+  workspaceReleases,
 }: AlmaMobileDrawerProps) {
   if (!open) return null;
 
@@ -69,18 +71,22 @@ export default function AlmaMobileDrawer({
         </div>
 
         <div className="flex-1 overflow-y-auto px-3 pb-8 text-sm">
-          <ConversationNavigation
-            conversations={conversations}
-            selectedConversationId={selectedConversationId}
-            statuses={statuses}
-            heading={labels.history}
-            newChatLabel={labels.newChat}
-            deleteLabel={deleteLabel}
-            onConversationSelect={onConversationSelect}
-            onConversationDelete={onConversationDelete}
-          />
+          {showConversations ? (
+            <>
+              <ConversationNavigation
+                conversations={conversations}
+                selectedConversationId={selectedConversationId}
+                statuses={statuses}
+                heading={labels.history}
+                newChatLabel={labels.newChat}
+                deleteLabel={deleteLabel}
+                onConversationSelect={onConversationSelect}
+                onConversationDelete={onConversationDelete}
+              />
 
-          <div className="mx-2 my-6 h-px bg-[#E5E7EB]" />
+              <div className="mx-2 my-6 h-px bg-[#E5E7EB]" />
+            </>
+          ) : null}
 
           <WorkspaceNavigation
             activeWorkspace={activeWorkspace}
@@ -88,6 +94,7 @@ export default function AlmaMobileDrawer({
             onHome={onHome}
             onAskAlma={onAskAlma}
             onWorkspaceNavigate={onWorkspaceNavigate}
+            workspaceReleases={workspaceReleases}
           />
         </div>
       </aside>

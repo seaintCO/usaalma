@@ -13,6 +13,7 @@ export type AlmaShellLabels = {
   platform: string;
   active: string;
   pro: string;
+  beta?: string;
   home: string;
   planner: string;
   tasks: string;
@@ -39,8 +40,13 @@ export type ConversationNavItem = { id: string; title: string | null };
 export type AlmaNavigationItem = {
   key: RoutedWorkspace;
   label: string;
-  release: "active" | "beta" | "coming_soon" | "requires_setup";
+  release: AlmaWorkspaceRelease;
 };
+export type AlmaWorkspaceRelease =
+  "active" | "beta" | "pro" | "coming_soon" | "requires_setup";
+export type AlmaWorkspaceReleaseOverrides = Partial<
+  Record<AlmaWorkspaceNavigationKey, AlmaWorkspaceRelease>
+>;
 export type AlmaSidebarNavigationProps = {
   language: AlmaShellLanguage;
   activeWorkspace: AlmaWorkspaceNavigationKey;
@@ -48,6 +54,7 @@ export type AlmaSidebarNavigationProps = {
   onHome: () => void;
   onAskAlma: () => void;
   onWorkspaceNavigate: (workspace: RoutedWorkspace) => void;
+  workspaceReleases?: AlmaWorkspaceReleaseOverrides;
 };
 export type AlmaConversationSectionProps = {
   conversations: readonly ConversationNavItem[];
@@ -72,6 +79,7 @@ export type AlmaMobileDrawerProps = {
   selectedConversationId: string | null;
   statuses: Readonly<Record<string, ConversationStatus>>;
   deleteLabel: string;
+  showConversations?: boolean;
   onMobileClose: () => void;
   onBrandClick: () => void;
   onLanguageChange: (language: AlmaShellLanguage) => void;
@@ -81,6 +89,7 @@ export type AlmaMobileDrawerProps = {
   onHome: () => void;
   onAskAlma: () => void;
   onWorkspaceNavigate: (workspace: RoutedWorkspace) => void;
+  workspaceReleases?: AlmaWorkspaceReleaseOverrides;
 };
 export type AlmaSidebarProps = AlmaSidebarNavigationProps &
   AlmaConversationSectionProps &

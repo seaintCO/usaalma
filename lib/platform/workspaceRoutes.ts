@@ -1,3 +1,5 @@
+export const DASHBOARD_ROUTE = "/dashboard";
+
 export const WORKSPACE_ROUTES = {
   tasks: "/tasks",
   notes: "/notes",

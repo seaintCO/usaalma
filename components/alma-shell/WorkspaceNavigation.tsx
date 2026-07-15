@@ -16,7 +16,12 @@ import {
 } from "lucide-react";
 import type { ComponentType } from "react";
 import type { RoutedWorkspace } from "@/lib/platform/workspaceRoutes";
-import type { AlmaShellLabels, AlmaWorkspaceNavigationKey } from "./types";
+import type {
+  AlmaShellLabels,
+  AlmaWorkspaceNavigationKey,
+  AlmaWorkspaceRelease,
+  AlmaWorkspaceReleaseOverrides,
+} from "./types";
 
 type WorkspaceNavigationProps = {
   activeWorkspace: AlmaWorkspaceNavigationKey;
@@ -24,6 +29,7 @@ type WorkspaceNavigationProps = {
   onHome: () => void;
   onAskAlma: () => void;
   onWorkspaceNavigate: (workspace: RoutedWorkspace) => void;
+  workspaceReleases?: AlmaWorkspaceReleaseOverrides;
 };
 
 type WorkspaceButtonProps = {
@@ -31,10 +37,22 @@ type WorkspaceButtonProps = {
   itemKey: AlmaWorkspaceNavigationKey;
   label: string;
   icon: ComponentType<{ className?: string }>;
-  release?: "active" | "pro";
+  release?: AlmaWorkspaceRelease;
   releaseLabel?: string;
   onClick: () => void;
 };
+
+function releaseText(labels: AlmaShellLabels, release?: AlmaWorkspaceRelease) {
+  if (release === "active") return labels.active;
+  if (release === "beta") return labels.beta ?? "Beta";
+  if (release === "pro") return labels.pro;
+  return undefined;
+}
+
+function releaseClass(release?: AlmaWorkspaceRelease) {
+  if (release === "active") return "text-green-600";
+  return "text-black";
+}
 
 function WorkspaceButton({
   activeWorkspace,
@@ -57,12 +75,8 @@ function WorkspaceButton({
         <Icon className="h-4 w-4" />
         {label}
       </span>
-      {release === "active" && releaseLabel ? (
-        <span className="text-[10px] font-medium text-green-600">
-          {releaseLabel.toUpperCase()}
-        </span>
-      ) : release === "pro" && releaseLabel ? (
-        <span className="text-[10px] font-medium text-black">
+      {releaseLabel ? (
+        <span className={`text-[10px] font-medium ${releaseClass(release)}`}>
           {releaseLabel.toUpperCase()}
         </span>
       ) : null}
@@ -102,7 +116,13 @@ export default function WorkspaceNavigation({
   onHome,
   onAskAlma,
   onWorkspaceNavigate,
+  workspaceReleases = {},
 }: WorkspaceNavigationProps) {
+  const releaseFor = (
+    key: AlmaWorkspaceNavigationKey,
+    fallback: AlmaWorkspaceRelease,
+  ) => workspaceReleases[key] ?? fallback;
+
   return (
     <>
       <div className="mb-6 space-y-1">
@@ -115,8 +135,8 @@ export default function WorkspaceNavigation({
           itemKey="home"
           label={labels.home}
           icon={Home}
-          release="active"
-          releaseLabel={labels.active}
+          release={releaseFor("home", "active")}
+          releaseLabel={releaseText(labels, releaseFor("home", "active"))}
           onClick={onHome}
         />
         <WorkspaceButton
@@ -124,8 +144,8 @@ export default function WorkspaceNavigation({
           itemKey="planner"
           label={labels.planner}
           icon={Calendar}
-          release="active"
-          releaseLabel={labels.active}
+          release={releaseFor("planner", "active")}
+          releaseLabel={releaseText(labels, releaseFor("planner", "active"))}
           onClick={() => onWorkspaceNavigate("planner")}
         />
         <WorkspaceButton
@@ -133,8 +153,8 @@ export default function WorkspaceNavigation({
           itemKey="tasks"
           label={labels.tasks}
           icon={CheckCircle2}
-          release="active"
-          releaseLabel={labels.active}
+          release={releaseFor("tasks", "active")}
+          releaseLabel={releaseText(labels, releaseFor("tasks", "active"))}
           onClick={() => onWorkspaceNavigate("tasks")}
         />
         <WorkspaceButton
@@ -142,8 +162,8 @@ export default function WorkspaceNavigation({
           itemKey="notes"
           label={labels.notes}
           icon={FileText}
-          release="active"
-          releaseLabel={labels.active}
+          release={releaseFor("notes", "active")}
+          releaseLabel={releaseText(labels, releaseFor("notes", "active"))}
           onClick={() => onWorkspaceNavigate("notes")}
         />
         <WorkspaceButton
@@ -151,8 +171,8 @@ export default function WorkspaceNavigation({
           itemKey="documents"
           label={labels.documents}
           icon={FolderOpen}
-          release="active"
-          releaseLabel={labels.active}
+          release={releaseFor("documents", "active")}
+          releaseLabel={releaseText(labels, releaseFor("documents", "active"))}
           onClick={() => onWorkspaceNavigate("documents")}
         />
         <WorkspaceButton
@@ -160,8 +180,8 @@ export default function WorkspaceNavigation({
           itemKey="fitness"
           label={labels.fitness}
           icon={Activity}
-          release="active"
-          releaseLabel={labels.active}
+          release={releaseFor("fitness", "active")}
+          releaseLabel={releaseText(labels, releaseFor("fitness", "active"))}
           onClick={() => onWorkspaceNavigate("fitness")}
         />
       </div>
@@ -178,8 +198,8 @@ export default function WorkspaceNavigation({
           itemKey="crm"
           label={labels.crm}
           icon={Users}
-          release="active"
-          releaseLabel={labels.active}
+          release={releaseFor("crm", "active")}
+          releaseLabel={releaseText(labels, releaseFor("crm", "active"))}
           onClick={() => onWorkspaceNavigate("crm")}
         />
         <WorkspaceButton
@@ -187,8 +207,8 @@ export default function WorkspaceNavigation({
           itemKey="invoicing"
           label={labels.invoices}
           icon={ReceiptText}
-          release="active"
-          releaseLabel={labels.active}
+          release={releaseFor("invoicing", "active")}
+          releaseLabel={releaseText(labels, releaseFor("invoicing", "active"))}
           onClick={() => onWorkspaceNavigate("invoicing")}
         />
       </div>
@@ -205,8 +225,8 @@ export default function WorkspaceNavigation({
           itemKey="chat"
           label={labels.alma}
           icon={Mic}
-          release="pro"
-          releaseLabel={labels.pro}
+          release={releaseFor("chat", "pro")}
+          releaseLabel={releaseText(labels, releaseFor("chat", "pro"))}
           onClick={onAskAlma}
         />
         <WorkspaceButton
@@ -214,8 +234,8 @@ export default function WorkspaceNavigation({
           itemKey="images"
           label={labels.images}
           icon={ImageIcon}
-          release="pro"
-          releaseLabel={labels.pro}
+          release={releaseFor("images", "pro")}
+          releaseLabel={releaseText(labels, releaseFor("images", "pro"))}
           onClick={() => onWorkspaceNavigate("images")}
         />
         <WorkspaceButton
@@ -223,8 +243,8 @@ export default function WorkspaceNavigation({
           itemKey="creative"
           label={labels.creativeStudio}
           icon={Settings}
-          release="pro"
-          releaseLabel={labels.pro}
+          release={releaseFor("creative", "pro")}
+          releaseLabel={releaseText(labels, releaseFor("creative", "pro"))}
           onClick={() => onWorkspaceNavigate("creative")}
         />
         <WorkspaceButton
@@ -232,8 +252,8 @@ export default function WorkspaceNavigation({
           itemKey="launch"
           label={labels.launchStudio}
           icon={Rocket}
-          release="pro"
-          releaseLabel={labels.pro}
+          release={releaseFor("launch", "pro")}
+          releaseLabel={releaseText(labels, releaseFor("launch", "pro"))}
           onClick={() => onWorkspaceNavigate("launch")}
         />
         <WorkspaceButton
@@ -241,8 +261,8 @@ export default function WorkspaceNavigation({
           itemKey="trader"
           label={labels.trader}
           icon={Activity}
-          release="pro"
-          releaseLabel={labels.pro}
+          release={releaseFor("trader", "pro")}
+          releaseLabel={releaseText(labels, releaseFor("trader", "pro"))}
           onClick={() => onWorkspaceNavigate("trader")}
         />
       </div>

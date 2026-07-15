@@ -87,13 +87,14 @@ function actionForItem(
   if (item.connectionStatus === "connect") {
     const routes: Record<string, string> = {
       google_workspace: "/api/oauth/google/start?returnTo=%2Fmarketplace",
-      stripe: "/api/oauth/stripe/start",
+      stripe: "/api/oauth/stripe/start?returnTo=%2Fmarketplace",
     };
     const href = item.providerKey ? routes[item.providerKey] : undefined;
     return href ? { kind: "connect", label: copy.connect, href } : null;
   }
   if (
-    item.providerKey === "google_workspace" &&
+    (item.providerKey === "google_workspace" ||
+      item.providerKey === "stripe") &&
     item.connectionStatus === "connected"
   ) {
     return { kind: "disconnect", label: copy.disconnect };
@@ -101,7 +102,7 @@ function actionForItem(
   if (item.connectionStatus === "reconnect_required") {
     const routes: Record<string, string> = {
       google_workspace: "/api/oauth/google/start?returnTo=%2Fmarketplace",
-      stripe: "/api/oauth/stripe/start",
+      stripe: "/api/oauth/stripe/start?returnTo=%2Fmarketplace",
     };
     const href = item.providerKey ? routes[item.providerKey] : undefined;
     return href ? { kind: "connect", label: copy.reconnect, href } : null;
@@ -211,15 +212,20 @@ export default function MarketplacePage() {
     [copy.installFailed, loadCatalog, mutatingKey],
   );
 
-  const disconnectGoogle = useCallback(
+  const disconnectConnection = useCallback(
     async (item: MarketplaceItem) => {
-      if (mutatingKey || item.providerKey !== "google_workspace") return;
+      const disconnectRoutes: Record<string, string> = {
+        google_workspace: "/api/oauth/google/disconnect",
+        stripe: "/api/oauth/stripe/disconnect",
+      };
+      const route = item.providerKey
+        ? disconnectRoutes[item.providerKey]
+        : undefined;
+      if (mutatingKey || !route) return;
       setMutatingKey(item.key);
       setError(null);
       try {
-        const response = await fetch("/api/oauth/google/disconnect", {
-          method: "POST",
-        });
+        const response = await fetch(route, { method: "POST" });
         if (!response.ok) throw new Error("disconnect_failed");
         await loadCatalog();
       } catch {
@@ -398,7 +404,9 @@ export default function MarketplacePage() {
                       action={actionForItem(item, copy)}
                       isMutating={mutatingKey === item.key}
                       onInstall={(target) => void installModule(target)}
-                      onDisconnect={(target) => void disconnectGoogle(target)}
+                      onDisconnect={(target) =>
+                        void disconnectConnection(target)
+                      }
                       onDetails={setSelectedItem}
                     />
                   ))}
@@ -427,7 +435,9 @@ export default function MarketplacePage() {
                       action={actionForItem(item, copy)}
                       isMutating={false}
                       onInstall={(target) => void installModule(target)}
-                      onDisconnect={(target) => void disconnectGoogle(target)}
+                      onDisconnect={(target) =>
+                        void disconnectConnection(target)
+                      }
                       onDetails={setSelectedItem}
                     />
                   ))}
@@ -446,7 +456,7 @@ export default function MarketplacePage() {
         isMutating={selectedItem?.key === mutatingKey}
         onClose={() => setSelectedItem(null)}
         onInstall={(target) => void installModule(target)}
-        onDisconnect={(target) => void disconnectGoogle(target)}
+        onDisconnect={(target) => void disconnectConnection(target)}
       />
     </main>
   );

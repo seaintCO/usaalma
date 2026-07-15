@@ -391,6 +391,9 @@ export class MarketplaceCatalogService {
           ...(connection?.providerAccountEmail
             ? { providerAccountEmail: connection.providerAccountEmail }
             : {}),
+          ...(connection?.providerAccountLabel
+            ? { providerAccountLabel: connection.providerAccountLabel }
+            : {}),
         };
       }),
     ];

@@ -16,6 +16,13 @@ export type GoogleWorkspaceConnection = {
   provider_account_id: string | null;
 };
 
+export type StripeConnectConnection = Omit<
+  GoogleWorkspaceConnection,
+  "provider"
+> & {
+  provider: "stripe";
+};
+
 export class OAuthRepository {
   static async listConnectionStates(
     userId: string,
@@ -54,6 +61,10 @@ export class OAuthRepository {
           expiresAt: connection.expires_at,
           hasRefreshToken: Boolean(connection.refresh_token),
           providerAccountEmail: connection.provider_account_email,
+          providerAccountLabel:
+            typeof metadata.provider_account_label === "string"
+              ? metadata.provider_account_label
+              : null,
           grantedScopes: connection.scopes?.split(/\s+/).filter(Boolean) ?? [],
         };
       },
@@ -185,6 +196,87 @@ export class OAuthRepository {
 
   static async disconnectGoogleWorkspace(userId: string) {
     const connection = await this.getGoogleWorkspaceConnection(userId);
+    if (!connection) return null;
+    const supabase = createAdminClient();
+    const { error } = await supabase
+      .from("oauth_connections")
+      .update({
+        connected: false,
+        connection_status: "disconnected",
+        access_token: null,
+        refresh_token: null,
+        expires_at: null,
+        disconnected_at: new Date().toISOString(),
+        connection_error: null,
+      })
+      .eq("id", connection.id)
+      .eq("user_id", userId);
+    if (error) throw error;
+    return connection;
+  }
+
+  static async getStripeConnectConnection(userId: string) {
+    const supabase = createAdminClient();
+    const { data, error } = await supabase
+      .from("oauth_connections")
+      .select(
+        "id, user_id, provider, connected, access_token, refresh_token, expires_at, scopes, metadata, connection_status, provider_account_email, provider_account_id",
+      )
+      .eq("user_id", userId)
+      .eq("provider", "stripe")
+      .maybeSingle();
+    if (error) throw error;
+    return data as StripeConnectConnection | null;
+  }
+
+  static async saveStripeConnectConnection(input: {
+    userId: string;
+    accessToken: string;
+    refreshToken: string | null;
+    scopes: string | null;
+    accountId: string;
+    accountEmail: string | null;
+    accountLabel: string | null;
+    liveMode: boolean | null;
+  }) {
+    const supabase = createAdminClient();
+    const now = new Date().toISOString();
+    const { data, error } = await supabase
+      .from("oauth_connections")
+      .upsert(
+        {
+          user_id: input.userId,
+          provider: "stripe",
+          connected: true,
+          access_token: input.accessToken,
+          refresh_token: input.refreshToken,
+          expires_at: null,
+          scopes: input.scopes,
+          provider_account_email: input.accountEmail,
+          provider_account_id: input.accountId,
+          connected_at: now,
+          disconnected_at: null,
+          connection_status: "connected",
+          connection_error: null,
+          metadata: {
+            encrypted: true,
+            connection_kind: "stripe_connect",
+            provider_account_label: input.accountLabel,
+            livemode: input.liveMode,
+          },
+        },
+        { onConflict: "user_id,provider" },
+      )
+      .select(
+        "id, provider, connected, connection_status, provider_account_email",
+      )
+      .single();
+    if (error) throw error;
+    return data;
+  }
+
+  static async disconnectStripeConnect(userId: string) {
+    const connection = await this.getStripeConnectConnection(userId);
     if (!connection) return null;
     const supabase = createAdminClient();
     const { error } = await supabase

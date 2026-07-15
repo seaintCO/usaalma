@@ -42,6 +42,7 @@ export type MarketplaceItem = {
   setupRequirements?: string[];
   limitations?: string[];
   providerAccountEmail?: string;
+  providerAccountLabel?: string;
 };
 
 export type MarketplaceCatalogResponse = {
@@ -66,5 +67,6 @@ export type MarketplaceConnectionRecord = {
   expiresAt?: string | null;
   hasRefreshToken?: boolean;
   providerAccountEmail?: string | null;
+  providerAccountLabel?: string | null;
   grantedScopes?: string[];
 };

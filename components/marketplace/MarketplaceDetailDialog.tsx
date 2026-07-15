@@ -88,12 +88,17 @@ export function MarketplaceDetailDialog({
               {item.name}
             </h2>
           </div>
-          {item.providerAccountEmail ? (
+          {item.providerAccountEmail || item.providerAccountLabel ? (
             <div>
               <dt className="text-[#6B7280]">{copy.account}</dt>
               <dd className="mt-1 break-all font-medium">
-                {item.providerAccountEmail}
+                {item.providerAccountLabel ?? item.providerAccountEmail}
               </dd>
+              {item.providerAccountLabel && item.providerAccountEmail ? (
+                <dd className="mt-1 break-all text-[#6B7280]">
+                  {item.providerAccountEmail}
+                </dd>
+              ) : null}
             </div>
           ) : null}
           <button

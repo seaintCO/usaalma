@@ -12,6 +12,7 @@ import {
 import { useCallback, useEffect, useState } from "react";
 import { pick, useAppLanguage } from "@/lib/i18n/appLanguage";
 import { useCreativeResourceDetail } from "@/components/creative-studio/useCreativeResourceDetail";
+import { CreativeDetailPanel } from "@/components/creative-studio/CreativeDetailPanel";
 type Asset = {
   id: string;
   title: string;
@@ -89,7 +90,6 @@ const copy = {
 };
 export default function CreativeStudioPage() {
   const creativeResourceDetail = useCreativeResourceDetail();
-  void creativeResourceDetail;
   const language = useAppLanguage(),
     t = pick(language, copy.en, copy.es);
   const [assets, setAssets] = useState<Asset[]>([]),
@@ -255,6 +255,7 @@ export default function CreativeStudioPage() {
                 <button
                   key={kit.id}
                   onClick={() => {
+                    creativeResourceDetail.selectResource("brandKit", kit.id);
                     setBrandKitId(kit.id);
                     setAudience(kit.audience ?? "");
                   }}
@@ -291,6 +292,7 @@ export default function CreativeStudioPage() {
                 <button
                   key={c.id}
                   onClick={() => {
+                    creativeResourceDetail.selectResource("campaign", c.id);
                     setCampaignId(c.id);
                     setPrompt(c.product_photo_prompt || c.concept || "");
                   }}
@@ -353,6 +355,9 @@ export default function CreativeStudioPage() {
             <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {assets.map((asset) => (
                 <article
+                  onClick={() =>
+                    creativeResourceDetail.selectResource("asset", asset.id)
+                  }
                   key={asset.id}
                   className="overflow-hidden rounded-2xl border bg-white"
                 >
@@ -402,6 +407,15 @@ export default function CreativeStudioPage() {
           )}
         </section>
       </div>
+      <CreativeDetailPanel
+        language={language}
+        detail={creativeResourceDetail.detail}
+        loading={creativeResourceDetail.loading}
+        error={creativeResourceDetail.error}
+        onClose={creativeResourceDetail.closeResource}
+        onRetry={creativeResourceDetail.retry}
+        onSelect={creativeResourceDetail.selectResource}
+      />
     </main>
   );
 }

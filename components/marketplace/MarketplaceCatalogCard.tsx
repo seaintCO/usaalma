@@ -48,6 +48,7 @@ export type MarketplaceCardAction =
   | { kind: "open"; label: string; href: string }
   | { kind: "install"; label: string; disabled?: boolean }
   | { kind: "connect"; label: string; href: string }
+  | { kind: "disconnect"; label: string; disabled?: boolean }
   | null;
 
 type MarketplaceCatalogCardProps = {
@@ -56,6 +57,7 @@ type MarketplaceCatalogCardProps = {
   action: MarketplaceCardAction;
   isMutating: boolean;
   onInstall: (item: MarketplaceItem) => void;
+  onDisconnect: (item: MarketplaceItem) => void;
   onDetails: (item: MarketplaceItem) => void;
 };
 
@@ -73,6 +75,7 @@ export function MarketplaceCatalogCard({
   action,
   isMutating,
   onInstall,
+  onDisconnect,
   onDetails,
 }: MarketplaceCatalogCardProps) {
   const Icon = ICONS[item.key] ?? Store;
@@ -119,14 +122,20 @@ export function MarketplaceCatalogCard({
           >
             {action.label}
           </a>
-        ) : action?.kind === "install" ? (
+        ) : action?.kind === "install" || action?.kind === "disconnect" ? (
           <button
             type="button"
-            onClick={() => onInstall(item)}
+            onClick={() =>
+              action.kind === "install" ? onInstall(item) : onDisconnect(item)
+            }
             disabled={isMutating || action.disabled}
             className="rounded-2xl bg-black px-4 py-3 text-sm font-medium text-white transition hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2 disabled:cursor-not-allowed disabled:bg-[#9CA3AF]"
           >
-            {isMutating ? copy.installing : action.label}
+            {isMutating
+              ? action.kind === "install"
+                ? copy.installing
+                : copy.disconnect
+              : action.label}
           </button>
         ) : null}
         <button

@@ -86,15 +86,21 @@ function actionForItem(
 
   if (item.connectionStatus === "connect") {
     const routes: Record<string, string> = {
-      google: "/api/oauth/google/start",
+      google_workspace: "/api/oauth/google/start?returnTo=%2Fmarketplace",
       stripe: "/api/oauth/stripe/start",
     };
     const href = item.providerKey ? routes[item.providerKey] : undefined;
     return href ? { kind: "connect", label: copy.connect, href } : null;
   }
+  if (
+    item.providerKey === "google_workspace" &&
+    item.connectionStatus === "connected"
+  ) {
+    return { kind: "disconnect", label: copy.disconnect };
+  }
   if (item.connectionStatus === "reconnect_required") {
     const routes: Record<string, string> = {
-      google: "/api/oauth/google/start",
+      google_workspace: "/api/oauth/google/start?returnTo=%2Fmarketplace",
       stripe: "/api/oauth/stripe/start",
     };
     const href = item.providerKey ? routes[item.providerKey] : undefined;
@@ -203,6 +209,26 @@ export default function MarketplacePage() {
       }
     },
     [copy.installFailed, loadCatalog, mutatingKey],
+  );
+
+  const disconnectGoogle = useCallback(
+    async (item: MarketplaceItem) => {
+      if (mutatingKey || item.providerKey !== "google_workspace") return;
+      setMutatingKey(item.key);
+      setError(null);
+      try {
+        const response = await fetch("/api/oauth/google/disconnect", {
+          method: "POST",
+        });
+        if (!response.ok) throw new Error("disconnect_failed");
+        await loadCatalog();
+      } catch {
+        setError(copy.unavailable);
+      } finally {
+        setMutatingKey(null);
+      }
+    },
+    [copy.unavailable, loadCatalog, mutatingKey],
   );
 
   const filteredItems = useMemo(() => {
@@ -372,6 +398,7 @@ export default function MarketplacePage() {
                       action={actionForItem(item, copy)}
                       isMutating={mutatingKey === item.key}
                       onInstall={(target) => void installModule(target)}
+                      onDisconnect={(target) => void disconnectGoogle(target)}
                       onDetails={setSelectedItem}
                     />
                   ))}
@@ -400,6 +427,7 @@ export default function MarketplacePage() {
                       action={actionForItem(item, copy)}
                       isMutating={false}
                       onInstall={(target) => void installModule(target)}
+                      onDisconnect={(target) => void disconnectGoogle(target)}
                       onDetails={setSelectedItem}
                     />
                   ))}
@@ -418,6 +446,7 @@ export default function MarketplacePage() {
         isMutating={selectedItem?.key === mutatingKey}
         onClose={() => setSelectedItem(null)}
         onInstall={(target) => void installModule(target)}
+        onDisconnect={(target) => void disconnectGoogle(target)}
       />
     </main>
   );

@@ -38,8 +38,10 @@ export type MarketplaceItem = {
   providerKey?: string;
   requiredPlan?: string;
   requiredScopes?: string[];
+  grantedScopes?: string[];
   setupRequirements?: string[];
   limitations?: string[];
+  providerAccountEmail?: string;
 };
 
 export type MarketplaceCatalogResponse = {
@@ -61,4 +63,8 @@ export type MarketplaceConnectionRecord = {
   connected: boolean;
   status?: string | null;
   isMock: boolean;
+  expiresAt?: string | null;
+  hasRefreshToken?: boolean;
+  providerAccountEmail?: string | null;
+  grantedScopes?: string[];
 };

@@ -34,6 +34,7 @@ const COPY = {
     comingSoon: "Coming Soon",
     connect: "Connect",
     connected: "Connected",
+    disconnect: "Disconnect",
     reconnect: "Reconnect",
     requiresSetup: "Requires Setup",
     details: "Details",
@@ -48,6 +49,7 @@ const COPY = {
     beta: "Beta",
     connection: "Connection",
     module: "Module",
+    account: "Connected account",
     installFailed: "ALMA could not install this module. Please try again.",
   },
   es: {
@@ -76,6 +78,7 @@ const COPY = {
     comingSoon: "Próximamente",
     connect: "Conectar",
     connected: "Conectado",
+    disconnect: "Desconectar",
     reconnect: "Reconectar",
     requiresSetup: "Requiere configuración",
     details: "Detalles",
@@ -90,6 +93,7 @@ const COPY = {
     beta: "Beta",
     connection: "Conexión",
     module: "Módulo",
+    account: "Cuenta conectada",
     installFailed: "ALMA no pudo instalar este módulo. Inténtalo de nuevo.",
   },
 } as const;

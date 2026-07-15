@@ -168,9 +168,9 @@ const PROVIDERS: readonly ProviderDefinition[] = [
     name: "Google Workspace",
     category: "Communication",
     description: "Connect supported Google Workspace capabilities.",
-    providerKey: "google",
+    providerKey: "google_workspace",
     releaseStatus: "active",
-    requiredScopes: ["Gmail", "Google Calendar"],
+    requiredScopes: ["Gmail", "Google Calendar", "Google Drive file access"],
     connectionKind: "oauth",
   },
   {
@@ -232,7 +232,7 @@ const PROVIDERS: readonly ProviderDefinition[] = [
     name: "Gmail",
     category: "Communication",
     description: "Email capability through Google Workspace.",
-    providerKey: "google",
+    providerKey: "google_workspace",
     releaseStatus: "coming_soon",
     requiredScopes: ["Gmail"],
     connectionKind: "unavailable",
@@ -242,7 +242,7 @@ const PROVIDERS: readonly ProviderDefinition[] = [
     name: "Google Calendar",
     category: "Productivity",
     description: "Calendar capability through Google Workspace.",
-    providerKey: "google",
+    providerKey: "google_workspace",
     releaseStatus: "coming_soon",
     requiredScopes: ["Google Calendar"],
     connectionKind: "unavailable",
@@ -252,7 +252,7 @@ const PROVIDERS: readonly ProviderDefinition[] = [
     name: "Google Drive",
     category: "Productivity",
     description: "Drive capability through Google Workspace.",
-    providerKey: "google",
+    providerKey: "google_workspace",
     releaseStatus: "coming_soon",
     requiredScopes: ["Google Drive"],
     connectionKind: "unavailable",
@@ -288,7 +288,19 @@ function connectionStatusFor(
   const record = records.find(
     (item) => item.provider === definition.providerKey && !item.isMock,
   );
-  if (record?.connected) return "connected";
+  const expiresAt = record?.expiresAt
+    ? new Date(record.expiresAt).getTime()
+    : 0;
+  const hasUsableGoogleCredentials =
+    definition.providerKey !== "google_workspace" ||
+    Boolean(record?.hasRefreshToken || expiresAt > Date.now());
+  if (
+    record?.connected &&
+    hasUsableGoogleCredentials &&
+    record.status !== "reconnect_required" &&
+    record.status !== "disconnected"
+  )
+    return "connected";
   if (
     record &&
     ["invalid", "disconnected", "reconnect_required", "expired"].includes(
@@ -344,32 +356,43 @@ export class MarketplaceCatalogService {
             : {}),
         };
       }),
-      ...PROVIDERS.map((definition) => ({
-        key: definition.key,
-        name: definition.name,
-        category: definition.category,
-        itemType: "external_connection" as const,
-        description: definition.description,
-        releaseStatus: definition.releaseStatus,
-        accessStatus:
-          definition.releaseStatus === "coming_soon"
-            ? ("unavailable" as const)
-            : ("included" as const),
-        connectionStatus: connectionStatusFor(
-          definition,
-          connections,
-          new Set(voiceProviders),
-        ),
-        ...(definition.providerKey
-          ? { providerKey: definition.providerKey }
-          : {}),
-        ...(definition.requiredScopes
-          ? { requiredScopes: definition.requiredScopes }
-          : {}),
-        ...(definition.setupRequirements
-          ? { setupRequirements: definition.setupRequirements }
-          : {}),
-      })),
+      ...PROVIDERS.map((definition) => {
+        const connection = connections.find(
+          (item) => item.provider === definition.providerKey && !item.isMock,
+        );
+        return {
+          key: definition.key,
+          name: definition.name,
+          category: definition.category,
+          itemType: "external_connection" as const,
+          description: definition.description,
+          releaseStatus: definition.releaseStatus,
+          accessStatus:
+            definition.releaseStatus === "coming_soon"
+              ? ("unavailable" as const)
+              : ("included" as const),
+          connectionStatus: connectionStatusFor(
+            definition,
+            connections,
+            new Set(voiceProviders),
+          ),
+          ...(definition.providerKey
+            ? { providerKey: definition.providerKey }
+            : {}),
+          ...(definition.requiredScopes
+            ? { requiredScopes: definition.requiredScopes }
+            : {}),
+          ...(connection?.grantedScopes?.length
+            ? { grantedScopes: connection.grantedScopes }
+            : {}),
+          ...(definition.setupRequirements
+            ? { setupRequirements: definition.setupRequirements }
+            : {}),
+          ...(connection?.providerAccountEmail
+            ? { providerAccountEmail: connection.providerAccountEmail }
+            : {}),
+        };
+      }),
     ];
     return { ok: true, items, currentPlan: plan };
   }

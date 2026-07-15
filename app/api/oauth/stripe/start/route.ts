@@ -9,6 +9,6 @@ export async function GET() {
   });
 
   return NextResponse.redirect(
-    `https://connect.stripe.com/oauth/authorize?${params.toString()}`
+    `https://connect.stripe.com/oauth/authorize?${params.toString()}`,
   );
 }

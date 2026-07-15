@@ -19,6 +19,7 @@ type MarketplaceDetailDialogProps = {
   isMutating: boolean;
   onClose: () => void;
   onInstall: (item: MarketplaceItem) => void;
+  onDisconnect: (item: MarketplaceItem) => void;
 };
 
 function DetailList({ title, items }: { title: string; items?: string[] }) {
@@ -42,6 +43,7 @@ export function MarketplaceDetailDialog({
   isMutating,
   onClose,
   onInstall,
+  onDisconnect,
 }: MarketplaceDetailDialogProps) {
   useEffect(() => {
     if (!item) return;
@@ -86,6 +88,14 @@ export function MarketplaceDetailDialog({
               {item.name}
             </h2>
           </div>
+          {item.providerAccountEmail ? (
+            <div>
+              <dt className="text-[#6B7280]">{copy.account}</dt>
+              <dd className="mt-1 break-all font-medium">
+                {item.providerAccountEmail}
+              </dd>
+            </div>
+          ) : null}
           <button
             type="button"
             onClick={onClose}
@@ -121,7 +131,10 @@ export function MarketplaceDetailDialog({
             </dd>
           </div>
         </dl>
-        <DetailList title={copy.permissions} items={item.requiredScopes} />
+        <DetailList
+          title={copy.permissions}
+          items={item.grantedScopes ?? item.requiredScopes}
+        />
         <DetailList title={copy.setup} items={item.setupRequirements} />
         <DetailList title={copy.limitations} items={item.limitations} />
 
@@ -133,14 +146,20 @@ export function MarketplaceDetailDialog({
             >
               {action.label}
             </a>
-          ) : action?.kind === "install" ? (
+          ) : action?.kind === "install" || action?.kind === "disconnect" ? (
             <button
               type="button"
-              onClick={() => onInstall(item)}
+              onClick={() =>
+                action.kind === "install" ? onInstall(item) : onDisconnect(item)
+              }
               disabled={isMutating || action.disabled}
               className="rounded-2xl bg-black px-4 py-3 text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2 disabled:cursor-not-allowed disabled:bg-[#9CA3AF]"
             >
-              {isMutating ? copy.installing : action.label}
+              {isMutating
+                ? action.kind === "install"
+                  ? copy.installing
+                  : copy.disconnect
+                : action.label}
             </button>
           ) : null}
         </div>

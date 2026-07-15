@@ -1,8 +1,8 @@
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export class IntegrationRepository {
   static async listConfiguredVoiceProviders(userId: string): Promise<string[]> {
-    const supabase = await createClient();
+    const supabase = createAdminClient();
     const { data, error } = await supabase
       .from("workspace_voice_connections")
       .select(
@@ -21,7 +21,7 @@ export class IntegrationRepository {
   }
 
   static async listConnected(userId: string) {
-    const supabase = await createClient();
+    const supabase = createAdminClient();
 
     const { data } = await supabase
       .from("oauth_connections")

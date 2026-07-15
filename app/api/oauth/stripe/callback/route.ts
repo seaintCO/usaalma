@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentUser } from "@/lib/auth/user";
 
 export async function GET(req: Request) {
@@ -13,7 +13,9 @@ export async function GET(req: Request) {
   const code = url.searchParams.get("code");
 
   if (!code) {
-    return NextResponse.redirect(new URL("/settings?stripe=missing_code", req.url));
+    return NextResponse.redirect(
+      new URL("/settings?stripe=missing_code", req.url),
+    );
   }
 
   const tokenRes = await fetch("https://connect.stripe.com/oauth/token", {
@@ -30,7 +32,7 @@ export async function GET(req: Request) {
 
   const tokens = await tokenRes.json();
 
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   await supabase.from("oauth_connections").upsert({
     user_id: user.id,

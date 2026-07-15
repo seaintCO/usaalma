@@ -84,6 +84,7 @@ export const ALMA_SHELL_LABELS: Record<AlmaShellLanguage, AlmaShellLabels> = {
 
 const SHELL_WORKSPACE_RELEASES: AlmaWorkspaceReleaseOverrides = {
   tasks: "active",
+  images: "active",
   creative: "beta",
   launch: "beta",
   trader: "beta",

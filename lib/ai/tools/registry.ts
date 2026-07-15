@@ -13,8 +13,15 @@ import { summarizeGmailTool, draftGmailTool, sendGmailTool } from "@/lib/tools/g
 import { cleanNumber, cleanString } from "./utils";
 import { ToolRunRepository } from "@/lib/db/repositories/tools/toolRun.repository";
 import { getInstalledModuleKeys, userHasModule } from "@/lib/ai/modules/permissions";
+import { traderTool } from "@/lib/tools/trader/traderTools";
 
 export const toolDefinitions = [
+  { type:"function", name:"add_to_watchlist", description:"Add an exact trading symbol to the owned watchlist. Educational workspace only.", parameters:{type:"object",properties:{symbol:{type:"string"},notes:{type:"string"},assetType:{type:"string"}},required:["symbol"],additionalProperties:false}},
+  { type:"function", name:"list_watchlist", description:"List the user's owned trading watchlist.", parameters:{type:"object",properties:{},additionalProperties:false}},
+  { type:"function", name:"save_trading_analysis", description:"Save an educational chart analysis; never place a trade.", parameters:{type:"object",properties:{symbol:{type:"string"},content:{type:"string"},notes:{type:"string"}},required:["content"],additionalProperties:false}},
+  { type:"function", name:"create_trading_journal_entry", description:"Create an owned journal entry for an exact symbol; never place a trade.", parameters:{type:"object",properties:{symbol:{type:"string"},direction:{type:"string"},setup:{type:"string"},notes:{type:"string"}},required:["symbol"],additionalProperties:false}},
+  { type:"function", name:"list_trading_journal", description:"List the user's recent owned trading journal entries.", parameters:{type:"object",properties:{},additionalProperties:false}},
+  { type:"function", name:"analyze_trading_journal", description:"Summarize saved journal patterns without promises of returns.", parameters:{type:"object",properties:{},additionalProperties:false}},
   { type:"function", name:"create_task", description:"Crear una tarea.", parameters:{ type:"object", properties:{ title:{ type:"string" }, description:{type:"string"}, priority:{type:"string",enum:["low","medium","high","urgent"]}, dueAt:{type:"string"} }, required:["title"], additionalProperties:false } },
   { type:"function", name:"list_tasks", description:"Mostrar tareas reales del usuario.", parameters:{type:"object",properties:{status:{type:"string",enum:["open","completed","overdue","today","all"]}},additionalProperties:false}},
   { type:"function", name:"update_task_status", description:"Completar, reabrir o cancelar una sola tarea por título exacto.", parameters:{type:"object",properties:{title:{type:"string"},status:{type:"string",enum:["completed","open","cancelled"]}},required:["title","status"],additionalProperties:false}},
@@ -63,6 +70,8 @@ function blocked(moduleName:string) {
 export async function executeTool(userId:string, name:string, args:any, context?:{executionId?:string}) {
   try {
     const installed = await getInstalledModuleKeys(userId);
+
+    if (["add_to_watchlist","list_watchlist","save_trading_analysis","create_trading_journal_entry","list_trading_journal","analyze_trading_journal"].includes(name)) return await logAndReturn(userId,name,args,await traderTool(userId,name,args,context?.executionId));
 
     if (name === "create_task") {
       if (!userHasModule(installed, "tasks")) return blocked("Tasks");

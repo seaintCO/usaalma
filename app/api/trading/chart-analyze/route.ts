@@ -2,9 +2,10 @@ import { NextResponse } from "next/server";
 import OpenAI from "openai";
 import { requirePaidUser } from "@/lib/api/requirePaidUser";
 import { buildTradingChartPrompt } from "@/lib/ai/trading/chartPrompt";
+import { ImageRepository } from "@/lib/db/repositories/images/image.repository";
 
 export async function POST(req:Request) {
-  const { error } = await requirePaidUser();
+  const { user, error } = await requirePaidUser();
   if (error) return error;
 
   if (!process.env.OPENAI_API_KEY) {
@@ -25,6 +26,7 @@ export async function POST(req:Request) {
 
   const buffer = Buffer.from(await file.arrayBuffer());
   const dataUrl = `data:${file.type};base64,${buffer.toString("base64")}`;
+  const sourceImage = await ImageRepository.create(user.id, { prompt:"Trader chart screenshot", imageBase64:buffer.toString("base64"), status:"source", mimeType:file.type, aspectRatio:"square", quality:"medium" });
 
   const client = new OpenAI({ apiKey:process.env.OPENAI_API_KEY });
 
@@ -41,6 +43,6 @@ export async function POST(req:Request) {
 
   return NextResponse.json({
     success:true,
-    answer:result.output_text || "No chart analysis available."
+    answer:result.output_text || "No chart analysis available.", screenshotId:sourceImage.id
   });
 }

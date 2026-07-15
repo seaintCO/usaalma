@@ -16,36 +16,11 @@ import {
 } from "lucide-react";
 import type { ComponentType } from "react";
 import type { RoutedWorkspace } from "@/lib/platform/workspaceRoutes";
-import type { AlmaWorkspaceNavigationKey } from "./types";
-
-type WorkspaceNavigationLabels = {
-  core: string;
-  business: string;
-  ai: string;
-  platform: string;
-  active: string;
-  pro: string;
-  home: string;
-  planner: string;
-  tasks: string;
-  notes: string;
-  documents: string;
-  fitness: string;
-  crm: string;
-  invoices: string;
-  alma: string;
-  images: string;
-  creativeStudio: string;
-  launchStudio: string;
-  trader: string;
-  marketplace: string;
-  billing: string;
-  settings: string;
-};
+import type { AlmaShellLabels, AlmaWorkspaceNavigationKey } from "./types";
 
 type WorkspaceNavigationProps = {
   activeWorkspace: AlmaWorkspaceNavigationKey;
-  labels: WorkspaceNavigationLabels;
+  labels: AlmaShellLabels;
   onHome: () => void;
   onAskAlma: () => void;
   onWorkspaceNavigate: (workspace: RoutedWorkspace) => void;

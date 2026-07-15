@@ -23,6 +23,7 @@ import ConversationNavigation, {
   ConversationNewChatButton,
 } from "@/components/alma-shell/ConversationNavigation";
 import WorkspaceNavigation from "@/components/alma-shell/WorkspaceNavigation";
+import AlmaMobileDrawer from "@/components/alma-shell/AlmaMobileDrawer";
 import type { AlmaWorkspaceNavigationKey } from "@/components/alma-shell/types";
 
 function cleanAIText(text: string) {
@@ -558,15 +559,34 @@ export default function DashboardPage() {
         <Sidebar />
       </div>
 
-      {sidebarOpen && (
-        <div className="fixed inset-0 z-50 flex md:hidden">
-          <Sidebar />
-          <button
-            onClick={() => setSidebarOpen(false)}
-            className="flex-1 bg-black/20 backdrop-blur-sm"
-          />
-        </div>
-      )}
+      <AlmaMobileDrawer
+        open={sidebarOpen}
+        language={language}
+        activeWorkspace={activeWorkspace}
+        labels={t}
+        conversations={history}
+        selectedConversationId={conversationId}
+        statuses={conversationStatuses}
+        deleteLabel="Delete"
+        onMobileClose={() => setSidebarOpen(false)}
+        onBrandClick={() => {
+          setActiveWorkspace("chat");
+          setSidebarOpen(false);
+        }}
+        onLanguageChange={updateLanguage}
+        onNewChat={startNewChat}
+        onConversationSelect={selectConversation}
+        onConversationDelete={deleteConversation}
+        onHome={() => {
+          setActiveWorkspace("home");
+          setSidebarOpen(false);
+        }}
+        onAskAlma={() => {
+          setActiveWorkspace("chat");
+          setSidebarOpen(false);
+        }}
+        onWorkspaceNavigate={openWorkspace}
+      />
 
       <section className="relative flex h-full min-w-0 flex-1 flex-col">
         <div className="flex h-14 items-center justify-between border-b border-[#E5E7EB] bg-white px-4 md:hidden">

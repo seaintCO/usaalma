@@ -51,3 +51,18 @@ left untouched.
   Stripe/Supabase environment using a real test customer.
 - Confirm the live `subscriptions.user_id` uniqueness constraint required by the
   existing `upsert(..., { onConflict: "user_id" })` reconciliation contract.
+
+## Stage 2 audit — Settings and Connected Apps
+
+**Stopped before implementation.** The current Settings page is a placeholder.
+Only `preferred_language` and `alma_mode` are represented by authenticated
+routes, and `oauth_connections` has real Google Workspace and Stripe Connect
+state. The source repository does not verify a canonical profile schema for the
+remaining approved settings: display name, timezone, chat preferences, memory
+controls, notification preferences, export readiness, or deletion readiness.
+
+Implementing those fields would require either guessing live `profiles` columns
+or creating a migration against an unknown production schema. Per the overnight
+stop condition, no Stage 2 code or migration was created. Obtain a read-only
+inspection of the relevant profile/preferences tables, columns, constraints, and
+RLS policies before resuming Settings work.

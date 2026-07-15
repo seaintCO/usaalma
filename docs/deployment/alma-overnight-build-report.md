@@ -2,43 +2,52 @@
 
 ## Program status
 
-**Stopped before Stage 1 (Billing) implementation — 2026-07-15.**
+**Stage 1 (Billing) completed locally — 2026-07-15.**
 
-### Billing audit blocker
+### Initial audit and unblocking evidence
 
-The checked-in source has no migration defining the canonical `public.subscriptions`
-table. The existing billing repository and routes assume fields including
-`user_id`, `stripe_customer_id`, `stripe_subscription_id`, `plan`, `status`,
-`current_period_end`, `cancel_at_period_end`, and `updated_at`, but their schema,
-uniqueness constraints, and RLS policies cannot be verified from this repository.
+The source audit initially found no checked-in schema migration defining the
+canonical `public.subscriptions` table. Live Supabase inspection then confirmed
+the existing table already includes `status`, `plan`, `stripe_customer_id`,
+`stripe_subscription_id`, `price_id`, and `current_period_end`. The existing
+table is therefore the sole billing source of truth; no subscriptions migration
+was created.
 
-This is recorded independently in
-`docs/architecture/module-schema-rls-inventory.md`, which specifically requires
-live verification of Billing RLS and the webhook service-role path.
+### Stage 1 implementation
 
-The Stripe webhook currently uses the request-scoped Supabase client in
-`app/api/billing/webhook/route.ts`. Whether that client can safely reconcile
-subscriptions is dependent on the unknown `subscriptions` RLS policy. Changing
-the Billing UI or adding reconciliation behavior without the verified table
-contract could either fail production writes or weaken ownership boundaries.
+- The Billing workspace reads current plan, lifecycle status, renewal or end
+  date, and access requirements only from `subscriptions`.
+- Authenticated price discovery exposes only actual configured Stripe Price
+  details. It does not fabricate amounts or plan labels.
+- Checkout is used for a subscriber without a Stripe customer. Existing Stripe
+  customers use the Stripe Customer Portal for plan and lifecycle changes.
+- Payment history lists only invoices returned for the authenticated user's
+  canonical subscription customer.
+- The checkout-success page follows the normalized billing status contract.
+- The Stripe webhook now reconciles `subscriptions` through the server-only
+  Supabase admin client using the existing `user_id` conflict key.
+- ALMA platform billing remains separate from user-connected Stripe business
+  accounts in `oauth_connections`; Stripe Connect code was not changed.
+- The Billing UI has English and Spanish copy plus loading, error, empty, and
+  unauthenticated-safe states.
 
-### Required unblocking evidence
-
-Run the read-only `subscriptions` column, constraint, index, and RLS-policy
-queries in `docs/architecture/module-schema-rls-inventory.md` against the target
-Supabase project, then record the results. After that evidence is available, use
-a new additive corrective migration only if it is required; do not alter an
-already-applied migration.
-
-### Changes made
-
-No runtime code, migration, deployment configuration, or production resource was
-changed. The pre-existing uncommitted
+No runtime code, migration, deployment configuration, secret, or production
+resource was changed outside this local checkpoint. The pre-existing uncommitted
 `supabase/migrations/20260715013000_alma_ai_workspace_closeout.sql` change was
 left untouched.
 
 ### Local validation
 
+- `npx prettier --check` passed for all Billing files.
 - `npx tsc --noEmit` passed.
+- Targeted ESLint passed without errors.
 - `npm run build` passed.
 - `git diff --check` passed.
+
+### External verification still required
+
+- Configure Stripe platform billing prices and the signed webhook endpoint.
+- Verify Checkout, Customer Portal, and invoice history in a non-production
+  Stripe/Supabase environment using a real test customer.
+- Confirm the live `subscriptions.user_id` uniqueness constraint required by the
+  existing `upsert(..., { onConflict: "user_id" })` reconciliation contract.

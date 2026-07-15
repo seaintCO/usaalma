@@ -1,136 +1,424 @@
 "use client";
 
 import {
-  Bot,
-  Calendar,
-  CheckCircle2,
-  FileText,
-  Globe,
-  Mail,
-  MessageSquareText,
-  ReceiptText,
-  Store,
-  Users,
-  Zap,
-} from "lucide-react";
-import { useEffect, useState } from "react";
+  MarketplaceCatalogCard,
+  type MarketplaceCardAction,
+} from "@/components/marketplace/MarketplaceCatalogCard";
+import { MarketplaceDetailDialog } from "@/components/marketplace/MarketplaceDetailDialog";
+import {
+  getMarketplaceCopy,
+  MARKETPLACE_CATEGORIES,
+  type MarketplaceLanguage,
+} from "@/components/marketplace/marketplaceCopy";
+import type {
+  MarketplaceCatalogErrorResponse,
+  MarketplaceCatalogResponse,
+  MarketplaceItem,
+} from "@/lib/platform/marketplace/types";
+import { Search, Store } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-const iconMap:any = {
-  planner: Calendar,
-  tasks: CheckCircle2,
-  notes: FileText,
-  crm: Users,
-  invoicing: ReceiptText,
-  documents: FileText,
-  ai_receptionist: Bot,
-  automations: Zap,
-  email_marketing: Mail,
-  sms: MessageSquareText,
-  website_builder: Globe,
-};
+type LoadState = "loading" | "ready" | "error";
+type ReleaseFilter = "all" | MarketplaceItem["releaseStatus"];
+type StatusFilter =
+  | "all"
+  | MarketplaceItem["accessStatus"]
+  | NonNullable<MarketplaceItem["installStatus"]>
+  | NonNullable<MarketplaceItem["connectionStatus"]>;
+
+const STATUS_FILTERS: StatusFilter[] = [
+  "all",
+  "included",
+  "upgrade_required",
+  "unavailable",
+  "available",
+  "installed",
+  "connect",
+  "connected",
+  "reconnect_required",
+  "setup_required",
+  "coming_soon",
+];
+
+function isCatalogResponse(
+  value: unknown,
+): value is MarketplaceCatalogResponse {
+  return Boolean(
+    value &&
+    typeof value === "object" &&
+    (value as MarketplaceCatalogResponse).ok === true &&
+    Array.isArray((value as MarketplaceCatalogResponse).items),
+  );
+}
+
+function labelForStatus(
+  value: StatusFilter,
+  copy: ReturnType<typeof getMarketplaceCopy>,
+) {
+  if (value === "all") return copy.all;
+  const labels: Record<Exclude<StatusFilter, "all">, string> = {
+    included: copy.included,
+    upgrade_required: copy.upgrade,
+    unavailable: copy.unavailable,
+    available: copy.available,
+    installed: copy.installed,
+    connect: copy.connect,
+    connected: copy.connected,
+    reconnect_required: copy.reconnect,
+    setup_required: copy.requiresSetup,
+    coming_soon: copy.comingSoon,
+  };
+  return labels[value];
+}
+
+function actionForItem(
+  item: MarketplaceItem,
+  copy: ReturnType<typeof getMarketplaceCopy>,
+): MarketplaceCardAction {
+  if (item.releaseStatus === "coming_soon") return null;
+  if (item.itemType === "internal_module") {
+    if (item.accessStatus !== "included") return null;
+    if (item.installStatus === "available")
+      return { kind: "install", label: copy.install };
+    if (item.route) return { kind: "open", label: copy.open, href: item.route };
+    return null;
+  }
+
+  if (item.connectionStatus === "connect") {
+    const routes: Record<string, string> = {
+      google: "/api/oauth/google/start",
+      stripe: "/api/oauth/stripe/start",
+    };
+    const href = item.providerKey ? routes[item.providerKey] : undefined;
+    return href ? { kind: "connect", label: copy.connect, href } : null;
+  }
+  if (item.connectionStatus === "reconnect_required") {
+    const routes: Record<string, string> = {
+      google: "/api/oauth/google/start",
+      stripe: "/api/oauth/stripe/start",
+    };
+    const href = item.providerKey ? routes[item.providerKey] : undefined;
+    return href ? { kind: "connect", label: copy.reconnect, href } : null;
+  }
+  if (item.connectionStatus === "setup_required") {
+    return {
+      kind: "open",
+      label: copy.requiresSetup,
+      href: "/voice-connections",
+    };
+  }
+  return null;
+}
 
 export default function MarketplacePage() {
-  const [modules, setModules] = useState<any[]>([]);
-  const [loadingKey, setLoadingKey] = useState<string | null>(null);
+  const [catalog, setCatalog] = useState<MarketplaceCatalogResponse | null>(
+    null,
+  );
+  const [state, setState] = useState<LoadState>("loading");
+  const [error, setError] = useState<string | null>(null);
+  const [language, setLanguage] = useState<MarketplaceLanguage>("en");
+  const [search, setSearch] = useState("");
+  const [category, setCategory] = useState<"all" | MarketplaceItem["category"]>(
+    "all",
+  );
+  const [release, setRelease] = useState<ReleaseFilter>("all");
+  const [status, setStatus] = useState<StatusFilter>("all");
+  const [selectedItem, setSelectedItem] = useState<MarketplaceItem | null>(
+    null,
+  );
+  const [mutatingKey, setMutatingKey] = useState<string | null>(null);
+  const requestRef = useRef<AbortController | null>(null);
 
-  async function loadModules() {
-    const res = await fetch("/api/modules/list");
-    const data = await res.json();
-    if (Array.isArray(data)) setModules(data);
-  }
+  const copy = getMarketplaceCopy(language);
 
-  async function installModule(moduleKey:string) {
-    setLoadingKey(moduleKey);
+  const loadCatalog = useCallback(async () => {
+    requestRef.current?.abort();
+    const controller = new AbortController();
+    requestRef.current = controller;
+    setState("loading");
+    setError(null);
 
-    await fetch("/api/modules/install", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ moduleKey }),
-    });
-
-    await loadModules();
-    setLoadingKey(null);
-  }
+    try {
+      const [catalogResponse, languageResponse] = await Promise.all([
+        fetch("/api/marketplace/catalog", {
+          signal: controller.signal,
+          cache: "no-store",
+        }),
+        fetch("/api/settings/language", {
+          signal: controller.signal,
+          cache: "no-store",
+        }),
+      ]);
+      const payload: unknown = await catalogResponse.json();
+      if (!catalogResponse.ok || !isCatalogResponse(payload)) {
+        const responseError = payload as MarketplaceCatalogErrorResponse;
+        throw new Error(responseError.error?.message ?? "catalog_unavailable");
+      }
+      if (!controller.signal.aborted) {
+        setCatalog(payload);
+        setState("ready");
+      }
+      if (languageResponse.ok && !controller.signal.aborted) {
+        const languagePayload = await languageResponse.json();
+        setLanguage(languagePayload.language === "es" ? "es" : "en");
+      }
+    } catch (loadError) {
+      if (controller.signal.aborted) return;
+      setState("error");
+      setError(
+        loadError instanceof Error ? loadError.message : "catalog_unavailable",
+      );
+    }
+  }, []);
 
   useEffect(() => {
-    loadModules();
-  }, []);
+    const timer = window.setTimeout(() => {
+      void loadCatalog();
+    }, 0);
+    return () => {
+      window.clearTimeout(timer);
+      requestRef.current?.abort();
+    };
+  }, [loadCatalog]);
+
+  const installModule = useCallback(
+    async (item: MarketplaceItem) => {
+      if (mutatingKey || item.installStatus !== "available") return;
+      setMutatingKey(item.key);
+      setError(null);
+      try {
+        const response = await fetch("/api/modules/install", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            moduleKey: item.key === "images" ? "image_generator" : item.key,
+          }),
+        });
+        if (!response.ok) throw new Error("install_failed");
+        await loadCatalog();
+      } catch {
+        setError(copy.installFailed);
+      } finally {
+        setMutatingKey(null);
+      }
+    },
+    [copy.installFailed, loadCatalog, mutatingKey],
+  );
+
+  const filteredItems = useMemo(() => {
+    const normalizedSearch = search.trim().toLocaleLowerCase();
+    return (catalog?.items ?? []).filter((item) => {
+      const searchable =
+        `${item.name} ${item.description} ${item.category}`.toLocaleLowerCase();
+      const matchesSearch =
+        !normalizedSearch || searchable.includes(normalizedSearch);
+      const matchesCategory = category === "all" || item.category === category;
+      const matchesRelease =
+        release === "all" || item.releaseStatus === release;
+      const matchesStatus =
+        status === "all" ||
+        item.accessStatus === status ||
+        item.installStatus === status ||
+        item.connectionStatus === status;
+      return (
+        matchesSearch && matchesCategory && matchesRelease && matchesStatus
+      );
+    });
+  }, [catalog, category, release, search, status]);
+
+  const modules = filteredItems.filter(
+    (item) => item.itemType === "internal_module",
+  );
+  const connections = filteredItems.filter(
+    (item) => item.itemType === "external_connection",
+  );
+  const selectedAction = selectedItem
+    ? actionForItem(selectedItem, copy)
+    : null;
 
   return (
     <main className="min-h-screen bg-[#F7F7F8] px-6 py-10 text-[#111111]">
       <div className="mx-auto max-w-7xl">
-        <a href="/dashboard" className="text-sm text-[#6B7280] hover:text-black">
-          ← Volver a ALMA
+        <a
+          href="/dashboard"
+          className="text-sm text-[#6B7280] hover:text-black"
+        >
+          ← {copy.back}
         </a>
 
-        <div className="mt-10 flex flex-col justify-between gap-6 md:flex-row md:items-end">
-          <div>
-            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl border border-[#E5E7EB] bg-white">
-              <Store className="h-5 w-5" />
-            </div>
-            <p className="mb-2 text-xs font-medium uppercase tracking-[0.2em] text-[#6B7280]">
-              Marketplace
-            </p>
-            <h1 className="text-4xl font-medium tracking-tight md:text-5xl">
-              Instala solo lo que necesitas.
-            </h1>
-            <p className="mt-4 max-w-2xl text-lg text-[#6B7280]">
-              Activa módulos personales, herramientas de negocio y automatizaciones
-              cuando las necesites.
-            </p>
+        <div className="mt-10">
+          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl border border-[#E5E7EB] bg-white">
+            <Store className="h-5 w-5" aria-hidden="true" />
           </div>
-
-          <div className="rounded-2xl border border-[#E5E7EB] bg-white p-4 text-sm text-[#6B7280]">
-            <div className="font-medium text-black">Planes principales</div>
-            <div>Personal: $25/mes</div>
-            <div>Business Pro: $100/mes</div>
-          </div>
+          <p className="mb-2 text-xs font-medium uppercase tracking-[0.2em] text-[#6B7280]">
+            {copy.eyebrow}
+          </p>
+          <h1 className="max-w-4xl text-4xl font-medium tracking-tight md:text-5xl">
+            {copy.title}
+          </h1>
+          <p className="mt-4 max-w-3xl text-lg text-[#6B7280]">
+            {copy.description}
+          </p>
         </div>
 
-        <div className="mt-12 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-          {modules.map((module) => {
-            const Icon = iconMap[module.module_key] || Store;
-
-            return (
-              <div
-                key={module.module_key}
-                className="flex flex-col rounded-[1.5rem] border border-[#E5E7EB] bg-white p-6 shadow-sm shadow-black/5 transition hover:-translate-y-1 hover:shadow-md"
+        <section
+          className="mt-10 rounded-[1.5rem] border border-[#E5E7EB] bg-white p-4"
+          aria-label={copy.search}
+        >
+          <div className="grid gap-3 md:grid-cols-4">
+            <label className="relative block md:col-span-2">
+              <span className="sr-only">{copy.search}</span>
+              <Search
+                className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#6B7280]"
+                aria-hidden="true"
+              />
+              <input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder={copy.search}
+                className="w-full rounded-xl border border-[#E5E7EB] py-3 pl-10 pr-3 text-sm outline-none focus:ring-2 focus:ring-black"
+              />
+            </label>
+            <label>
+              <span className="sr-only">{copy.category}</span>
+              <select
+                value={category}
+                onChange={(event) =>
+                  setCategory(event.target.value as typeof category)
+                }
+                className="w-full rounded-xl border border-[#E5E7EB] bg-white px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-black"
               >
-                <div className="mb-5 flex items-start justify-between">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-[#E5E7EB] bg-[#F7F7F8]">
-                    <Icon className="h-5 w-5" />
-                  </div>
+                <option value="all">
+                  {copy.category}: {copy.all}
+                </option>
+                {MARKETPLACE_CATEGORIES.map((entry) => (
+                  <option key={entry} value={entry}>
+                    {entry}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              <span className="sr-only">{copy.release}</span>
+              <select
+                value={release}
+                onChange={(event) =>
+                  setRelease(event.target.value as ReleaseFilter)
+                }
+                className="w-full rounded-xl border border-[#E5E7EB] bg-white px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-black"
+              >
+                <option value="all">
+                  {copy.release}: {copy.all}
+                </option>
+                <option value="active">{copy.active}</option>
+                <option value="beta">{copy.beta}</option>
+                <option value="coming_soon">{copy.comingSoon}</option>
+              </select>
+            </label>
+            <label>
+              <span className="sr-only">{copy.status}</span>
+              <select
+                value={status}
+                onChange={(event) =>
+                  setStatus(event.target.value as StatusFilter)
+                }
+                className="w-full rounded-xl border border-[#E5E7EB] bg-white px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-black"
+              >
+                {STATUS_FILTERS.map((entry) => (
+                  <option key={entry} value={entry}>
+                    {copy.status}: {labelForStatus(entry, copy)}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+        </section>
 
-                  <span className="rounded-full bg-[#F7F7F8] px-3 py-1 text-xs font-medium text-[#6B7280]">
-                    {module.price}
-                  </span>
+        {state === "loading" ? (
+          <p className="mt-12 text-sm text-[#6B7280]" role="status">
+            {copy.loading}
+          </p>
+        ) : null}
+        {state === "error" ? (
+          <section className="mt-12 rounded-[1.5rem] border border-[#E5E7EB] bg-white p-6">
+            <p className="text-sm text-[#6B7280]">
+              {error || copy.unavailable}
+            </p>
+            <button
+              type="button"
+              onClick={() => void loadCatalog()}
+              className="mt-4 rounded-2xl bg-black px-4 py-3 text-sm font-medium text-white"
+            >
+              {copy.retry}
+            </button>
+          </section>
+        ) : null}
+        {state === "ready" ? (
+          <>
+            <section className="mt-12" aria-labelledby="alma-modules-heading">
+              <h2
+                id="alma-modules-heading"
+                className="text-2xl font-medium tracking-tight"
+              >
+                {copy.modules}
+              </h2>
+              {modules.length ? (
+                <div className="mt-5 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+                  {modules.map((item) => (
+                    <MarketplaceCatalogCard
+                      key={item.key}
+                      item={item}
+                      copy={copy}
+                      action={actionForItem(item, copy)}
+                      isMutating={mutatingKey === item.key}
+                      onInstall={(target) => void installModule(target)}
+                      onDetails={setSelectedItem}
+                    />
+                  ))}
                 </div>
-
-                <h2 className="text-lg font-medium tracking-tight">{module.name}</h2>
-                <p className="mt-2 flex-1 text-sm leading-6 text-[#6B7280]">
-                  {module.description}
-                </p>
-
-                <button
-                  onClick={() => installModule(module.module_key)}
-                  disabled={module.installed || loadingKey === module.module_key}
-                  className={
-                    module.installed
-                      ? "mt-6 rounded-2xl bg-green-50 py-3 text-sm font-medium text-green-700"
-                      : "mt-6 rounded-2xl bg-black py-3 text-sm font-medium text-white hover:bg-gray-800"
-                  }
-                >
-                  {loadingKey === module.module_key
-                    ? "Instalando..."
-                    : module.installed
-                    ? "Instalado"
-                    : "Instalar módulo"}
-                </button>
-              </div>
-            );
-          })}
-        </div>
+              ) : (
+                <p className="mt-5 text-sm text-[#6B7280]">{copy.empty}</p>
+              )}
+            </section>
+            <section
+              className="mt-12 pb-10"
+              aria-labelledby="connections-heading"
+            >
+              <h2
+                id="connections-heading"
+                className="text-2xl font-medium tracking-tight"
+              >
+                {copy.connections}
+              </h2>
+              {connections.length ? (
+                <div className="mt-5 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+                  {connections.map((item) => (
+                    <MarketplaceCatalogCard
+                      key={item.key}
+                      item={item}
+                      copy={copy}
+                      action={actionForItem(item, copy)}
+                      isMutating={false}
+                      onInstall={(target) => void installModule(target)}
+                      onDetails={setSelectedItem}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <p className="mt-5 text-sm text-[#6B7280]">{copy.empty}</p>
+              )}
+            </section>
+          </>
+        ) : null}
       </div>
+      <MarketplaceDetailDialog
+        item={selectedItem}
+        copy={copy}
+        action={selectedAction}
+        isMutating={selectedItem?.key === mutatingKey}
+        onClose={() => setSelectedItem(null)}
+        onInstall={(target) => void installModule(target)}
+      />
     </main>
   );
 }

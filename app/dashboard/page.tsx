@@ -11,7 +11,6 @@ import {
   Mic,
   Paperclip,
   PenSquare,
-  PlusCircle,
   ReceiptText,
   Search,
   Settings,
@@ -34,6 +33,9 @@ import ChatWorkspace, {
   type ChatMessage,
 } from "@/components/dashboard-chat/ChatWorkspace";
 import OperatingDashboard from "@/components/dashboard-home/OperatingDashboard";
+import ConversationNavigation, {
+  ConversationNewChatButton,
+} from "@/components/alma-shell/ConversationNavigation";
 
 const moduleMap: any = {
   planner: ["Planner", Calendar, "/planner"],
@@ -532,16 +534,10 @@ export default function DashboardPage() {
         </div>
 
         <div className="px-3">
-          <button
-            onClick={startNewChat}
-            className="mb-4 flex w-full items-center justify-between rounded-xl border border-[#E5E7EB] bg-white px-3 py-2 text-sm font-medium shadow-sm"
-          >
-            <span className="flex items-center gap-2">
-              <PlusCircle className="h-4 w-4 text-[#6B7280]" />
-              {t.newChat}
-            </span>
-            <PenSquare className="h-4 w-4 text-[#6B7280]" />
-          </button>
+          <ConversationNewChatButton
+            label={t.newChat}
+            onNewChat={startNewChat}
+          />
 
           <div className="relative mb-4">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#6B7280]" />
@@ -553,48 +549,16 @@ export default function DashboardPage() {
         </div>
 
         <div className="flex-1 overflow-y-auto px-3 pb-8 text-sm">
-          <h5 className="mb-2 px-2 text-xs font-medium uppercase tracking-wide text-[#6B7280]">
-            {t.history}
-          </h5>
-
-          {history.map((chat) => (
-            <div
-              key={chat.id}
-              className="group flex items-center gap-1 rounded-lg hover:bg-gray-200"
-            >
-              <button
-                onClick={() => selectConversation(chat.id)}
-                className="min-w-0 flex-1 truncate px-2 py-1.5 text-left text-[#6B7280] hover:text-black"
-              >
-                <span className="flex items-center gap-1.5">
-                  <span className="truncate">{chat.title || t.newChat}</span>
-                  {conversationStatuses[chat.id]?.failed ? (
-                    <span
-                      aria-label="Response failed"
-                      className="h-2 w-2 rounded-full bg-red-500"
-                    />
-                  ) : conversationStatuses[chat.id]?.active ? (
-                    <span
-                      aria-label="Generating response"
-                      className="h-2 w-2 animate-pulse rounded-full bg-blue-500"
-                    />
-                  ) : conversationStatuses[chat.id]?.unread &&
-                    conversationId !== chat.id ? (
-                    <span
-                      aria-label="Unread response"
-                      className="h-2 w-2 rounded-full bg-black"
-                    />
-                  ) : null}
-                </span>
-              </button>
-              <button
-                onClick={() => deleteConversation(chat.id)}
-                className="hidden px-1 text-xs text-red-500 group-hover:block"
-              >
-                Delete
-              </button>
-            </div>
-          ))}
+          <ConversationNavigation
+            conversations={history}
+            selectedConversationId={conversationId}
+            statuses={conversationStatuses}
+            heading={t.history}
+            newChatLabel={t.newChat}
+            deleteLabel="Delete"
+            onConversationSelect={selectConversation}
+            onConversationDelete={deleteConversation}
+          />
 
           <div className="mx-2 my-6 h-px bg-[#E5E7EB]" />
 

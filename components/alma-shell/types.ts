@@ -7,7 +7,6 @@ export type ConversationStatus = {
   failed?: boolean;
 };
 export type ConversationNavItem = { id: string; title: string | null };
-export type ConversationEditingState = { id: string | null; title: string };
 export type AlmaNavigationItem = {
   key: RoutedWorkspace;
   label: string;
@@ -25,13 +24,14 @@ export type AlmaConversationSectionProps = {
   conversations: readonly ConversationNavItem[];
   selectedConversationId: string | null;
   statuses: Readonly<Record<string, ConversationStatus>>;
-  editing: ConversationEditingState;
+  heading: string;
+  newChatLabel: string;
+  deleteLabel: string;
+  loadingLabel?: string;
+  emptyLabel?: string;
+  loading?: boolean;
   onConversationSelect: (conversationId: string) => void;
   onNewChat: () => void;
-  onConversationRenameStart: (conversationId: string, title: string) => void;
-  onConversationRenameChange: (title: string) => void;
-  onConversationRenameSave: (conversationId: string) => void;
-  onConversationRenameCancel: () => void;
   onConversationDelete: (conversationId: string) => void;
 };
 export type AlmaMobileDrawerProps = {

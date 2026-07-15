@@ -3,7 +3,7 @@ begin;
 create table if not exists public.creative_brand_kits (
  id uuid primary key default gen_random_uuid(), user_id uuid not null references auth.users(id) on delete cascade,
  name text not null, voice text, audience text, colors jsonb not null default '[]'::jsonb, logo_image_id uuid references public.generated_images(id) on delete set null,
- references jsonb not null default '[]'::jsonb, metadata jsonb not null default '{}'::jsonb, created_at timestamptz not null default now(), updated_at timestamptz not null default now()
+ "references" jsonb not null default '[]'::jsonb, metadata jsonb not null default '{}'::jsonb, created_at timestamptz not null default now(), updated_at timestamptz not null default now()
 );
 create table if not exists public.creative_campaigns (
  id uuid primary key default gen_random_uuid(), user_id uuid not null references auth.users(id) on delete cascade, brand_kit_id uuid references public.creative_brand_kits(id) on delete set null,

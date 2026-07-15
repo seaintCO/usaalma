@@ -34,6 +34,10 @@ export async function POST(req:Request) {
     const result = await generateCreativeAsset(user.id, {
       ...body,
       ...templateInput,
+      folderId: body.folderId ?? null,
+      brandKitId: body.brandKitId ?? null,
+      campaignId: body.campaignId ?? null,
+      idempotencyKey: typeof body.idempotencyKey === "string" ? body.idempotencyKey : undefined,
     });
 
     if (result?.success !== false) {

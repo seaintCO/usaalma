@@ -2,6 +2,9 @@
 import { ArrowLeft, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import AlmaShell from "@/components/alma-shell/AlmaShell";
+import type { AlmaShellLanguage } from "@/components/alma-shell/types";
+import { DASHBOARD_ROUTE } from "@/lib/platform/workspaceRoutes";
 
 type Settings = {
   timezone: string;
@@ -156,6 +159,11 @@ export default function SettingsPage() {
   const [message, setMessage] = useState<string | null>(null);
   const language = profile?.language === "es" ? "es" : "en";
   const t = copy[language];
+  function updateLanguage(next: AlmaShellLanguage) {
+    setProfile((current) =>
+      current ? { ...current, language: next } : current,
+    );
+  }
   const load = useCallback(async () => {
     const [settingsRes, catalogRes, notificationsRes] = await Promise.all([
       fetch("/api/settings", { cache: "no-store" }),
@@ -231,9 +239,9 @@ export default function SettingsPage() {
   };
   if (!profile)
     return (
-      <main className="min-h-screen bg-[#F7F7F8] p-8 text-gray-500">
-        {copy.en.loading}
-      </main>
+      <AlmaShell language="en" activeWorkspace="settings" title={copy.en.title}>
+        <div className="p-8 text-gray-500">{copy.en.loading}</div>
+      </AlmaShell>
     );
   const field = (label: string, child: React.ReactNode) => (
     <label className="block text-sm font-medium text-gray-700">
@@ -242,247 +250,257 @@ export default function SettingsPage() {
     </label>
   );
   return (
-    <main className="min-h-screen bg-[#F7F7F8] px-4 py-8 text-black md:px-10">
-      <div className="mx-auto max-w-5xl">
-        <Link
-          href="/dashboard"
-          className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-black"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          {t.back}
-        </Link>
-        <header className="mt-8">
-          <p className="text-xs uppercase tracking-[.35em] text-gray-500">
-            ALMA
-          </p>
-          <h1 className="mt-3 text-4xl font-medium">{t.title}</h1>
-        </header>
-        <div className="mt-8 grid gap-6 lg:grid-cols-2">
-          <section className="rounded-[2rem] border border-gray-200 bg-white p-6">
-            <h2 className="text-xl font-medium">{t.profile}</h2>
-            <div className="mt-5 space-y-5">
-              {field(
-                t.email,
-                <p className="rounded-xl bg-[#F7F7F8] px-3 py-3 text-gray-600">
-                  {profile.email}
-                </p>,
-              )}
-              {field(
-                t.language,
-                <select
-                  value={profile.language}
-                  onChange={(e) =>
-                    setProfile({
-                      ...profile,
-                      language: e.target.value as Profile["language"],
-                    })
-                  }
-                  className="w-full rounded-xl border border-gray-200 bg-white p-3"
-                >
-                  <option value="auto">{t.auto}</option>
-                  <option value="en">{t.en}</option>
-                  <option value="es">{t.es}</option>
-                </select>,
-              )}
-            </div>
-          </section>
-          <section className="rounded-[2rem] border border-gray-200 bg-white p-6">
-            <h2 className="text-xl font-medium">{t.chat}</h2>
-            <div className="mt-5 space-y-5">
-              {field(
-                t.mode,
-                <select
-                  value={profile.almaMode}
-                  onChange={(e) =>
-                    setProfile({
-                      ...profile,
-                      almaMode: e.target.value as Profile["almaMode"],
-                    })
-                  }
-                  className="w-full rounded-xl border border-gray-200 bg-white p-3"
-                >
-                  {["auto", "fast", "deep"].map((v) => (
-                    <option key={v} value={v}>
-                      {t[v as "auto" | "fast" | "deep"]}
-                    </option>
-                  ))}
-                </select>,
-              )}
-              {field(
-                t.timezone,
-                <input
-                  value={settings.timezone}
-                  onChange={(e) =>
-                    setSettings({ ...settings, timezone: e.target.value })
-                  }
-                  className="w-full rounded-xl border border-gray-200 p-3"
-                />,
-              )}
-              {field(
-                t.theme,
-                <select
-                  value={settings.theme}
-                  onChange={(e) =>
-                    setSettings({ ...settings, theme: e.target.value })
-                  }
-                  className="w-full rounded-xl border border-gray-200 bg-white p-3"
-                >
-                  {["light", "dark", "system"].map((v) => (
-                    <option key={v} value={v}>
-                      {t[v as "light" | "dark" | "system"]}
-                    </option>
-                  ))}
-                </select>,
-              )}
-            </div>
-          </section>
-          <section className="rounded-[2rem] border border-gray-200 bg-white p-6">
-            <h2 className="text-xl font-medium">{t.models}</h2>
-            <div className="mt-5 space-y-5">
-              {field(
-                t.text,
-                <select
-                  value={settings.preferredAiModel}
-                  onChange={(e) =>
-                    setSettings({
-                      ...settings,
-                      preferredAiModel: e.target.value,
-                    })
-                  }
-                  className="w-full rounded-xl border border-gray-200 bg-white p-3"
-                >
-                  {textModels.map((v) => (
-                    <option key={v}>{v}</option>
-                  ))}
-                </select>,
-              )}
-              {field(
-                t.image,
-                <select
-                  value={settings.preferredImageModel}
-                  onChange={(e) =>
-                    setSettings({
-                      ...settings,
-                      preferredImageModel: e.target.value,
-                    })
-                  }
-                  className="w-full rounded-xl border border-gray-200 bg-white p-3"
-                >
-                  {imageModels.map((v) => (
-                    <option key={v}>{v}</option>
-                  ))}
-                </select>,
-              )}
-            </div>
-          </section>
-          <section className="rounded-[2rem] border border-gray-200 bg-white p-6">
-            <h2 className="text-xl font-medium">{t.notifications}</h2>
-            <div className="mt-5 space-y-4">
-              {field(
-                "Email",
-                <input
-                  type="checkbox"
-                  checked={settings.notificationEmailEnabled}
-                  onChange={(e) =>
-                    setSettings({
-                      ...settings,
-                      notificationEmailEnabled: e.target.checked,
-                    })
-                  }
-                />,
-              )}
-              {field(
-                "In-app",
-                <input
-                  type="checkbox"
-                  checked={settings.notificationInAppEnabled}
-                  onChange={(e) =>
-                    setSettings({
-                      ...settings,
-                      notificationInAppEnabled: e.target.checked,
-                    })
-                  }
-                />,
-              )}
-              <h3 className="pt-2 font-medium">{t.inbox}</h3>
-              {notifications.length ? (
-                notifications.slice(0, 3).map((n) => (
-                  <p key={n.id} className="rounded-xl bg-[#F7F7F8] p-3 text-sm">
-                    <b>{n.title}</b>
-                    <br />
-                    {n.body}
-                  </p>
-                ))
-              ) : (
-                <p className="text-sm text-gray-500">{t.none}</p>
-              )}
-            </div>
-          </section>
-        </div>
-        <button
-          disabled={saving}
-          onClick={() => void save()}
-          className="mt-6 rounded-xl bg-black px-5 py-3 text-sm font-medium text-white disabled:opacity-60"
-        >
-          {saving ? t.saving : t.save}
-        </button>
-        {message ? (
-          <span className="ml-3 text-sm text-gray-600">{message}</span>
-        ) : null}
-        <section className="mt-6 rounded-[2rem] border border-gray-200 bg-white p-6">
-          <h2 className="text-xl font-medium">{t.apps}</h2>
-          <div className="mt-5 grid gap-4 md:grid-cols-2">
-            {connections.map((item) => {
-              const status = item.connectionStatus;
-              const label =
-                status === "connected"
-                  ? t.connected
-                  : status === "reconnect_required"
-                    ? t.reconnect
-                    : status === "setup_required"
-                      ? t.setup
-                      : status === "coming_soon"
-                        ? t.soon
-                        : t.connect;
-              return (
-                <div
-                  key={item.key}
-                  className="flex items-center justify-between rounded-xl bg-[#F7F7F8] p-4"
-                >
-                  <span>
-                    {item.name}
-                    <small className="block text-gray-500">{label}</small>
-                  </span>
-                  {status !== "coming_soon" && status !== "setup_required" ? (
-                    <button
-                      onClick={() => void connectionAction(item)}
-                      className="rounded-lg bg-black px-3 py-2 text-sm text-white"
+    <AlmaShell
+      language={language}
+      activeWorkspace="settings"
+      title={t.title}
+      onLanguageChange={updateLanguage}
+    >
+      <div className="px-4 py-8 text-black md:px-10">
+        <div className="mx-auto max-w-5xl">
+          <Link
+            href={DASHBOARD_ROUTE}
+            className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-black"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            {t.back}
+          </Link>
+          <header className="mt-8">
+            <p className="text-xs uppercase tracking-[.35em] text-gray-500">
+              ALMA
+            </p>
+            <h1 className="mt-3 text-4xl font-medium">{t.title}</h1>
+          </header>
+          <div className="mt-8 grid gap-6 lg:grid-cols-2">
+            <section className="rounded-[2rem] border border-gray-200 bg-white p-6">
+              <h2 className="text-xl font-medium">{t.profile}</h2>
+              <div className="mt-5 space-y-5">
+                {field(
+                  t.email,
+                  <p className="rounded-xl bg-[#F7F7F8] px-3 py-3 text-gray-600">
+                    {profile.email}
+                  </p>,
+                )}
+                {field(
+                  t.language,
+                  <select
+                    value={profile.language}
+                    onChange={(e) =>
+                      setProfile({
+                        ...profile,
+                        language: e.target.value as Profile["language"],
+                      })
+                    }
+                    className="w-full rounded-xl border border-gray-200 bg-white p-3"
+                  >
+                    <option value="auto">{t.auto}</option>
+                    <option value="en">{t.en}</option>
+                    <option value="es">{t.es}</option>
+                  </select>,
+                )}
+              </div>
+            </section>
+            <section className="rounded-[2rem] border border-gray-200 bg-white p-6">
+              <h2 className="text-xl font-medium">{t.chat}</h2>
+              <div className="mt-5 space-y-5">
+                {field(
+                  t.mode,
+                  <select
+                    value={profile.almaMode}
+                    onChange={(e) =>
+                      setProfile({
+                        ...profile,
+                        almaMode: e.target.value as Profile["almaMode"],
+                      })
+                    }
+                    className="w-full rounded-xl border border-gray-200 bg-white p-3"
+                  >
+                    {["auto", "fast", "deep"].map((v) => (
+                      <option key={v} value={v}>
+                        {t[v as "auto" | "fast" | "deep"]}
+                      </option>
+                    ))}
+                  </select>,
+                )}
+                {field(
+                  t.timezone,
+                  <input
+                    value={settings.timezone}
+                    onChange={(e) =>
+                      setSettings({ ...settings, timezone: e.target.value })
+                    }
+                    className="w-full rounded-xl border border-gray-200 p-3"
+                  />,
+                )}
+                {field(
+                  t.theme,
+                  <select
+                    value={settings.theme}
+                    onChange={(e) =>
+                      setSettings({ ...settings, theme: e.target.value })
+                    }
+                    className="w-full rounded-xl border border-gray-200 bg-white p-3"
+                  >
+                    {["light", "dark", "system"].map((v) => (
+                      <option key={v} value={v}>
+                        {t[v as "light" | "dark" | "system"]}
+                      </option>
+                    ))}
+                  </select>,
+                )}
+              </div>
+            </section>
+            <section className="rounded-[2rem] border border-gray-200 bg-white p-6">
+              <h2 className="text-xl font-medium">{t.models}</h2>
+              <div className="mt-5 space-y-5">
+                {field(
+                  t.text,
+                  <select
+                    value={settings.preferredAiModel}
+                    onChange={(e) =>
+                      setSettings({
+                        ...settings,
+                        preferredAiModel: e.target.value,
+                      })
+                    }
+                    className="w-full rounded-xl border border-gray-200 bg-white p-3"
+                  >
+                    {textModels.map((v) => (
+                      <option key={v}>{v}</option>
+                    ))}
+                  </select>,
+                )}
+                {field(
+                  t.image,
+                  <select
+                    value={settings.preferredImageModel}
+                    onChange={(e) =>
+                      setSettings({
+                        ...settings,
+                        preferredImageModel: e.target.value,
+                      })
+                    }
+                    className="w-full rounded-xl border border-gray-200 bg-white p-3"
+                  >
+                    {imageModels.map((v) => (
+                      <option key={v}>{v}</option>
+                    ))}
+                  </select>,
+                )}
+              </div>
+            </section>
+            <section className="rounded-[2rem] border border-gray-200 bg-white p-6">
+              <h2 className="text-xl font-medium">{t.notifications}</h2>
+              <div className="mt-5 space-y-4">
+                {field(
+                  "Email",
+                  <input
+                    type="checkbox"
+                    checked={settings.notificationEmailEnabled}
+                    onChange={(e) =>
+                      setSettings({
+                        ...settings,
+                        notificationEmailEnabled: e.target.checked,
+                      })
+                    }
+                  />,
+                )}
+                {field(
+                  "In-app",
+                  <input
+                    type="checkbox"
+                    checked={settings.notificationInAppEnabled}
+                    onChange={(e) =>
+                      setSettings({
+                        ...settings,
+                        notificationInAppEnabled: e.target.checked,
+                      })
+                    }
+                  />,
+                )}
+                <h3 className="pt-2 font-medium">{t.inbox}</h3>
+                {notifications.length ? (
+                  notifications.slice(0, 3).map((n) => (
+                    <p
+                      key={n.id}
+                      className="rounded-xl bg-[#F7F7F8] p-3 text-sm"
                     >
-                      {status === "connected" ? t.disconnect : label}
-                    </button>
-                  ) : null}
-                </div>
-              );
-            })}
+                      <b>{n.title}</b>
+                      <br />
+                      {n.body}
+                    </p>
+                  ))
+                ) : (
+                  <p className="text-sm text-gray-500">{t.none}</p>
+                )}
+              </div>
+            </section>
           </div>
-        </section>
-        <div className="mt-6 grid gap-6 md:grid-cols-3">
-          <section className="rounded-[2rem] border border-gray-200 bg-white p-6">
-            <h2 className="text-xl font-medium">{t.memory}</h2>
-            <p className="mt-3 text-sm text-gray-500">{t.memoryText}</p>
+          <button
+            disabled={saving}
+            onClick={() => void save()}
+            className="mt-6 rounded-xl bg-black px-5 py-3 text-sm font-medium text-white disabled:opacity-60"
+          >
+            {saving ? t.saving : t.save}
+          </button>
+          {message ? (
+            <span className="ml-3 text-sm text-gray-600">{message}</span>
+          ) : null}
+          <section className="mt-6 rounded-[2rem] border border-gray-200 bg-white p-6">
+            <h2 className="text-xl font-medium">{t.apps}</h2>
+            <div className="mt-5 grid gap-4 md:grid-cols-2">
+              {connections.map((item) => {
+                const status = item.connectionStatus;
+                const label =
+                  status === "connected"
+                    ? t.connected
+                    : status === "reconnect_required"
+                      ? t.reconnect
+                      : status === "setup_required"
+                        ? t.setup
+                        : status === "coming_soon"
+                          ? t.soon
+                          : t.connect;
+                return (
+                  <div
+                    key={item.key}
+                    className="flex items-center justify-between rounded-xl bg-[#F7F7F8] p-4"
+                  >
+                    <span>
+                      {item.name}
+                      <small className="block text-gray-500">{label}</small>
+                    </span>
+                    {status !== "coming_soon" && status !== "setup_required" ? (
+                      <button
+                        onClick={() => void connectionAction(item)}
+                        className="rounded-lg bg-black px-3 py-2 text-sm text-white"
+                      >
+                        {status === "connected" ? t.disconnect : label}
+                      </button>
+                    ) : null}
+                  </div>
+                );
+              })}
+            </div>
           </section>
-          <section className="rounded-[2rem] border border-gray-200 bg-white p-6">
-            <h2 className="text-xl font-medium">{t.export}</h2>
-            <p className="mt-3 text-sm text-gray-500">{t.exportText}</p>
-          </section>
-          <section className="rounded-[2rem] border border-gray-200 bg-white p-6">
-            <ShieldCheck className="h-5 w-5" />
-            <h2 className="mt-3 text-xl font-medium">{t.security}</h2>
-            <p className="mt-3 text-sm text-gray-500">{t.securityText}</p>
-            <p className="mt-3 text-sm text-gray-500">{t.deletionText}</p>
-          </section>
+          <div className="mt-6 grid gap-6 md:grid-cols-3">
+            <section className="rounded-[2rem] border border-gray-200 bg-white p-6">
+              <h2 className="text-xl font-medium">{t.memory}</h2>
+              <p className="mt-3 text-sm text-gray-500">{t.memoryText}</p>
+            </section>
+            <section className="rounded-[2rem] border border-gray-200 bg-white p-6">
+              <h2 className="text-xl font-medium">{t.export}</h2>
+              <p className="mt-3 text-sm text-gray-500">{t.exportText}</p>
+            </section>
+            <section className="rounded-[2rem] border border-gray-200 bg-white p-6">
+              <ShieldCheck className="h-5 w-5" />
+              <h2 className="mt-3 text-xl font-medium">{t.security}</h2>
+              <p className="mt-3 text-sm text-gray-500">{t.securityText}</p>
+              <p className="mt-3 text-sm text-gray-500">{t.deletionText}</p>
+            </section>
+          </div>
         </div>
       </div>
-    </main>
+    </AlmaShell>
   );
 }

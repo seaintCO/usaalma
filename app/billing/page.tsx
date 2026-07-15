@@ -5,6 +5,9 @@ import type {
   BillingPriceOption,
   BillingSubscription,
 } from "@/lib/billing/types";
+import AlmaShell from "@/components/alma-shell/AlmaShell";
+import type { AlmaShellLanguage } from "@/components/alma-shell/types";
+import { DASHBOARD_ROUTE } from "@/lib/platform/workspaceRoutes";
 import {
   ArrowLeft,
   CheckCircle2,
@@ -210,6 +213,10 @@ export default function BillingPage() {
     }
   }, []);
 
+  function updateLanguage(next: AlmaShellLanguage) {
+    setLanguage(next);
+  }
+
   useEffect(() => {
     const timer = window.setTimeout(() => void load(), 0);
     return () => {
@@ -271,184 +278,191 @@ export default function BillingPage() {
   const periodLabel = subscription?.cancelAtPeriodEnd ? text.ends : text.renews;
 
   return (
-    <main className="min-h-screen bg-[#F7F7F8] px-4 py-8 text-black md:px-10">
-      <div className="mx-auto max-w-5xl">
-        <Link
-          href="/dashboard"
-          className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-black"
-        >
-          <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-          {text.back}
-        </Link>
+    <AlmaShell
+      language={language}
+      activeWorkspace="billing"
+      title={text.eyebrow}
+      onLanguageChange={updateLanguage}
+    >
+      <div className="px-4 py-8 text-black md:px-10">
+        <div className="mx-auto max-w-5xl">
+          <Link
+            href={DASHBOARD_ROUTE}
+            className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-black"
+          >
+            <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+            {text.back}
+          </Link>
 
-        <section className="mt-8 rounded-[2rem] border border-gray-200 bg-white p-6 shadow-sm md:p-8">
-          <p className="text-xs uppercase tracking-[0.35em] text-gray-500">
-            {text.eyebrow}
-          </p>
-          <h1 className="mt-4 text-3xl font-medium tracking-tight md:text-4xl">
-            {text.title}
-          </h1>
-          <p className="mt-4 max-w-2xl text-gray-500">{text.description}</p>
-
-          {state === "loading" ? (
-            <p className="mt-8 text-sm text-gray-500" role="status">
-              …
+          <section className="mt-8 rounded-[2rem] border border-gray-200 bg-white p-6 shadow-sm md:p-8">
+            <p className="text-xs uppercase tracking-[0.35em] text-gray-500">
+              {text.eyebrow}
             </p>
-          ) : null}
-          {state === "error" ? (
-            <div className="mt-8 rounded-2xl bg-[#F7F7F8] p-5">
-              <p className="text-sm text-gray-600">{text.unavailable}</p>
+            <h1 className="mt-4 text-3xl font-medium tracking-tight md:text-4xl">
+              {text.title}
+            </h1>
+            <p className="mt-4 max-w-2xl text-gray-500">{text.description}</p>
+
+            {state === "loading" ? (
+              <p className="mt-8 text-sm text-gray-500" role="status">
+                …
+              </p>
+            ) : null}
+            {state === "error" ? (
+              <div className="mt-8 rounded-2xl bg-[#F7F7F8] p-5">
+                <p className="text-sm text-gray-600">{text.unavailable}</p>
+                <button
+                  type="button"
+                  onClick={() => void load()}
+                  className="mt-4 rounded-xl bg-black px-4 py-2.5 text-sm font-medium text-white"
+                >
+                  {text.retry}
+                </button>
+              </div>
+            ) : null}
+
+            {state === "ready" && subscription ? (
+              <div className="mt-8 grid gap-4 md:grid-cols-3">
+                <div className="rounded-2xl bg-[#F7F7F8] p-5">
+                  <p className="text-xs uppercase tracking-[0.2em] text-gray-500">
+                    {text.currentPlan}
+                  </p>
+                  <p className="mt-2 text-xl font-medium">{planLabel}</p>
+                </div>
+                <div className="rounded-2xl bg-[#F7F7F8] p-5">
+                  <p className="text-xs uppercase tracking-[0.2em] text-gray-500">
+                    {text.status}
+                  </p>
+                  <p className="mt-2 flex items-center gap-2 text-xl font-medium">
+                    <CheckCircle2 className="h-5 w-5" aria-hidden="true" />
+                    {statusLabel}
+                  </p>
+                </div>
+                <div className="rounded-2xl bg-[#F7F7F8] p-5">
+                  <p className="text-xs uppercase tracking-[0.2em] text-gray-500">
+                    {periodLabel}
+                  </p>
+                  <p className="mt-2 text-xl font-medium">
+                    {periodEnd ?? text.noRenewal}
+                  </p>
+                </div>
+              </div>
+            ) : null}
+          </section>
+
+          {state === "ready" && subscription?.stripeCustomerId ? (
+            <section className="mt-6 rounded-[2rem] border border-gray-200 bg-white p-6 shadow-sm md:p-8">
+              <h2 className="text-2xl font-medium">{text.choose}</h2>
+              <p className="mt-2 text-sm text-gray-500">
+                {activeSubscription ? text.manage : text.choose}
+              </p>
               <button
                 type="button"
-                onClick={() => void load()}
-                className="mt-4 rounded-xl bg-black px-4 py-2.5 text-sm font-medium text-white"
+                disabled={action !== null}
+                onClick={() => void openPortal()}
+                className="mt-5 rounded-xl bg-black px-4 py-3 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {text.retry}
+                {action === "portal" ? text.portal : text.manage}
               </button>
-            </div>
+            </section>
           ) : null}
 
-          {state === "ready" && subscription ? (
-            <div className="mt-8 grid gap-4 md:grid-cols-3">
-              <div className="rounded-2xl bg-[#F7F7F8] p-5">
-                <p className="text-xs uppercase tracking-[0.2em] text-gray-500">
-                  {text.currentPlan}
-                </p>
-                <p className="mt-2 text-xl font-medium">{planLabel}</p>
-              </div>
-              <div className="rounded-2xl bg-[#F7F7F8] p-5">
-                <p className="text-xs uppercase tracking-[0.2em] text-gray-500">
-                  {text.status}
-                </p>
-                <p className="mt-2 flex items-center gap-2 text-xl font-medium">
-                  <CheckCircle2 className="h-5 w-5" aria-hidden="true" />
-                  {statusLabel}
-                </p>
-              </div>
-              <div className="rounded-2xl bg-[#F7F7F8] p-5">
-                <p className="text-xs uppercase tracking-[0.2em] text-gray-500">
-                  {periodLabel}
-                </p>
-                <p className="mt-2 text-xl font-medium">
-                  {periodEnd ?? text.noRenewal}
-                </p>
-              </div>
-            </div>
-          ) : null}
-        </section>
-
-        {state === "ready" && subscription?.stripeCustomerId ? (
-          <section className="mt-6 rounded-[2rem] border border-gray-200 bg-white p-6 shadow-sm md:p-8">
-            <h2 className="text-2xl font-medium">{text.choose}</h2>
-            <p className="mt-2 text-sm text-gray-500">
-              {activeSubscription ? text.manage : text.choose}
-            </p>
-            <button
-              type="button"
-              disabled={action !== null}
-              onClick={() => void openPortal()}
-              className="mt-5 rounded-xl bg-black px-4 py-3 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {action === "portal" ? text.portal : text.manage}
-            </button>
-          </section>
-        ) : null}
-
-        {state === "ready" && !subscription?.stripeCustomerId ? (
-          <section className="mt-6 rounded-[2rem] border border-gray-200 bg-white p-6 shadow-sm md:p-8">
-            <h2 className="text-2xl font-medium">{text.choose}</h2>
-            {!plansConfigured ? (
-              <p className="mt-4 text-sm text-gray-500">{text.configured}</p>
-            ) : null}
-            <div className="mt-5 grid gap-4 md:grid-cols-3">
-              {plans.map((plan) => (
-                <article
-                  key={plan.plan}
-                  className="rounded-2xl bg-[#F7F7F8] p-5"
-                >
-                  <h3 className="text-lg font-medium">{text[plan.plan]}</h3>
-                  <p className="mt-2 text-sm text-gray-600">
-                    {plan.amount !== null && plan.currency
-                      ? formatMoney(plan.amount, plan.currency, language)
-                      : "—"}
-                    {plan.interval ? ` / ${plan.interval}` : ""}
-                  </p>
-                  <button
-                    type="button"
-                    disabled={action !== null}
-                    onClick={() => void openCheckout(plan.plan)}
-                    className="mt-5 rounded-xl bg-black px-4 py-2.5 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
+          {state === "ready" && !subscription?.stripeCustomerId ? (
+            <section className="mt-6 rounded-[2rem] border border-gray-200 bg-white p-6 shadow-sm md:p-8">
+              <h2 className="text-2xl font-medium">{text.choose}</h2>
+              {!plansConfigured ? (
+                <p className="mt-4 text-sm text-gray-500">{text.configured}</p>
+              ) : null}
+              <div className="mt-5 grid gap-4 md:grid-cols-3">
+                {plans.map((plan) => (
+                  <article
+                    key={plan.plan}
+                    className="rounded-2xl bg-[#F7F7F8] p-5"
                   >
-                    {action === "checkout" ? text.processing : text.checkout}
-                  </button>
-                </article>
-              ))}
-            </div>
-          </section>
-        ) : null}
-
-        {state === "ready" ? (
-          <section className="mt-6 rounded-[2rem] border border-gray-200 bg-white p-6 shadow-sm md:p-8">
-            <div className="flex items-center gap-3">
-              <ReceiptText className="h-5 w-5" aria-hidden="true" />
-              <h2 className="text-2xl font-medium">{text.history}</h2>
-            </div>
-            {!invoices.length ? (
-              <p className="mt-5 text-sm text-gray-500">{text.noHistory}</p>
-            ) : (
-              <div className="mt-5 divide-y divide-gray-100">
-                {invoices.map((invoice) => (
-                  <div
-                    key={invoice.id}
-                    className="flex flex-col gap-3 py-4 text-sm sm:flex-row sm:items-center sm:justify-between"
-                  >
-                    <div>
-                      <p className="font-medium">
-                        {text.invoice} {invoice.number ?? invoice.id}
-                      </p>
-                      <p className="mt-1 text-gray-500">
-                        {formatDate(invoice.createdAt, language) ?? "—"} ·{" "}
-                        {invoice.status ?? "—"}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <span>
-                        {invoice.amountPaid
-                          ? `${text.paid}: ${formatMoney(invoice.amountPaid, invoice.currency, language)}`
-                          : `${text.due}: ${formatMoney(invoice.amountDue, invoice.currency, language)}`}
-                      </span>
-                      {invoice.hostedInvoiceUrl ? (
-                        <a
-                          href={invoice.hostedInvoiceUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex items-center gap-1 text-gray-600 hover:text-black"
-                        >
-                          {text.open}
-                          <ExternalLink
-                            className="h-3.5 w-3.5"
-                            aria-hidden="true"
-                          />
-                        </a>
-                      ) : null}
-                      {invoice.invoicePdfUrl ? (
-                        <a
-                          href={invoice.invoicePdfUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-gray-600 hover:text-black"
-                        >
-                          {text.download}
-                        </a>
-                      ) : null}
-                    </div>
-                  </div>
+                    <h3 className="text-lg font-medium">{text[plan.plan]}</h3>
+                    <p className="mt-2 text-sm text-gray-600">
+                      {plan.amount !== null && plan.currency
+                        ? formatMoney(plan.amount, plan.currency, language)
+                        : "—"}
+                      {plan.interval ? ` / ${plan.interval}` : ""}
+                    </p>
+                    <button
+                      type="button"
+                      disabled={action !== null}
+                      onClick={() => void openCheckout(plan.plan)}
+                      className="mt-5 rounded-xl bg-black px-4 py-2.5 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {action === "checkout" ? text.processing : text.checkout}
+                    </button>
+                  </article>
                 ))}
               </div>
-            )}
-          </section>
-        ) : null}
+            </section>
+          ) : null}
+
+          {state === "ready" ? (
+            <section className="mt-6 rounded-[2rem] border border-gray-200 bg-white p-6 shadow-sm md:p-8">
+              <div className="flex items-center gap-3">
+                <ReceiptText className="h-5 w-5" aria-hidden="true" />
+                <h2 className="text-2xl font-medium">{text.history}</h2>
+              </div>
+              {!invoices.length ? (
+                <p className="mt-5 text-sm text-gray-500">{text.noHistory}</p>
+              ) : (
+                <div className="mt-5 divide-y divide-gray-100">
+                  {invoices.map((invoice) => (
+                    <div
+                      key={invoice.id}
+                      className="flex flex-col gap-3 py-4 text-sm sm:flex-row sm:items-center sm:justify-between"
+                    >
+                      <div>
+                        <p className="font-medium">
+                          {text.invoice} {invoice.number ?? invoice.id}
+                        </p>
+                        <p className="mt-1 text-gray-500">
+                          {formatDate(invoice.createdAt, language) ?? "—"} ·{" "}
+                          {invoice.status ?? "—"}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span>
+                          {invoice.amountPaid
+                            ? `${text.paid}: ${formatMoney(invoice.amountPaid, invoice.currency, language)}`
+                            : `${text.due}: ${formatMoney(invoice.amountDue, invoice.currency, language)}`}
+                        </span>
+                        {invoice.hostedInvoiceUrl ? (
+                          <a
+                            href={invoice.hostedInvoiceUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1 text-gray-600 hover:text-black"
+                          >
+                            {text.open}
+                            <ExternalLink
+                              className="h-3.5 w-3.5"
+                              aria-hidden="true"
+                            />
+                          </a>
+                        ) : null}
+                        {invoice.invoicePdfUrl ? (
+                          <a
+                            href={invoice.invoicePdfUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-gray-600 hover:text-black"
+                          >
+                            {text.download}
+                          </a>
+                        ) : null}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+          ) : null}
+        </div>
       </div>
-    </main>
+    </AlmaShell>
   );
 }

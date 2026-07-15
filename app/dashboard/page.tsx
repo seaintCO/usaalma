@@ -2,26 +2,12 @@
 
 import {
   ArrowUp,
-  Calendar,
-  CheckCircle2,
-  CreditCard,
-  FileText,
-  FolderOpen,
   Menu,
-  Mic,
   Paperclip,
   PenSquare,
-  ReceiptText,
   Search,
-  Settings,
-  Store,
-  Users,
-  ImageIcon,
   Camera,
-  Activity,
-  Rocket,
   Presentation,
-  Home,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -36,16 +22,8 @@ import OperatingDashboard from "@/components/dashboard-home/OperatingDashboard";
 import ConversationNavigation, {
   ConversationNewChatButton,
 } from "@/components/alma-shell/ConversationNavigation";
-
-const moduleMap: any = {
-  planner: ["Planner", Calendar, "/planner"],
-  tasks: ["Tasks", CheckCircle2, "/tasks"],
-  notes: ["Notes", FileText, "/notes"],
-  crm: ["CRM", Users, "/crm"],
-  invoicing: ["Invoices", ReceiptText, "/invoicing"],
-  documents: ["Documents", FolderOpen, "/documents"],
-  launchStudio: ["Launch Studio", Rocket, "/launch-studio"],
-};
+import WorkspaceNavigation from "@/components/alma-shell/WorkspaceNavigation";
+import type { AlmaWorkspaceNavigationKey } from "@/components/alma-shell/types";
 
 function cleanAIText(text: string) {
   return text
@@ -184,7 +162,8 @@ export default function DashboardPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState("");
-  const [activeWorkspace, setActiveWorkspace] = useState<string>("chat");
+  const [activeWorkspace, setActiveWorkspace] =
+    useState<AlmaWorkspaceNavigationKey>("chat");
   const [language, setLanguage] = useState<AlmaLanguage>("en");
   const [durableChatEnabled, setDurableChatEnabled] = useState(false);
   const t = almaText[language];
@@ -483,24 +462,6 @@ export default function DashboardPage() {
   }, [conversationStatuses]);
 
   function Sidebar() {
-    const activeBadge = (
-      <span className="text-[10px] font-medium text-green-600">
-        {t.active.toUpperCase()}
-      </span>
-    );
-    const proBadge = (
-      <span className="text-[10px] font-medium text-black">
-        {t.pro.toUpperCase()}
-      </span>
-    );
-
-    const navClass = (key: string) =>
-      `flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left transition ${
-        activeWorkspace === key
-          ? "bg-gray-200 text-black"
-          : "text-[#6B7280] hover:bg-gray-200 hover:text-black"
-      }`;
-
     return (
       <aside className="flex h-full w-72 flex-col border-r border-[#E5E7EB] bg-[#F7F7F8] md:w-64">
         <div className="px-5 pb-4 pt-5">
@@ -562,196 +523,19 @@ export default function DashboardPage() {
 
           <div className="mx-2 my-6 h-px bg-[#E5E7EB]" />
 
-          <div className="mb-6 space-y-1">
-            <h5 className="mb-2 px-2 text-xs font-medium uppercase tracking-wide text-[#6B7280]">
-              {t.core}
-            </h5>
-
-            <button
-              onClick={() => {
-                setActiveWorkspace("home");
-                setSidebarOpen(false);
-              }}
-              className={navClass("home")}
-            >
-              <span className="flex items-center gap-2.5">
-                <Home className="h-4 w-4" />
-                {t.home}
-              </span>
-              {activeBadge}
-            </button>
-            <button
-              onClick={() => openWorkspace("planner")}
-              className={navClass("planner")}
-            >
-              <span className="flex items-center gap-2.5">
-                <Calendar className="h-4 w-4" />
-                {t.planner}
-              </span>
-              {activeBadge}
-            </button>
-            <button
-              onClick={() => openWorkspace("tasks")}
-              className={navClass("tasks")}
-            >
-              <span className="flex items-center gap-2.5">
-                <CheckCircle2 className="h-4 w-4" />
-                {t.tasks}
-              </span>
-              {activeBadge}
-            </button>
-            <button
-              onClick={() => openWorkspace("notes")}
-              className={navClass("notes")}
-            >
-              <span className="flex items-center gap-2.5">
-                <FileText className="h-4 w-4" />
-                {t.notes}
-              </span>
-              {activeBadge}
-            </button>
-            <button
-              onClick={() => openWorkspace("documents")}
-              className={navClass("documents")}
-            >
-              <span className="flex items-center gap-2.5">
-                <FolderOpen className="h-4 w-4" />
-                {t.documents}
-              </span>
-              {activeBadge}
-            </button>
-            <button
-              onClick={() => openWorkspace("fitness")}
-              className={navClass("fitness")}
-            >
-              <span className="flex items-center gap-2.5">
-                <Activity className="h-4 w-4" />
-                {t.fitness}
-              </span>
-              {activeBadge}
-            </button>
-          </div>
-
-          <div className="mx-2 my-6 h-px bg-[#E5E7EB]" />
-
-          <div className="mb-6 space-y-1">
-            <h5 className="mb-2 px-2 text-xs font-medium uppercase tracking-wide text-[#6B7280]">
-              {t.business}
-            </h5>
-
-            <button
-              onClick={() => openWorkspace("crm")}
-              className={navClass("crm")}
-            >
-              <span className="flex items-center gap-2.5">
-                <Users className="h-4 w-4" />
-                {t.crm}
-              </span>
-              {activeBadge}
-            </button>
-            <button
-              onClick={() => openWorkspace("invoicing")}
-              className={navClass("invoicing")}
-            >
-              <span className="flex items-center gap-2.5">
-                <ReceiptText className="h-4 w-4" />
-                {t.invoices}
-              </span>
-              {activeBadge}
-            </button>
-          </div>
-
-          <div className="mx-2 my-6 h-px bg-[#E5E7EB]" />
-
-          <div className="mb-6 space-y-1">
-            <h5 className="mb-2 px-2 text-xs font-medium uppercase tracking-wide text-[#6B7280]">
-              {t.ai}
-            </h5>
-
-            <button
-              onClick={() => {
-                setActiveWorkspace("chat");
-                setSidebarOpen(false);
-              }}
-              className={navClass("chat")}
-            >
-              <span className="flex items-center gap-2.5">
-                <Mic className="h-4 w-4" />
-                {t.alma}
-              </span>
-              {proBadge}
-            </button>
-            <button
-              onClick={() => openWorkspace("images")}
-              className={navClass("images")}
-            >
-              <span className="flex items-center gap-2.5">
-                <ImageIcon className="h-4 w-4" />
-                {t.images}
-              </span>
-              {proBadge}
-            </button>
-            <button
-              onClick={() => openWorkspace("creative")}
-              className={navClass("creative")}
-            >
-              <span className="flex items-center gap-2.5">
-                <Settings className="h-4 w-4" />
-                {t.creativeStudio}
-              </span>
-              {proBadge}
-            </button>
-            <button
-              onClick={() => openWorkspace("launch")}
-              className={navClass("launch")}
-            >
-              <span className="flex items-center gap-2.5">
-                <Rocket className="h-4 w-4" />
-                {t.launchStudio}
-              </span>
-              {proBadge}
-            </button>
-            <button
-              onClick={() => openWorkspace("trader")}
-              className={navClass("trader")}
-            >
-              <span className="flex items-center gap-2.5">
-                <Activity className="h-4 w-4" />
-                {t.trader}
-              </span>
-              {proBadge}
-            </button>
-          </div>
-
-          <div className="mx-2 my-6 h-px bg-[#E5E7EB]" />
-
-          <div className="mb-6 space-y-1">
-            <h5 className="mb-2 px-2 text-xs font-medium uppercase tracking-wide text-[#6B7280]">
-              {t.platform}
-            </h5>
-
-            <button
-              onClick={() => openWorkspace("marketplace")}
-              className={navClass("marketplace")}
-            >
-              <Store className="h-4 w-4" />
-              {t.marketplace}
-            </button>
-            <button
-              onClick={() => openWorkspace("billing")}
-              className={navClass("billing")}
-            >
-              <CreditCard className="h-4 w-4" />
-              {t.billing}
-            </button>
-            <button
-              onClick={() => openWorkspace("settings")}
-              className={navClass("settings")}
-            >
-              <Settings className="h-4 w-4" />
-              {t.settings}
-            </button>
-          </div>
+          <WorkspaceNavigation
+            activeWorkspace={activeWorkspace}
+            labels={t}
+            onHome={() => {
+              setActiveWorkspace("home");
+              setSidebarOpen(false);
+            }}
+            onAskAlma={() => {
+              setActiveWorkspace("chat");
+              setSidebarOpen(false);
+            }}
+            onWorkspaceNavigate={openWorkspace}
+          />
         </div>
       </aside>
     );

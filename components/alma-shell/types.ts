@@ -1,6 +1,7 @@
 import type { RoutedWorkspace } from "@/lib/platform/workspaceRoutes";
 
 export type AlmaShellLanguage = "en" | "es";
+export type AlmaWorkspaceNavigationKey = "home" | "chat" | RoutedWorkspace;
 export type ConversationStatus = {
   active?: boolean;
   unread?: boolean;
@@ -14,7 +15,7 @@ export type AlmaNavigationItem = {
 };
 export type AlmaSidebarNavigationProps = {
   language: AlmaShellLanguage;
-  activeWorkspace: "home" | "chat";
+  activeWorkspace: AlmaWorkspaceNavigationKey;
   navigation: readonly AlmaNavigationItem[];
   onHome: () => void;
   onAskAlma: () => void;

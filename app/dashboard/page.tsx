@@ -144,6 +144,7 @@ const almaText = {
 };
 
 export default function DashboardPage() {
+  const launchPrompt = typeof window === "undefined" ? "" : new URLSearchParams(window.location.search).get("prompt") ?? "";
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [authReady, setAuthReady] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
@@ -527,7 +528,7 @@ export default function DashboardPage() {
           <InlineAppFrame title="Billing" src={`/billing?lang=${language}`} />
         ) : activeWorkspace === "settings" ? (
           <InlineAppFrame title="Settings" src={`/settings?lang=${language}`} />
-        ) : <ChatWorkspace messages={messages} setMessages={setMessages} conversationId={conversationId} setConversationId={setConversationId} language={language} setLanguage={updateLanguage} streamEpoch={streamEpoch} loadingConversation={conversationLoading} durableEnabled={durableChatEnabled} onComplete={(completedConversationId) => { if (completedConversationId) conversationCache.current.delete(completedConversationId); void loadHistory(); }} onAnalyzeFile={analyzeFile} />}
+        ) : <ChatWorkspace messages={messages} setMessages={setMessages} conversationId={conversationId} setConversationId={setConversationId} language={language} setLanguage={updateLanguage} streamEpoch={streamEpoch} loadingConversation={conversationLoading} durableEnabled={durableChatEnabled} initialPrompt={launchPrompt} onComplete={(completedConversationId) => { if (completedConversationId) conversationCache.current.delete(completedConversationId); void loadHistory(); }} onAnalyzeFile={analyzeFile} />}
       </section>
     </main>
   );

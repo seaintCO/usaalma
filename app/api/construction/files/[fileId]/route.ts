@@ -6,6 +6,31 @@ import {
 } from "@/lib/construction/routes";
 import { ConstructionRepository } from "@/lib/db/repositories/construction/construction.repository";
 
+export async function GET(
+  request: Request,
+  context: { params: Promise<{ fileId: string }> },
+) {
+  const { user, error } = await requireConstructionUser();
+  if (error) return error;
+  const { fileId } = await context.params;
+  const mode =
+    new URL(request.url).searchParams.get("mode") === "download"
+      ? "download"
+      : "preview";
+  try {
+    const signed = await ConstructionRepository.createFileSignedUrl(
+      user.id,
+      fileId,
+      mode,
+    );
+    return signed
+      ? ok({ ...signed, mode })
+      : fail(404, "not_found", "Construction file was not found.");
+  } catch (cause) {
+    return routeError(cause, "Construction file could not be opened.");
+  }
+}
+
 export async function DELETE(
   request: Request,
   context: { params: Promise<{ fileId: string }> },

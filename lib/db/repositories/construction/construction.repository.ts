@@ -7,6 +7,7 @@ import {
 } from "@/lib/construction/calculations";
 import {
   constructionAnnotationTypes,
+  constructionFileLimits,
   constructionMimeTypes,
   constructionProjectStatuses,
   constructionProjectTypes,
@@ -20,7 +21,6 @@ import {
 } from "@/lib/construction/types";
 
 const constructionBucket = "alma-construction";
-const maxConstructionFileSize = 25 * 1024 * 1024;
 
 type ConstructionScopeInput = {
   sectionKey: ConstructionScopeKey;
@@ -238,7 +238,11 @@ export class ConstructionRepository {
     if (!isAllowed(file.type, constructionMimeTypes)) {
       throw new Error("unsupported_construction_file_type");
     }
-    if (file.size <= 0 || file.size > maxConstructionFileSize) {
+    if (
+      file.size <= 0 ||
+      file.size >
+        constructionFileLimits[file.type as keyof typeof constructionFileLimits]
+    ) {
       throw new Error("invalid_construction_file_size");
     }
     if (input.documentId) {
@@ -273,6 +277,42 @@ export class ConstructionRepository {
       throw new Error("construction_file_metadata_failed");
     }
     return data;
+  }
+
+  static async createFileSignedUrl(
+    userId: string,
+    fileId: string,
+    mode: "preview" | "download",
+  ) {
+    const supabase = await createClient();
+    const { data: file, error: getError } = await supabase
+      .from("construction_plan_files")
+      .select("*")
+      .eq("id", fileId)
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (getError) throw new Error("construction_file_get_failed");
+    if (!file) return null;
+
+    const options =
+      mode === "download" ? { download: file.original_filename } : undefined;
+    const { data, error } = await supabase.storage
+      .from(constructionBucket)
+      .createSignedUrl(file.storage_path, 300, options);
+    if (error || !data?.signedUrl) {
+      throw new Error("construction_file_signed_url_failed");
+    }
+
+    return {
+      url: data.signedUrl,
+      expiresIn: 300,
+      file: {
+        id: file.id,
+        original_filename: file.original_filename,
+        mime_type: file.mime_type,
+        title: file.title,
+      },
+    };
   }
 
   static async deleteFile(userId: string, fileId: string) {

@@ -27,6 +27,10 @@ export type MeasurementCalculationResult = {
   unit: ConstructionUnit;
 };
 
+export type MeasurementValidationResult =
+  | { ok: true; result: MeasurementCalculationResult }
+  | { ok: false; message: string };
+
 const unitKind: Record<
   ConstructionUnit,
   "linear" | "area" | "volume" | "count"
@@ -73,6 +77,18 @@ function requiredPositive(value: number | null | undefined, field: string) {
 
 function roundStored(value: number) {
   return Math.round(value * 10000) / 10000;
+}
+
+export function displayMeasurementTotal(value: number) {
+  if (!Number.isFinite(value)) return "-";
+  return new Intl.NumberFormat("en-US", {
+    maximumFractionDigits: 2,
+    minimumFractionDigits: 0,
+  }).format(value);
+}
+
+export function unitKindFor(unit: ConstructionUnit) {
+  return unitKind[unit];
 }
 
 export function assertCompatibleUnit(
@@ -144,9 +160,26 @@ export function calculateMeasurement(
   }
 
   const adjustedTotal = baseTotal * (1 + waste / 100);
+  if (!Number.isFinite(baseTotal) || !Number.isFinite(adjustedTotal)) {
+    throw new Error("Measurement total is invalid");
+  }
   return {
     baseTotal: roundStored(baseTotal),
     adjustedTotal: roundStored(adjustedTotal),
     unit: input.unit,
   };
+}
+
+export function tryCalculateMeasurement(
+  input: MeasurementCalculationInput,
+): MeasurementValidationResult {
+  try {
+    return { ok: true, result: calculateMeasurement(input) };
+  } catch (cause) {
+    return {
+      ok: false,
+      message:
+        cause instanceof Error ? cause.message : "Measurement is invalid",
+    };
+  }
 }

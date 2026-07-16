@@ -28,6 +28,14 @@ export const constructionMimeTypes = [
   "image/jpeg",
 ] as const;
 
+export const constructionFileLimits = {
+  "application/pdf": 25 * 1024 * 1024,
+  "image/png": 15 * 1024 * 1024,
+  "image/jpeg": 15 * 1024 * 1024,
+} as const;
+
+export const constructionFileAccept = "application/pdf,image/png,image/jpeg";
+
 export const constructionAnnotationTypes = [
   "point",
   "line",

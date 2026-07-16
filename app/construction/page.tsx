@@ -22,6 +22,8 @@ import {
 import { useEffect, useMemo, useState } from "react";
 import AlmaShell from "@/components/alma-shell/AlmaShell";
 import type { AlmaShellLanguage } from "@/components/alma-shell/types";
+import { FileUpload } from "@/components/construction/FileUpload";
+import { MeasurementCalculator } from "@/components/construction/MeasurementCalculator";
 
 type RequestState = "idle" | "loading" | "success" | "error";
 type ProjectType =
@@ -197,6 +199,63 @@ const copy = {
     completed: "Completed",
     back: "Projects",
     retry: "Retry",
+    photos: "Photos",
+    upload: "Upload",
+    uploading: "Uploading",
+    uploadPlan: "Upload plan or photo",
+    uploadHint: "Add a private plan PDF, site photo, or phone-camera image.",
+    fileTitle: "Title",
+    notes: "Notes",
+    download: "Download",
+    loadingFiles: "Loading plans and photos",
+    noFiles: "No plans or photos uploaded yet.",
+    fileLoadError: "Plans and photos could not be loaded.",
+    fileUploadError:
+      "File could not be uploaded. Your selection is still here.",
+    fileDeleteError: "File could not be deleted.",
+    fileTypeError: "Use a PDF, PNG, JPG, or JPEG file.",
+    fileSizeError: "PDF files can be up to 25MB. Images can be up to 15MB.",
+    chooseFile: "Choose file",
+    cameraPhoto: "Camera photo",
+    pdfCard: "PDF preview is available as a private signed file.",
+    privateFiles:
+      "Uploaded files stay private and user-owned. Preview and download links are temporary signed links.",
+    confirmDeleteFile:
+      "Delete this project file? Measurements keep their values, but this file link will be removed.",
+    close: "Close",
+    addMeasurement: "Add Measurement",
+    editMeasurement: "Edit Measurement",
+    linear: "Linear",
+    area: "Area",
+    volume: "Volume",
+    perimeter: "Perimeter",
+    count: "Count",
+    length: "Length",
+    width: "Width",
+    heightDepth: "Height/Depth",
+    quantity: "Quantity",
+    unit: "Unit",
+    waste: "Waste",
+    label: "Label",
+    linkedPlan: "Plan or photo",
+    noLinkedPlan: "No linked plan",
+    baseTotal: "Base Total",
+    adjustedTotal: "Adjusted Total",
+    estimate: "Estimate",
+    formula: "Formula",
+    loadingMeasurements: "Loading measurements",
+    noMeasurements: "No measurements yet.",
+    measurementLoadError: "Measurements could not be loaded.",
+    measurementSaveError:
+      "Measurement could not be saved. Your values are still here.",
+    measurementDeleteError: "Measurement could not be deleted.",
+    requiredField: "Required field",
+    invalidMeasurement: "Measurement values are invalid.",
+    confirmDeleteMeasurement: "Delete this measurement?",
+    measurementSummary: "Measurement Summary",
+    verifyMeasurements: "Verify all field measurements.",
+    estimateOnly: "Estimate only.",
+    notAdvice: "Not engineering or architectural advice.",
   },
   es: {
     title: "Construccion",
@@ -265,6 +324,63 @@ const copy = {
     completed: "Completado",
     back: "Proyectos",
     retry: "Reintentar",
+    photos: "Fotos",
+    upload: "Subir",
+    uploading: "Subiendo",
+    uploadPlan: "Subir plano o foto",
+    uploadHint: "Agrega un PDF privado, foto del sitio o imagen de camara.",
+    fileTitle: "Titulo",
+    notes: "Notas",
+    download: "Descargar",
+    loadingFiles: "Cargando planos y fotos",
+    noFiles: "Aun no hay planos o fotos subidos.",
+    fileLoadError: "No se pudieron cargar los planos y fotos.",
+    fileUploadError: "No se pudo subir el archivo. Tu seleccion sigue aqui.",
+    fileDeleteError: "No se pudo eliminar el archivo.",
+    fileTypeError: "Usa un archivo PDF, PNG, JPG o JPEG.",
+    fileSizeError: "Los PDF pueden ser de hasta 25MB. Las imagenes hasta 15MB.",
+    chooseFile: "Elegir archivo",
+    cameraPhoto: "Foto de camara",
+    pdfCard:
+      "La vista previa del PDF esta disponible como archivo privado firmado.",
+    privateFiles:
+      "Los archivos subidos permanecen privados y son propiedad del usuario. Las vistas y descargas usan enlaces firmados temporales.",
+    confirmDeleteFile:
+      "Eliminar este archivo del proyecto? Las medidas conservan sus valores, pero se quita este vinculo.",
+    close: "Cerrar",
+    addMeasurement: "Agregar medida",
+    editMeasurement: "Editar medida",
+    linear: "Lineal",
+    area: "Area",
+    volume: "Volumen",
+    perimeter: "Perimetro",
+    count: "Conteo",
+    length: "Largo",
+    width: "Ancho",
+    heightDepth: "Altura/Profundidad",
+    quantity: "Cantidad",
+    unit: "Unidad",
+    waste: "Desperdicio",
+    label: "Etiqueta",
+    linkedPlan: "Plano o foto",
+    noLinkedPlan: "Sin plano vinculado",
+    baseTotal: "Total base",
+    adjustedTotal: "Total ajustado",
+    estimate: "Estimacion",
+    formula: "Formula",
+    loadingMeasurements: "Cargando medidas",
+    noMeasurements: "Aun no hay medidas.",
+    measurementLoadError: "No se pudieron cargar las medidas.",
+    measurementSaveError:
+      "No se pudo guardar la medida. Tus valores siguen aqui.",
+    measurementDeleteError: "No se pudo eliminar la medida.",
+    requiredField: "Campo obligatorio",
+    invalidMeasurement: "Los valores de la medida no son validos.",
+    confirmDeleteMeasurement: "Eliminar esta medida?",
+    measurementSummary: "Resumen de medidas",
+    verifyMeasurements: "Verifica todas las medidas en campo.",
+    estimateOnly: "Solo estimacion.",
+    notAdvice: "No es asesoria de ingenieria o arquitectura.",
   },
 };
 
@@ -859,7 +975,7 @@ function ProjectDetail({
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div className="min-w-0">
           <p className="text-xs font-medium uppercase tracking-[0.16em] text-[#9CA3AF]">
-            {text[project.project_type]} ·{" "}
+            {text[project.project_type]} /{" "}
             {project.status === "active" || project.status === "archived"
               ? text[project.status]
               : text[project.status]}
@@ -953,6 +1069,18 @@ function ProjectDetail({
               {text.nextStep}
             </p>
           </aside>
+        </div>
+      ) : workflowStep === "plans" ? (
+        <div className="mt-5">
+          <FileUpload projectId={project.id} language={language} text={text} />
+        </div>
+      ) : workflowStep === "measurements" ? (
+        <div className="mt-5">
+          <MeasurementCalculator
+            projectId={project.id}
+            language={language}
+            text={text}
+          />
         </div>
       ) : (
         <div className="mt-5 rounded-3xl border border-dashed border-[#D1D5DB] bg-[#F7F7F8] p-6">

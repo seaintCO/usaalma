@@ -63,7 +63,6 @@ for (const forbidden of [
   "supplier pricing",
   "automatic scale",
   "OCR",
-  "PDF export",
 ]) {
   assert.equal(page.includes(forbidden), false, `${forbidden} is not P6-C`);
 }

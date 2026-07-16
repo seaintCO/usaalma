@@ -157,7 +157,6 @@ assert.equal(normalizeAnnotationColor("red"), "neutral");
 
 for (const forbidden of [
   "AnnotationCanvas",
-  "PDF export",
   "OCR",
   "automatic scale",
   "supplier pricing",

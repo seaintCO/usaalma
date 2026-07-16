@@ -72,6 +72,21 @@ type CrewChecklistItem = {
   planFileId?: string | null;
 };
 
+type ConstructionExportStatus =
+  "pending" | "generating" | "completed" | "failed";
+
+type ConstructionExportInput = {
+  idempotencyKey?: string | null;
+  filename: string;
+  sourceSnapshot?: Record<string, unknown>;
+};
+
+type ConstructionExportCompleteInput = {
+  storagePath: string;
+  filename: string;
+  sourceSnapshot?: Record<string, unknown>;
+};
+
 function normalizeProject(input: ConstructionProjectInput) {
   const projectType = isAllowed(input.projectType, constructionProjectTypes)
     ? input.projectType
@@ -913,15 +928,29 @@ export class ConstructionRepository {
 
   static async getSummary(userId: string, projectId: string) {
     const project = await this.assertProject(userId, projectId);
-    const [files, measurements, materials, scope, crew, annotations] =
-      await Promise.all([
-        this.listFiles(userId, projectId),
-        this.listMeasurements(userId, projectId),
-        this.listMaterials(userId, projectId),
-        this.listScope(userId, projectId),
-        this.getCrewInstructions(userId, projectId),
-        this.listAnnotations(userId, projectId),
-      ]);
+    const [
+      files,
+      measurements,
+      materials,
+      scope,
+      crew,
+      annotations,
+      contact,
+      company,
+    ] = await Promise.all([
+      this.listFiles(userId, projectId),
+      this.listMeasurements(userId, projectId),
+      this.listMaterials(userId, projectId),
+      this.listScope(userId, projectId),
+      this.getCrewInstructions(userId, projectId),
+      this.listAnnotations(userId, projectId),
+      project.contact_id
+        ? this.getContact(userId, project.contact_id)
+        : Promise.resolve(null),
+      project.company_id
+        ? this.getCompany(userId, project.company_id)
+        : Promise.resolve(null),
+    ]);
     const measurementTotals = measurements.reduce<Record<string, number>>(
       (totals, measurement: MeasurementSummaryRow) => ({
         ...totals,
@@ -947,6 +976,8 @@ export class ConstructionRepository {
     const crewChecklist = Array.isArray(crew?.checklist) ? crew.checklist : [];
     return {
       project,
+      contact,
+      company,
       files,
       measurements,
       materials,
@@ -966,6 +997,173 @@ export class ConstructionRepository {
       measurementTotals,
       materialTotals,
     };
+  }
+
+  static async listExports(userId: string, projectId: string) {
+    await this.assertProject(userId, projectId);
+    const { data, error } = await (
+      await createClient()
+    )
+      .from("construction_export_records")
+      .select("*")
+      .eq("project_id", projectId)
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false });
+    if (error) throw new Error("construction_exports_list_failed");
+    return data ?? [];
+  }
+
+  static async getCompletedExportByIdempotencyKey(
+    userId: string,
+    projectId: string,
+    idempotencyKey: string,
+  ) {
+    const { data, error } = await (
+      await createClient()
+    )
+      .from("construction_export_records")
+      .select("*")
+      .eq("project_id", projectId)
+      .eq("user_id", userId)
+      .eq("idempotency_key", idempotencyKey)
+      .eq("status", "completed")
+      .maybeSingle();
+    if (error) throw new Error("construction_export_get_failed");
+    return data;
+  }
+
+  static async createExportRecord(
+    userId: string,
+    projectId: string,
+    input: ConstructionExportInput,
+  ) {
+    await this.assertProject(userId, projectId);
+    const { data, error } = await (
+      await createClient()
+    )
+      .from("construction_export_records")
+      .insert({
+        user_id: userId,
+        project_id: projectId,
+        idempotency_key: input.idempotencyKey ?? null,
+        filename: input.filename,
+        status: "generating" satisfies ConstructionExportStatus,
+        source_snapshot: input.sourceSnapshot ?? {},
+      })
+      .select()
+      .single();
+    if (error) throw new Error("construction_export_create_failed");
+    return data;
+  }
+
+  static async completeExportRecord(
+    userId: string,
+    exportId: string,
+    input: ConstructionExportCompleteInput,
+  ) {
+    const { data, error } = await (
+      await createClient()
+    )
+      .from("construction_export_records")
+      .update({
+        status: "completed" satisfies ConstructionExportStatus,
+        storage_path: input.storagePath,
+        filename: input.filename,
+        source_snapshot: input.sourceSnapshot ?? {},
+        error_code: null,
+        error_message: null,
+        generated_at: new Date().toISOString(),
+      })
+      .eq("id", exportId)
+      .eq("user_id", userId)
+      .select()
+      .single();
+    if (error) throw new Error("construction_export_complete_failed");
+    return data;
+  }
+
+  static async failExportRecord(
+    userId: string,
+    exportId: string,
+    errorCode: string,
+    errorMessage: string,
+  ) {
+    await (
+      await createClient()
+    )
+      .from("construction_export_records")
+      .update({
+        status: "failed" satisfies ConstructionExportStatus,
+        error_code: errorCode.slice(0, 80),
+        error_message: errorMessage.slice(0, 500),
+      })
+      .eq("id", exportId)
+      .eq("user_id", userId);
+  }
+
+  static async uploadExportPdf(
+    userId: string,
+    projectId: string,
+    filename: string,
+    pdf: ArrayBuffer,
+  ) {
+    await this.assertProject(userId, projectId);
+    const storagePath = `${userId}/${projectId}/exports/${crypto.randomUUID()}-${safeFilename(filename)}`;
+    const { error } = await (
+      await createClient()
+    ).storage
+      .from(constructionBucket)
+      .upload(storagePath, pdf, {
+        contentType: "application/pdf",
+        upsert: false,
+      });
+    if (error) throw new Error("construction_export_storage_failed");
+    return storagePath;
+  }
+
+  static async createExportSignedUrl(userId: string, exportId: string) {
+    const supabase = await createClient();
+    const { data: record, error: getError } = await supabase
+      .from("construction_export_records")
+      .select("*")
+      .eq("id", exportId)
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (getError) throw new Error("construction_export_get_failed");
+    if (!record) return null;
+    if (record.status !== "completed" || !record.storage_path) {
+      throw new Error("construction_export_not_ready");
+    }
+    const { data, error } = await supabase.storage
+      .from(constructionBucket)
+      .createSignedUrl(record.storage_path, 300, {
+        download: record.filename || "construction-summary.pdf",
+      });
+    if (error || !data?.signedUrl) {
+      throw new Error("construction_export_signed_url_failed");
+    }
+    return {
+      url: data.signedUrl,
+      expiresIn: 300,
+      export: record,
+    };
+  }
+
+  static async downloadPlanFileBlob(userId: string, fileId: string) {
+    const supabase = await createClient();
+    const { data: file, error: getError } = await supabase
+      .from("construction_plan_files")
+      .select("*")
+      .eq("id", fileId)
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (getError) throw new Error("construction_file_get_failed");
+    if (!file) return null;
+    const { data, error } = await supabase.storage
+      .from(constructionBucket)
+      .download(file.storage_path);
+    if (error || !data) throw new Error("construction_file_download_failed");
+    return { file, blob: data };
   }
 
   private static async assertProject(userId: string, projectId: string) {
@@ -1009,6 +1207,30 @@ export class ConstructionRepository {
       .eq("user_id", userId)
       .maybeSingle();
     if (!data) throw new Error("invalid_document_reference");
+  }
+
+  private static async getContact(userId: string, contactId: string) {
+    const { data } = await (
+      await createClient()
+    )
+      .from("contacts")
+      .select("id,name,first_name,last_name,email,phone,company")
+      .eq("id", contactId)
+      .eq("user_id", userId)
+      .maybeSingle();
+    return data;
+  }
+
+  private static async getCompany(userId: string, companyId: string) {
+    const { data } = await (
+      await createClient()
+    )
+      .from("companies")
+      .select("id,name,website,industry,phone,address")
+      .eq("id", companyId)
+      .eq("user_id", userId)
+      .maybeSingle();
+    return data;
   }
 
   private static async assertPlanFile(

@@ -20,9 +20,11 @@ import {
 } from "lucide-react";
 import AlmaShell from "@/components/alma-shell/AlmaShell";
 import type { AlmaShellLanguage } from "@/components/alma-shell/types";
+import TradingViewAdvancedChart from "@/components/trader/TradingViewAdvancedChart";
 import { pick } from "@/lib/i18n/appLanguage";
 
-type TabKey = "overview" | "watchlist" | "analyze" | "journal" | "performance";
+type TabKey =
+  "overview" | "chart" | "watchlist" | "analyze" | "journal" | "performance";
 type AssetType = "equity" | "etf" | "crypto" | "option" | "future" | "other";
 type Direction = "long" | "short" | "analysis" | "other";
 
@@ -167,6 +169,7 @@ const copy = {
     noBrokerage: "No brokerage execution is connected.",
     tabs: {
       overview: "Overview",
+      chart: "Chart",
       watchlist: "Watchlist",
       analyze: "Analyze",
       journal: "Journal",
@@ -245,6 +248,21 @@ const copy = {
     source: "Real saved journal rows only.",
     notAvailable: "Not available",
     selectAnalysis: "Select analysis",
+    displayedSymbol: "Displayed symbol",
+    viewChart: "View chart",
+    openChart: "Open chart",
+    liveChart: "View live chart",
+    poweredByTradingView: "Chart display powered by TradingView.",
+    marketDataAvailability:
+      "Market data availability and delay depend on TradingView and the selected market.",
+    chartDataBoundary:
+      "ALMA does not use this chart data for automated analysis or execution.",
+    analyzeScreenshot: "Analyze a screenshot",
+    uploadForAnalysis:
+      "Upload a chart image for educational ALMA analysis. ALMA cannot read the TradingView widget.",
+    chartUnavailable: "TradingView chart is unavailable right now.",
+    symbolSupport:
+      "Not every symbol or exchange is supported. This is a display symbol, not an ALMA quote.",
   },
   es: {
     title: "Trader",
@@ -258,6 +276,7 @@ const copy = {
     noBrokerage: "No hay ejecucion de broker conectada.",
     tabs: {
       overview: "Resumen",
+      chart: "Grafico",
       watchlist: "Lista",
       analyze: "Analizar",
       journal: "Diario",
@@ -336,6 +355,21 @@ const copy = {
     source: "Solo filas reales del diario guardado.",
     notAvailable: "No disponible",
     selectAnalysis: "Seleccionar analisis",
+    displayedSymbol: "Simbolo mostrado",
+    viewChart: "Ver grafico",
+    openChart: "Abrir grafico",
+    liveChart: "Ver grafico en vivo",
+    poweredByTradingView: "Grafico mostrado por TradingView.",
+    marketDataAvailability:
+      "La disponibilidad y demora de datos dependen de TradingView y del mercado seleccionado.",
+    chartDataBoundary:
+      "ALMA no usa estos datos para analisis automatico ni ejecucion.",
+    analyzeScreenshot: "Analizar una captura",
+    uploadForAnalysis:
+      "Sube una imagen del grafico para analisis educativo. ALMA no puede leer el widget de TradingView.",
+    chartUnavailable: "El grafico de TradingView no esta disponible ahora.",
+    symbolSupport:
+      "No todos los simbolos o mercados son compatibles. Es un simbolo mostrado, no una cotizacion de ALMA.",
   },
 };
 
@@ -348,6 +382,17 @@ const assetTypes: AssetType[] = [
   "other",
 ];
 const directions: Direction[] = ["long", "short", "analysis", "other"];
+const DEFAULT_TRADINGVIEW_SYMBOL = "NASDAQ:AAPL";
+
+function normalizeDisplaySymbol(value: string) {
+  const cleaned = value
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9:._-]/g, "")
+    .slice(0, 32);
+  return cleaned || DEFAULT_TRADINGVIEW_SYMBOL;
+}
+
 function valueOrNull(value: string) {
   const trimmed = value.trim();
   return trimmed ? trimmed : null;
@@ -544,6 +589,10 @@ export default function TraderPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [watchQuery, setWatchQuery] = useState("");
+  const [selectedChartSymbol, setSelectedChartSymbol] = useState(
+    DEFAULT_TRADINGVIEW_SYMBOL,
+  );
+  const [symbolInput, setSymbolInput] = useState(DEFAULT_TRADINGVIEW_SYMBOL);
   const [journalQuery, setJournalQuery] = useState("");
   const [watchlistForm, setWatchlistForm] =
     useState<WatchlistForm>(blankWatchlistForm);
@@ -635,6 +684,7 @@ export default function TraderPage() {
 
   const tabs: Array<{ key: TabKey; label: string; icon: typeof Activity }> = [
     { key: "overview", label: t.tabs.overview, icon: Activity },
+    { key: "chart", label: t.tabs.chart, icon: LineChart },
     { key: "watchlist", label: t.tabs.watchlist, icon: LineChart },
     { key: "analyze", label: t.tabs.analyze, icon: FileImage },
     { key: "journal", label: t.tabs.journal, icon: ClipboardList },
@@ -653,6 +703,13 @@ export default function TraderPage() {
         : blankWatchlistForm,
     );
     setWatchlistOpen(true);
+  };
+
+  const openChartForSymbol = (symbol: string) => {
+    const next = normalizeDisplaySymbol(symbol);
+    setSelectedChartSymbol(next);
+    setSymbolInput(next);
+    setActiveTab("chart");
   };
 
   const saveWatchlist = async () => {
@@ -933,6 +990,107 @@ export default function TraderPage() {
     </section>
   );
 
+  const chart = (
+    <section className="min-w-0">
+      <SectionHeader icon={LineChart} title={t.tabs.chart} />
+      <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="min-w-0 space-y-4">
+          <div className="rounded-2xl border border-[#E5E7EB] bg-white p-4">
+            <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto]">
+              <label className="min-w-0 text-sm font-medium">
+                {t.displayedSymbol}
+                <input
+                  value={symbolInput}
+                  onChange={(event) =>
+                    setSymbolInput(
+                      event.target.value
+                        .toUpperCase()
+                        .replace(/[^A-Z0-9:._-]/g, ""),
+                    )
+                  }
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      openChartForSymbol(symbolInput);
+                    }
+                  }}
+                  className="mt-1 min-h-11 w-full rounded-xl border border-[#E5E7EB] bg-[#F7F7F8] px-3 outline-none"
+                />
+              </label>
+              <button
+                type="button"
+                onClick={() => openChartForSymbol(symbolInput)}
+                className="inline-flex min-h-11 items-center justify-center gap-2 self-end rounded-full bg-black px-5 text-sm font-medium text-white"
+              >
+                <LineChart className="h-4 w-4" />
+                {t.viewChart}
+              </button>
+            </div>
+            <p className="mt-3 text-sm leading-6 text-[#6B7280]">
+              {t.symbolSupport}
+            </p>
+          </div>
+
+          <TradingViewAdvancedChart
+            symbol={selectedChartSymbol}
+            language={language}
+            title={t.liveChart}
+            unavailableLabel={t.chartUnavailable}
+            retryLabel={t.retry}
+          />
+        </div>
+
+        <aside className="min-w-0 space-y-4">
+          <div className="rounded-2xl border border-[#E5E7EB] bg-white p-4">
+            <h3 className="font-medium">{t.poweredByTradingView}</h3>
+            <div className="mt-3 space-y-3 text-sm leading-6 text-[#6B7280]">
+              <p>{t.marketDataAvailability}</p>
+              <p>{t.chartDataBoundary}</p>
+              <p>{t.educationOnly}</p>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-[#E5E7EB] bg-white p-4">
+            <h3 className="font-medium">{t.analyzeScreenshot}</h3>
+            <p className="mt-2 text-sm leading-6 text-[#6B7280]">
+              {t.uploadForAnalysis}
+            </p>
+            <button
+              type="button"
+              onClick={() => setActiveTab("analyze")}
+              className="mt-4 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full border border-[#E5E7EB] px-4 text-sm font-medium"
+            >
+              <FileImage className="h-4 w-4" />
+              {t.analyzeScreenshot}
+            </button>
+          </div>
+
+          <div className="rounded-2xl border border-[#E5E7EB] bg-white p-4">
+            <h3 className="font-medium">{t.tabs.watchlist}</h3>
+            <div className="mt-3 space-y-2">
+              {data.watchlist.slice(0, 6).length ? (
+                data.watchlist.slice(0, 6).map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => openChartForSymbol(item.symbol)}
+                    className="flex min-h-11 w-full items-center justify-between gap-3 rounded-xl bg-[#F7F7F8] px-3 text-left text-sm"
+                  >
+                    <span className="font-medium">{item.symbol}</span>
+                    <span className="text-xs text-[#6B7280]">
+                      {t.openChart}
+                    </span>
+                  </button>
+                ))
+              ) : (
+                <EmptyState text={t.noRecords} />
+              )}
+            </div>
+          </div>
+        </aside>
+      </div>
+    </section>
+  );
+
   const watchlist = (
     <section>
       <SectionHeader
@@ -973,6 +1131,14 @@ export default function TraderPage() {
                   </p>
                 </div>
                 <div className="flex gap-1">
+                  <button
+                    type="button"
+                    onClick={() => openChartForSymbol(item.symbol)}
+                    className="flex h-11 w-11 items-center justify-center rounded-full border border-[#E5E7EB]"
+                    aria-label={t.openChart}
+                  >
+                    <LineChart className="h-4 w-4" />
+                  </button>
                   <button
                     type="button"
                     onClick={() => openWatchlistForm(item)}
@@ -1294,6 +1460,7 @@ export default function TraderPage() {
 
   const activeSection: Record<TabKey, React.ReactNode> = {
     overview,
+    chart,
     watchlist,
     analyze: analyzeSection,
     journal,

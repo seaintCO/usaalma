@@ -5,6 +5,7 @@ import {
   ok,
   optionalString,
 } from "@/lib/construction/api";
+import { normalizeAnnotationColor } from "@/lib/construction/annotations";
 import {
   readJson,
   requireConstructionUser,
@@ -74,7 +75,7 @@ export async function POST(
         x2: numberOrNull(body.x2),
         y2: numberOrNull(body.y2),
         label: optionalString(body.label, 500),
-        colorKey: optionalString(body.colorKey ?? body.color_key, 80),
+        colorKey: normalizeAnnotationColor(body.colorKey ?? body.color_key),
         metadata:
           body.metadata && typeof body.metadata === "object"
             ? body.metadata

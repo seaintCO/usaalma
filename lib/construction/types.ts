@@ -43,6 +43,14 @@ export const constructionAnnotationTypes = [
   "text",
 ] as const;
 
+export const constructionAnnotationColorKeys = [
+  "neutral",
+  "measurement",
+  "material",
+  "scope",
+  "warning",
+] as const;
+
 export const constructionScopeKeys = [
   "project_summary",
   "included_work",
@@ -59,6 +67,8 @@ export type ConstructionProjectStatus =
 export type ConstructionMimeType = (typeof constructionMimeTypes)[number];
 export type ConstructionAnnotationType =
   (typeof constructionAnnotationTypes)[number];
+export type ConstructionAnnotationColorKey =
+  (typeof constructionAnnotationColorKeys)[number];
 export type ConstructionScopeKey = (typeof constructionScopeKeys)[number];
 
 export type ConstructionProjectInput = {
@@ -107,7 +117,7 @@ export type ConstructionAnnotationInput = {
   x2?: number | null;
   y2?: number | null;
   label?: string | null;
-  colorKey?: string | null;
+  colorKey?: ConstructionAnnotationColorKey | null;
   metadata?: Record<string, unknown>;
 };
 

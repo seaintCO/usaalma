@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { safeFilename } from "@/lib/construction/api";
+import { normalizeAnnotationColor } from "@/lib/construction/annotations";
 import {
   calculateMeasurement,
   type ConstructionMeasurementType,
@@ -595,7 +596,7 @@ export class ConstructionRepository {
         x2: input.x2 ?? null,
         y2: input.y2 ?? null,
         label: input.label ?? null,
-        color_key: input.colorKey ?? "black",
+        color_key: normalizeAnnotationColor(input.colorKey),
         metadata: input.metadata ?? {},
       })
       .select()
@@ -631,7 +632,9 @@ export class ConstructionRepository {
       y2: input.y2 === undefined ? existing.y2 : input.y2,
       label: input.label === undefined ? existing.label : input.label,
       colorKey:
-        input.colorKey === undefined ? existing.color_key : input.colorKey,
+        input.colorKey === undefined
+          ? normalizeAnnotationColor(existing.color_key)
+          : normalizeAnnotationColor(input.colorKey),
       metadata: input.metadata ?? existing.metadata ?? {},
     };
     await this.assertPlanFile(userId, existing.project_id, next.planFileId);
@@ -659,7 +662,7 @@ export class ConstructionRepository {
         x2: next.x2 ?? null,
         y2: next.y2 ?? null,
         label: next.label ?? null,
-        color_key: next.colorKey ?? "black",
+        color_key: normalizeAnnotationColor(next.colorKey),
         metadata: next.metadata ?? {},
       })
       .eq("id", annotationId)

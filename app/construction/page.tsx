@@ -22,6 +22,7 @@ import {
 import { useEffect, useMemo, useState } from "react";
 import AlmaShell from "@/components/alma-shell/AlmaShell";
 import type { AlmaShellLanguage } from "@/components/alma-shell/types";
+import { AnnotationWorkspace } from "@/components/construction/AnnotationWorkspace";
 import { FileUpload } from "@/components/construction/FileUpload";
 import { MeasurementCalculator } from "@/components/construction/MeasurementCalculator";
 
@@ -42,6 +43,7 @@ type WorkflowStep =
   | "overview"
   | "plans"
   | "measurements"
+  | "annotations"
   | "materials"
   | "scope"
   | "crew"
@@ -110,6 +112,7 @@ const workflowSteps: WorkflowStep[] = [
   "overview",
   "plans",
   "measurements",
+  "annotations",
   "materials",
   "scope",
   "crew",
@@ -175,6 +178,7 @@ const copy = {
     overview: "Overview",
     plans: "Plans",
     measurements: "Measurements",
+    annotations: "Annotations",
     materials: "Materials",
     scope: "Scope",
     crew: "Crew",
@@ -256,6 +260,40 @@ const copy = {
     verifyMeasurements: "Verify all field measurements.",
     estimateOnly: "Estimate only.",
     notAdvice: "Not engineering or architectural advice.",
+    annotate: "Annotate",
+    point: "Point",
+    line: "Line",
+    rectangle: "Rectangle",
+    textAnnotation: "Text",
+    linkedMeasurement: "Link Measurement",
+    noLinkedMeasurement: "No linked measurement",
+    category: "Category",
+    neutral: "Neutral",
+    measurement: "Measurement",
+    material: "Material",
+    scopeCategory: "Scope",
+    warning: "Warning",
+    zoomIn: "Zoom In",
+    zoomOut: "Zoom Out",
+    resetView: "Reset View",
+    pan: "Pan",
+    undo: "Undo",
+    loadingAnnotations: "Loading annotations",
+    noAnnotations: "No annotations",
+    annotationLoadError: "Annotations could not be loaded.",
+    annotationSaveError:
+      "Annotations could not be saved. Your changes are still here.",
+    annotationDeleteError: "Annotation could not be deleted.",
+    pdfAnnotationSoon: "PDF annotation preview coming soon",
+    selectPlanToAnnotate: "Select a plan or photo to annotate.",
+    noAnnotatableFiles: "Upload a plan or photo before adding annotations.",
+    imageOnlyAnnotation:
+      "PNG and JPG files can be annotated now. Open or download PDFs privately; PDF page annotation will come in a later checkpoint.",
+    annotationDisclaimer:
+      "Annotations are visual references only. Measurements must be entered and verified manually. Annotations do not establish scale. Not engineering or architectural advice.",
+    textLabelRequired: "Text annotations require a label.",
+    unsavedChanges: "You have unsaved annotation changes.",
+    confirmDeleteAnnotation: "Delete this selected annotation on Save?",
   },
   es: {
     title: "Construccion",
@@ -300,6 +338,7 @@ const copy = {
     overview: "Resumen",
     plans: "Planos",
     measurements: "Medidas",
+    annotations: "Anotaciones",
     materials: "Materiales",
     scope: "Alcance",
     crew: "Equipo",
@@ -381,6 +420,40 @@ const copy = {
     verifyMeasurements: "Verifica todas las medidas en campo.",
     estimateOnly: "Solo estimacion.",
     notAdvice: "No es asesoria de ingenieria o arquitectura.",
+    annotate: "Anotar",
+    point: "Punto",
+    line: "Linea",
+    rectangle: "Rectangulo",
+    textAnnotation: "Texto",
+    linkedMeasurement: "Vincular medida",
+    noLinkedMeasurement: "Sin medida vinculada",
+    category: "Categoria",
+    neutral: "Neutral",
+    measurement: "Medida",
+    material: "Material",
+    scopeCategory: "Alcance",
+    warning: "Advertencia",
+    zoomIn: "Acercar",
+    zoomOut: "Alejar",
+    resetView: "Restablecer vista",
+    pan: "Mover",
+    undo: "Deshacer",
+    loadingAnnotations: "Cargando anotaciones",
+    noAnnotations: "Sin anotaciones",
+    annotationLoadError: "No se pudieron cargar las anotaciones.",
+    annotationSaveError:
+      "No se pudieron guardar las anotaciones. Tus cambios siguen aqui.",
+    annotationDeleteError: "No se pudo eliminar la anotacion.",
+    pdfAnnotationSoon: "Anotacion de PDF disponible pronto",
+    selectPlanToAnnotate: "Selecciona un plano o foto para anotar.",
+    noAnnotatableFiles: "Sube un plano o foto antes de agregar anotaciones.",
+    imageOnlyAnnotation:
+      "Los archivos PNG y JPG se pueden anotar ahora. Abre o descarga PDFs en privado; la anotacion de paginas PDF vendra en un checkpoint posterior.",
+    annotationDisclaimer:
+      "Las anotaciones son solo referencias visuales. Las medidas deben ingresarse y verificarse manualmente. Las anotaciones no establecen escala. No es asesoria de ingenieria o arquitectura.",
+    textLabelRequired: "Las anotaciones de texto requieren etiqueta.",
+    unsavedChanges: "Tienes cambios de anotaciones sin guardar.",
+    confirmDeleteAnnotation: "Eliminar esta anotacion seleccionada al guardar?",
   },
 };
 
@@ -1081,6 +1154,10 @@ function ProjectDetail({
             language={language}
             text={text}
           />
+        </div>
+      ) : workflowStep === "annotations" ? (
+        <div className="mt-5">
+          <AnnotationWorkspace projectId={project.id} text={text} />
         </div>
       ) : (
         <div className="mt-5 rounded-3xl border border-dashed border-[#D1D5DB] bg-[#F7F7F8] p-6">

@@ -5,6 +5,7 @@ import {
   ok,
   optionalString,
 } from "@/lib/construction/api";
+import { normalizeAnnotationColor } from "@/lib/construction/annotations";
 import {
   readJson,
   requireConstructionUser,
@@ -61,7 +62,7 @@ export async function PATCH(
   if (body.y2 !== undefined) patch.y2 = numberOrNull(body.y2);
   if (body.label !== undefined) patch.label = optionalString(body.label, 500);
   if (body.colorKey !== undefined || body.color_key !== undefined) {
-    patch.colorKey = optionalString(body.colorKey ?? body.color_key, 80);
+    patch.colorKey = normalizeAnnotationColor(body.colorKey ?? body.color_key);
   }
   if (body.metadata !== undefined) {
     patch.metadata =

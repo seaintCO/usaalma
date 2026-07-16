@@ -1,67 +1,92 @@
 import { createClient } from "@/lib/supabase/server";
 
 export class MessageRepository {
+  static async findAssistantForExecution(executionId: string) {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from("messages")
+      .select("*")
+      .eq("execution_id", executionId)
+      .eq("role", "assistant")
+      .maybeSingle();
+    if (error) throw error;
+    return data;
+  }
 
-static async create(
+  static async create(
+    conversationId: string,
 
-conversationId:string,
+    userId: string,
 
-userId:string,
+    role: string,
 
-role:string,
+    content: string,
 
-content:string
+    options: {
+      executionId?: string | null;
+      idempotencyKey?: string | null;
+      status?: "draft" | "streaming" | "final" | "failed";
+    } = {},
+  ) {
+    const supabase = await createClient();
 
-){
+    if (role === "assistant" && options.executionId) {
+      const existing = await this.findAssistantForExecution(
+        options.executionId,
+      );
+      if (existing) return existing;
+    }
 
-const supabase=await createClient();
+    const { data, error } = await supabase
 
-const { data, error } = await supabase
+      .from("messages")
 
-.from("messages")
+      .insert({
+        conversation_id: conversationId,
 
-.insert({
+        user_id: userId,
 
-conversation_id:conversationId,
+        role,
 
-user_id:userId,
+        content,
 
-role,
+        execution_id: options.executionId ?? null,
 
-content
+        idempotency_key: options.idempotencyKey ?? null,
 
-})
+        status: options.status ?? "final",
+      })
 
-.select()
+      .select()
 
-.single();
+      .maybeSingle();
 
-if (error) throw error;
+    if (error) {
+      if (role === "assistant" && options.executionId) {
+        const existing = await this.findAssistantForExecution(
+          options.executionId,
+        );
+        if (existing) return existing;
+      }
+      throw error;
+    }
 
-return data;
+    return data;
+  }
 
-}
+  static async list(conversationId: string) {
+    const supabase = await createClient();
 
-static async list(
+    const { data } = await supabase
 
-conversationId:string
+      .from("messages")
 
-){
+      .select("*")
 
-const supabase=await createClient();
+      .eq("conversation_id", conversationId)
 
-const {data}=await supabase
+      .order("created_at");
 
-.from("messages")
-
-.select("*")
-
-.eq("conversation_id",conversationId)
-
-.order("created_at");
-
-return data??[];
-
-}
-
+    return data ?? [];
+  }
 }

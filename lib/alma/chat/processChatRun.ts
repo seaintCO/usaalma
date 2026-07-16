@@ -112,7 +112,8 @@ export type ChatRunInProgressResult = {
   message: string;
 };
 
-export type ChatRunResult = ChatRunSuccessResult | ChatRunFailureResult | ChatRunInProgressResult;
+export type ChatRunResult =
+  ChatRunSuccessResult | ChatRunFailureResult | ChatRunInProgressResult;
 
 export type DurableChatRunInvocation = {
   invocationMode: "durable";
@@ -137,7 +138,8 @@ export type InteractiveChatRunInvocation = {
   onProgress?: ChatRunProgressCallback;
 };
 
-export type CanonicalChatRunInvocation = DurableChatRunInvocation | InteractiveChatRunInvocation;
+export type CanonicalChatRunInvocation =
+  DurableChatRunInvocation | InteractiveChatRunInvocation;
 
 export type ImageExecutionKind =
   | "alma_image_generation"
@@ -251,18 +253,31 @@ export async function processImageChatRun(
   const kind = resolveImageExecutionKind(input);
   if (!kind) return null;
 
-  const tracked = input.tracking ?? await startChatRunTracking({
-    userId: input.userId,
-    conversationId: input.conversationId,
-    intent: input.almaIntent,
-    goal: input.userMessage,
-    plan: input.almaPlan,
-  });
+  const tracked =
+    input.tracking ??
+    (await startChatRunTracking({
+      userId: input.userId,
+      conversationId: input.conversationId,
+      intent: input.almaIntent,
+      goal: input.userMessage,
+      plan: input.almaPlan,
+    }));
   let assistantPersisted = false;
 
   const persistAssistant = async (content: string) => {
     if (assistantPersisted) return;
-    await MessageRepository.create(input.conversationId, input.userId, "assistant", content);
+    await MessageRepository.create(
+      input.conversationId,
+      input.userId,
+      "assistant",
+      content,
+      {
+        executionId: tracked?.executionId,
+        idempotencyKey: tracked?.executionId
+          ? `assistant:${tracked.executionId}`
+          : undefined,
+      },
+    );
     assistantPersisted = true;
   };
 
@@ -271,7 +286,11 @@ export async function processImageChatRun(
     summary: string,
     trackingResult: Record<string, unknown>,
   ) => {
-    const completed: ChatRunSuccessResult = { ok: true, tracking: tracked, ...result };
+    const completed: ChatRunSuccessResult = {
+      ok: true,
+      tracking: tracked,
+      ...result,
+    };
     await completeChatRunTracking({
       tracked,
       userId: input.userId,
@@ -279,7 +298,10 @@ export async function processImageChatRun(
       summary,
       result: trackingResult,
     });
-    await emitProgress(input.onProgress, { type: "completed", result: completed });
+    await emitProgress(input.onProgress, {
+      type: "completed",
+      result: completed,
+    });
     return completed;
   };
 
@@ -287,7 +309,11 @@ export async function processImageChatRun(
     result: Omit<ChatRunFailureResult, "ok" | "tracking">,
     summary: string,
   ) => {
-    const failed: ChatRunFailureResult = { ok: false, tracking: tracked, ...result };
+    const failed: ChatRunFailureResult = {
+      ok: false,
+      tracking: tracked,
+      ...result,
+    };
     await completeChatRunTracking({
       tracked,
       userId: input.userId,
@@ -300,7 +326,8 @@ export async function processImageChatRun(
   };
 
   if (kind === "router_image_edit") {
-    const reply = "Sube la imagen que quieres editar o dime cuál imagen de tu galería quieres cambiar. Luego puedo hacer cambios como fondo, estilo, color, realismo, formato 16:9 o 9:16.";
+    const reply =
+      "Sube la imagen que quieres editar o dime cuál imagen de tu galería quieres cambiar. Luego puedo hacer cambios como fondo, estilo, color, realismo, formato 16:9 o 9:16.";
     await persistAssistant(reply);
     await emitProgress(input.onProgress, { type: "text_delta", delta: reply });
     return finishSuccess(
@@ -314,20 +341,24 @@ export async function processImageChatRun(
     );
   }
 
-  const isAlmaImage = kind === "alma_image_generation" || kind === "alma_image_followup";
-  const responseRoute: ChatRunRoute = kind === "router_image_generate"
-    ? "image_generate"
-    : kind === "alma_image_followup"
-      ? "alma_image_followup"
-      : "alma_image_generation";
-  const imagePrompt = kind === "alma_image_followup"
-    ? buildImageFollowupPrompt(input.userMessage, input.almaContext)
-    : input.userMessage;
+  const isAlmaImage =
+    kind === "alma_image_generation" || kind === "alma_image_followup";
+  const responseRoute: ChatRunRoute =
+    kind === "router_image_generate"
+      ? "image_generate"
+      : kind === "alma_image_followup"
+        ? "alma_image_followup"
+        : "alma_image_generation";
+  const imagePrompt =
+    kind === "alma_image_followup"
+      ? buildImageFollowupPrompt(input.userMessage, input.almaContext)
+      : input.userMessage;
   // The Alma planner path has always honored requested aspect ratios; the
   // legacy router image path deliberately calls the tool with its default.
-  const imageSize = kind === "router_image_generate"
-    ? undefined
-    : detectImageSize(input.userMessage);
+  const imageSize =
+    kind === "router_image_generate"
+      ? undefined
+      : detectImageSize(input.userMessage);
 
   let imageStepId: string | null = null;
   if (tracked) {
@@ -339,12 +370,27 @@ export async function processImageChatRun(
       input: { kind, imagePrompt, imageSize },
     });
     if (!claimed.claimed) {
-      const output = claimed.step.output as { reply?: string; generated?: boolean };
+      const output = claimed.step.output as {
+        reply?: string;
+        generated?: boolean;
+      };
       if (claimed.step.status === "completed" && output.reply) {
-        await emitProgress(input.onProgress, output.generated
-          ? { type: "image", content: output.reply }
-          : { type: "text_delta", delta: output.reply });
-        return finishSuccess({ responseType: "image", route: responseRoute, finalContent: output.reply, image: { generated: Boolean(output.generated) } }, "ALMA reused a completed image generation.", { route: responseRoute, reused: true });
+        await emitProgress(
+          input.onProgress,
+          output.generated
+            ? { type: "image", content: output.reply }
+            : { type: "text_delta", delta: output.reply },
+        );
+        return finishSuccess(
+          {
+            responseType: "image",
+            route: responseRoute,
+            finalContent: output.reply,
+            image: { generated: Boolean(output.generated) },
+          },
+          "ALMA reused a completed image generation.",
+          { route: responseRoute, reused: true },
+        );
       }
       return {
         ok: false,
@@ -366,11 +412,16 @@ export async function processImageChatRun(
   }
 
   try {
-    const result = await generateImageTool(input.userId, imagePrompt, imageSize);
+    const result = await generateImageTool(
+      input.userId,
+      imagePrompt,
+      imageSize,
+    );
     const resultError = (result as { error?: string })?.error;
-    const reply = result?.success && result?.image?.outputBase64
-      ? `[ALMA_IMAGE:${result.image.outputBase64}]`
-      : result?.message || resultError || "No se pudo generar la imagen.";
+    const reply =
+      result?.success && result?.image?.outputBase64
+        ? `[ALMA_IMAGE:${result.image.outputBase64}]`
+        : result?.message || resultError || "No se pudo generar la imagen.";
 
     if (isAlmaImage) {
       await upsertAlmaContext(input.userId, input.conversationId, {
@@ -394,11 +445,19 @@ export async function processImageChatRun(
 
     await persistAssistant(reply);
     if (imageStepId) {
-      await AgentService.finishStep({ stepId: imageStepId, success: Boolean(result?.success), output: { reply, generated: Boolean(result?.image?.outputBase64) }, error: result?.success ? null : resultError || result?.message || null });
+      await AgentService.finishStep({
+        stepId: imageStepId,
+        success: Boolean(result?.success),
+        output: { reply, generated: Boolean(result?.image?.outputBase64) },
+        error: result?.success ? null : resultError || result?.message || null,
+      });
     }
-    await emitProgress(input.onProgress, result?.success && result?.image?.outputBase64
-      ? { type: "image", content: reply }
-      : { type: "text_delta", delta: reply });
+    await emitProgress(
+      input.onProgress,
+      result?.success && result?.image?.outputBase64
+        ? { type: "image", content: reply }
+        : { type: "text_delta", delta: reply },
+    );
 
     if (result?.success) {
       return finishSuccess(
@@ -427,17 +486,26 @@ export async function processImageChatRun(
     );
   } catch (error) {
     console.error("ALMA_IMAGE_ERROR", error);
-    const errorMessage = error instanceof Error ? error.message : "error desconocido";
+    const errorMessage =
+      error instanceof Error ? error.message : "error desconocido";
     const reply = isAlmaImage
       ? `ALMA tuvo un error generando la imagen: ${errorMessage}`
       : "ALMA tuvo un error generando la imagen.";
 
     if (!assistantPersisted) {
       await persistAssistant(reply);
-      await emitProgress(input.onProgress, { type: "text_delta", delta: reply });
+      await emitProgress(input.onProgress, {
+        type: "text_delta",
+        delta: reply,
+      });
     }
     if (imageStepId) {
-      await AgentService.finishStep({ stepId: imageStepId, success: false, output: { reply }, error: errorMessage });
+      await AgentService.finishStep({
+        stepId: imageStepId,
+        success: false,
+        output: { reply },
+        error: errorMessage,
+      });
     }
 
     return finishFailure(
@@ -455,23 +523,62 @@ export async function processImageChatRun(
 
 export type ProcessCanonicalChatRunInput = CanonicalChatRunInvocation;
 
-async function prepareDurableInvocation(input: DurableChatRunInvocation): Promise<ChatRunResult | ChatRunTrackingContext> {
-  const execution = await AgentExecutionRepository.findForDurableRun({ id: input.executionId, userId: input.userId, agentId: input.agentId });
-  if (!execution) throw new Error("Durable execution was not found for this agent and user.");
+async function prepareDurableInvocation(
+  input: DurableChatRunInvocation,
+): Promise<ChatRunResult | ChatRunTrackingContext> {
+  const execution = await AgentExecutionRepository.findForDurableRun({
+    id: input.executionId,
+    userId: input.userId,
+    agentId: input.agentId,
+  });
+  if (!execution)
+    throw new Error("Durable execution was not found for this agent and user.");
   const tracking = { agentId: input.agentId, executionId: input.executionId };
   if (["completed", "failed", "cancelled"].includes(execution.status)) {
     const persisted = (execution.result ?? {}) as Record<string, unknown>;
-    const finalContent = typeof persisted.finalContent === "string" ? persisted.finalContent : execution.error || "ALMA completed this execution.";
+    const finalContent =
+      typeof persisted.finalContent === "string"
+        ? persisted.finalContent
+        : execution.error || "ALMA completed this execution.";
     return execution.status === "completed"
-      ? { ok: true, responseType: "text", route: "chat", finalContent, assistantMessageId: typeof persisted.assistantMessageId === "string" ? persisted.assistantMessageId : undefined, tracking }
-      : { ok: false, responseType: "text", route: "chat", finalContent, tracking, code: "stream_failed", message: finalContent };
+      ? {
+          ok: true,
+          responseType: "text",
+          route: "chat",
+          finalContent,
+          assistantMessageId:
+            typeof persisted.assistantMessageId === "string"
+              ? persisted.assistantMessageId
+              : undefined,
+          tracking,
+        }
+      : {
+          ok: false,
+          responseType: "text",
+          route: "chat",
+          finalContent,
+          tracking,
+          code: "stream_failed",
+          message: finalContent,
+        };
   }
-  if (execution.status === "running") {
-    return { ok: false, responseType: "text", route: "chat", tracking, code: "execution_in_progress", message: "This execution is already running." };
+  if (execution.status === "running" || execution.status === "queued") {
+    return tracking;
   }
-  const claimed = await AgentExecutionRepository.claimPending(input.executionId, input.userId, input.agentId);
+  const claimed = await AgentExecutionRepository.claimPending(
+    input.executionId,
+    input.userId,
+    input.agentId,
+  );
   if (!claimed) {
-    return { ok: false, responseType: "text", route: "chat", tracking, code: "execution_in_progress", message: "This execution is already running." };
+    return {
+      ok: false,
+      responseType: "text",
+      route: "chat",
+      tracking,
+      code: "execution_in_progress",
+      message: "This execution is already running.",
+    };
   }
   return tracking;
 }
@@ -484,17 +591,27 @@ async function prepareDurableInvocation(input: DurableChatRunInvocation): Promis
 export async function processCanonicalChatRun(
   input: ProcessCanonicalChatRunInput,
 ): Promise<ChatRunResult> {
-  const durable = input.invocationMode === "durable" ? await prepareDurableInvocation(input) : null;
+  const durable =
+    input.invocationMode === "durable"
+      ? await prepareDurableInvocation(input)
+      : null;
   if (durable && "ok" in durable) return durable;
-  const { processPlannerAndToolChatRun } = await import("./processPlannerAndToolChatRun");
-  const routed = await processPlannerAndToolChatRun({ ...input, tracking: durable && "executionId" in durable ? durable : undefined });
+  const { processPlannerAndToolChatRun } =
+    await import("./processPlannerAndToolChatRun");
+  const routed = await processPlannerAndToolChatRun({
+    ...input,
+    tracking: durable && "executionId" in durable ? durable : undefined,
+  });
   if (routed.handled) return routed.result;
 
   let assistantPersisted = false;
   try {
     const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
     const stream = await client.responses.create({
-      model: (await import("@/lib/alma/modelRouter")).chooseAlmaModel(input.userMessage, "auto"),
+      model: (await import("@/lib/alma/modelRouter")).chooseAlmaModel(
+        input.userMessage,
+        "auto",
+      ),
       stream: true,
       input: [
         { role: "system", content: routed.systemPrompt },
@@ -505,7 +622,10 @@ export async function processCanonicalChatRun(
     for await (const event of stream as any) {
       if (event.type === "response.output_text.delta") {
         fullReply += event.delta;
-        await emitProgress(input.onProgress, { type: "text_delta", delta: event.delta });
+        await emitProgress(input.onProgress, {
+          type: "text_delta",
+          delta: event.delta,
+        });
       }
     }
 
@@ -514,6 +634,12 @@ export async function processCanonicalChatRun(
       input.userId,
       "assistant",
       fullReply,
+      {
+        executionId: routed.tracking?.executionId,
+        idempotencyKey: routed.tracking?.executionId
+          ? `assistant:${routed.tracking.executionId}`
+          : undefined,
+      },
     );
     assistantPersisted = true;
     const result: ChatRunSuccessResult = {
@@ -521,7 +647,10 @@ export async function processCanonicalChatRun(
       responseType: "text",
       route: "chat",
       finalContent: fullReply,
-      assistantMessageId: typeof assistantMessage?.id === "string" ? assistantMessage.id : undefined,
+      assistantMessageId:
+        typeof assistantMessage?.id === "string"
+          ? assistantMessage.id
+          : undefined,
       tracking: routed.tracking,
     };
     await completeChatRunTracking({
@@ -529,21 +658,41 @@ export async function processCanonicalChatRun(
       userId: input.userId,
       success: true,
       summary: "ALMA completed a chat execution.",
-      result: { route: "chat", finalContent: fullReply, assistantMessageId: result.assistantMessageId ?? null },
+      result: {
+        route: "chat",
+        finalContent: fullReply,
+        assistantMessageId: result.assistantMessageId ?? null,
+      },
     });
     await emitProgress(input.onProgress, { type: "completed", result });
     return result;
   } catch (error) {
     console.error("ALMA_CHAT_EXECUTION_ERROR", error);
-    const reply = input.language === "en"
-      ? "ALMA had an error generating the response."
-      : "ALMA tuvo un error generando la respuesta.";
+    const reply =
+      input.language === "en"
+        ? "ALMA had an error generating the response."
+        : "ALMA tuvo un error generando la respuesta.";
     let persistenceError: unknown = null;
     if (!assistantPersisted) {
       try {
-        await MessageRepository.create(input.conversationId, input.userId, "assistant", reply);
+        await MessageRepository.create(
+          input.conversationId,
+          input.userId,
+          "assistant",
+          reply,
+          {
+            executionId: routed.tracking?.executionId,
+            idempotencyKey: routed.tracking?.executionId
+              ? `assistant:${routed.tracking.executionId}`
+              : undefined,
+            status: "failed",
+          },
+        );
         assistantPersisted = true;
-        await emitProgress(input.onProgress, { type: "text_delta", delta: `\n\n${reply}` });
+        await emitProgress(input.onProgress, {
+          type: "text_delta",
+          delta: `\n\n${reply}`,
+        });
       } catch (persistError) {
         persistenceError = persistError;
         console.error("ALMA_ASSISTANT_PERSISTENCE_ERROR", persistError);
@@ -563,7 +712,8 @@ export async function processCanonicalChatRun(
       userId: input.userId,
       success: false,
       summary: "ALMA chat execution failed.",
-      error: error instanceof Error ? error.message : "Streaming response failed",
+      error:
+        error instanceof Error ? error.message : "Streaming response failed",
     });
     await emitProgress(input.onProgress, { type: "failed", error: failure });
     if (persistenceError) throw persistenceError;
@@ -572,6 +722,8 @@ export async function processCanonicalChatRun(
 }
 
 /** Server-only durable-worker entry point; deliberately has no progress callback. */
-export async function runDurableChatRun(input: Omit<DurableChatRunInvocation, "onProgress" | "invocationMode">) {
+export async function runDurableChatRun(
+  input: Omit<DurableChatRunInvocation, "onProgress" | "invocationMode">,
+) {
   return processCanonicalChatRun({ ...input, invocationMode: "durable" });
 }

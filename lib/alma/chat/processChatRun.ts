@@ -182,6 +182,7 @@ export async function startChatRunTracking(input: {
   intent: string;
   goal: string;
   plan: Record<string, unknown>;
+  idempotencyKey?: string | null;
 }): Promise<ChatRunTrackingContext | null> {
   try {
     const tracked = await AgentService.startExecution({
@@ -191,6 +192,7 @@ export async function startChatRunTracking(input: {
       intent: input.intent,
       goal: input.goal,
       plan: input.plan,
+      idempotencyKey: input.idempotencyKey,
     });
     await AgentService.recordStep({
       executionId: tracked.execution.id,
@@ -261,6 +263,7 @@ export async function processImageChatRun(
       intent: input.almaIntent,
       goal: input.userMessage,
       plan: input.almaPlan,
+      idempotencyKey: input.idempotencyKey,
     }));
   let assistantPersisted = false;
 

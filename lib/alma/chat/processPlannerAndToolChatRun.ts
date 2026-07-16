@@ -158,6 +158,7 @@ export async function processPlannerAndToolChatRun(
       intent: almaPlan.intent,
       goal: input.userMessage,
       plan: almaPlan,
+      idempotencyKey: input.idempotencyKey,
     }));
 
   try {

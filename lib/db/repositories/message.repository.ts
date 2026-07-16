@@ -1,6 +1,27 @@
 import { createClient } from "@/lib/supabase/server";
 
 export class MessageRepository {
+  static async findUserByIdempotency(input: {
+    userId: string;
+    idempotencyKey: string;
+    conversationId?: string | null;
+  }) {
+    const supabase = await createClient();
+    let query = supabase
+      .from("messages")
+      .select("*")
+      .eq("user_id", input.userId)
+      .eq("role", "user")
+      .eq("idempotency_key", input.idempotencyKey)
+      .order("created_at", { ascending: false })
+      .limit(1);
+    if (input.conversationId)
+      query = query.eq("conversation_id", input.conversationId);
+    const { data, error } = await query.maybeSingle();
+    if (error) throw error;
+    return data;
+  }
+
   static async findAssistantForExecution(executionId: string) {
     const supabase = await createClient();
     const { data, error } = await supabase
@@ -37,6 +58,15 @@ export class MessageRepository {
       if (existing) return existing;
     }
 
+    if (role === "user" && options.idempotencyKey) {
+      const existing = await this.findUserByIdempotency({
+        userId,
+        conversationId,
+        idempotencyKey: options.idempotencyKey,
+      });
+      if (existing) return existing;
+    }
+
     const { data, error } = await supabase
 
       .from("messages")
@@ -66,6 +96,14 @@ export class MessageRepository {
         const existing = await this.findAssistantForExecution(
           options.executionId,
         );
+        if (existing) return existing;
+      }
+      if (role === "user" && options.idempotencyKey) {
+        const existing = await this.findUserByIdempotency({
+          userId,
+          conversationId,
+          idempotencyKey: options.idempotencyKey,
+        });
         if (existing) return existing;
       }
       throw error;

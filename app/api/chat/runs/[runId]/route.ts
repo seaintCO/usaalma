@@ -16,7 +16,17 @@ export async function GET(
     .eq("id", runId)
     .eq("user_id", user.id)
     .maybeSingle();
-  if (error) throw error;
+  if (error) {
+    console.error("ALMA_CHAT_RUN_STATUS_ERROR", {
+      runId,
+      category: "server_unavailable",
+      error: error.message,
+    });
+    return Response.json(
+      { error: { category: "server_unavailable" } },
+      { status: 503 },
+    );
+  }
   if (!data) return new Response("Not found", { status: 404 });
   const { data: assistantMessage } = await admin
     .from("messages")

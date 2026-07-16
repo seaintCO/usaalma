@@ -1,11 +1,20 @@
 export type AgentLanguageMode = "en" | "es" | "auto";
 export type AgentStatus = "active" | "paused" | "archived";
 export type AgentAutonomyLevel = "manual" | "supervised" | "trusted";
-export type AgentExecutionStatus = "pending" | "running" | "waiting_approval" | "completed" | "failed" | "cancelled";
+export type AgentExecutionStatus =
+  | "pending"
+  | "running"
+  | "waiting_approval"
+  | "completed"
+  | "failed"
+  | "cancelled";
 export type AgentExecutionTrigger = "chat" | "manual" | "scheduled" | "event";
-export type AgentStepKind = "plan" | "tool" | "approval" | "verification" | "reflection";
-export type AgentStepStatus = "pending" | "running" | "completed" | "failed" | "skipped";
-export type AgentApprovalStatus = "pending" | "approved" | "rejected" | "expired";
+export type AgentStepKind =
+  "plan" | "tool" | "approval" | "verification" | "reflection";
+export type AgentStepStatus =
+  "pending" | "running" | "completed" | "failed" | "skipped";
+export type AgentApprovalStatus =
+  "pending" | "approved" | "rejected" | "expired";
 export type AgentPermissionEffect = "allow" | "deny" | "require_approval";
 export type AgentActivityLevel = "info" | "success" | "warning" | "error";
 
@@ -145,4 +154,5 @@ export type AgentExecutionInput = {
   intent?: string | null;
   goal?: string | null;
   plan?: Record<string, unknown>;
+  idempotencyKey?: string | null;
 };

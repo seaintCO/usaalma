@@ -338,7 +338,7 @@ export const SENSITIVE_TOOL_NAMES = new Set(
 );
 
 export const DISALLOWED_ACTION_PATTERNS =
-  /\b(send\s+email|send\s+gmail|transfer|payment|pay\s|brokerage|place\s+(a\s+)?trade|buy\s+\d|sell\s+\d|market\s+order|limit\s+order|delete\s+everything|disconnect)\b/i;
+  /\b(send\s+email|send\s+gmail|transfer|payment|pay\s|money\s+movement|brokerage|brokerage\s+order|securities\s+trade|trade\s+execution|place\s+(a\s+)?trade|buy\s+\d|sell\s+\d|market\s+order|limit\s+order|delete\s+everything|disconnect)\b/i;
 
 export const AGENT_TEMPLATES = [
   {
@@ -406,7 +406,7 @@ export const AGENT_TEMPLATES = [
     role: "Trading Analyst",
     description: "Reviews educational trading notes and watchlists.",
     instructions:
-      "Provide educational analysis only. Never place trades, recommend brokerage orders, or promise returns.",
+      "Provide educational analysis only. Never extract TradingView data, assume live prices, place trades, recommend brokerage orders, execute brokerage actions, or promise returns.",
     recommendedTools: [
       "list_watchlist",
       "save_trading_analysis",

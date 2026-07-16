@@ -654,49 +654,46 @@ export async function listActivity(userId: string, agentId: string) {
   const agent = await ownedAgent(userId, agentId);
   if (!agent) return safeError("not_found", "Agent not found.");
   const supabase = createAdminClient();
-  const [
-    { data: executions },
-    { data: steps },
-    { data: logs },
-    { data: approvals },
-  ] = await Promise.all([
-    supabase
-      .from("agent_executions")
-      .select(
-        "id,status,trigger_type,goal,result,error,started_at,completed_at,created_at",
-      )
-      .eq("user_id", userId)
-      .eq("agent_id", agentId)
-      .order("created_at", { ascending: false })
-      .limit(20),
-    supabase
-      .from("agent_execution_steps")
-      .select("id,execution_id,kind,status,tool_name,error,created_at")
-      .order("created_at", { ascending: false })
-      .limit(50),
-    supabase
-      .from("agent_activity_logs")
-      .select("id,execution_id,level,event_type,summary,created_at")
-      .eq("user_id", userId)
-      .eq("agent_id", agentId)
-      .order("created_at", { ascending: false })
-      .limit(20),
-    supabase
-      .from("agent_approvals")
-      .select("id,execution_id,status,action_summary,tool_name,requested_at")
-      .eq("user_id", userId)
-      .eq("agent_id", agentId)
-      .order("requested_at", { ascending: false })
-      .limit(20),
-  ]);
-  const executionIds = new Set((executions ?? []).map((item) => item.id));
+  const [{ data: executions }, { data: logs }, { data: approvals }] =
+    await Promise.all([
+      supabase
+        .from("agent_executions")
+        .select(
+          "id,status,trigger_type,goal,result,error,started_at,completed_at,created_at",
+        )
+        .eq("user_id", userId)
+        .eq("agent_id", agentId)
+        .order("created_at", { ascending: false })
+        .limit(20),
+      supabase
+        .from("agent_activity_logs")
+        .select("id,execution_id,level,event_type,summary,created_at")
+        .eq("user_id", userId)
+        .eq("agent_id", agentId)
+        .order("created_at", { ascending: false })
+        .limit(20),
+      supabase
+        .from("agent_approvals")
+        .select("id,execution_id,status,action_summary,tool_name,requested_at")
+        .eq("user_id", userId)
+        .eq("agent_id", agentId)
+        .order("requested_at", { ascending: false })
+        .limit(20),
+    ]);
+  const executionIds = (executions ?? []).map((item) => item.id);
+  const { data: steps } = executionIds.length
+    ? await supabase
+        .from("agent_execution_steps")
+        .select("id,execution_id,kind,status,tool_name,error,created_at")
+        .in("execution_id", executionIds)
+        .order("created_at", { ascending: false })
+        .limit(50)
+    : { data: [] };
   return {
     ok: true as const,
     activity: {
       executions: executions ?? [],
-      steps: (steps ?? []).filter((step) =>
-        executionIds.has(step.execution_id),
-      ),
+      steps: steps ?? [],
       logs: logs ?? [],
       approvals: approvals ?? [],
     },
@@ -749,6 +746,20 @@ function detectRequestedTool(prompt: string, assignedTools: string[]) {
   return null;
 }
 
+async function hasAssignedConnection(
+  userId: string,
+  agentId: string,
+  provider: string,
+) {
+  const connections = await listAgentConnections(userId, agentId);
+  return (
+    connections.ok &&
+    connections.connections.some(
+      (connection) => connection.provider === provider,
+    )
+  );
+}
+
 export async function testAgent(
   userId: string,
   agentId: string,
@@ -796,6 +807,69 @@ export async function testAgent(
       safeMode: true,
     },
   });
+
+  const requestedToolDefinition = requestedTool
+    ? toolByName(requestedTool)
+    : null;
+  if (
+    requestedToolDefinition?.provider &&
+    !(await hasAssignedConnection(
+      userId,
+      agentId,
+      requestedToolDefinition.provider,
+    ))
+  ) {
+    await supabase.from("agent_execution_steps").insert({
+      execution_id: execution.id,
+      sequence: 2,
+      kind: "verification",
+      status: "failed",
+      tool_name: requestedTool,
+      input: { provider: requestedToolDefinition.provider },
+      output: {
+        message:
+          "The requested provider tool requires a verified connection assigned to this agent.",
+      },
+      error: "assigned_connection_required",
+      completed_at: new Date().toISOString(),
+    });
+    await supabase
+      .from("agent_executions")
+      .update({
+        status: "failed",
+        error:
+          "The requested provider tool requires a verified connection assigned to this agent.",
+        result: {
+          requestedTool,
+          provider: requestedToolDefinition.provider,
+          message:
+            "Assign a verified Marketplace connection before testing this provider tool.",
+        },
+        completed_at: new Date().toISOString(),
+      })
+      .eq("id", execution.id);
+    await recordActivity(
+      userId,
+      agentId,
+      "test_failed",
+      "Test Agent stopped because an assigned verified connection is required.",
+      {
+        executionId: execution.id,
+        requestedTool,
+        provider: requestedToolDefinition.provider,
+      },
+    );
+    return {
+      ok: true as const,
+      result: {
+        status: "failed",
+        executionId: execution.id,
+        requestedTool,
+        message:
+          "Assign a verified Marketplace connection before testing this provider tool.",
+      },
+    };
+  }
 
   if (approvalRequired) {
     const { data: approval } = await supabase

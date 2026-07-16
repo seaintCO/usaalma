@@ -41,6 +41,7 @@ export const ALMA_SHELL_LABELS: Record<AlmaShellLanguage, AlmaShellLabels> = {
     documents: "Documents",
     fitness: "Fitness",
     crm: "CRM",
+    construction: "Construction",
     invoices: "Invoices",
     alma: "ALMA",
     images: "Images",
@@ -71,6 +72,7 @@ export const ALMA_SHELL_LABELS: Record<AlmaShellLanguage, AlmaShellLabels> = {
     documents: "Documentos",
     fitness: "Fitness",
     crm: "CRM",
+    construction: "Construccion",
     invoices: "Facturas",
     alma: "ALMA",
     images: "Imágenes",
@@ -91,6 +93,7 @@ const SHELL_WORKSPACE_RELEASES: AlmaWorkspaceReleaseOverrides = {
   launch: "beta",
   trader: "beta",
   agents: "beta",
+  construction: "beta",
 };
 
 type AlmaShellProps = {

@@ -6,6 +6,7 @@ import {
   CreditCard,
   FileText,
   FolderOpen,
+  Hammer,
   Home,
   ImageIcon,
   Mic,
@@ -202,6 +203,15 @@ export default function WorkspaceNavigation({
           release={releaseFor("crm", "active")}
           releaseLabel={releaseText(labels, releaseFor("crm", "active"))}
           onClick={() => onWorkspaceNavigate("crm")}
+        />
+        <WorkspaceButton
+          activeWorkspace={activeWorkspace}
+          itemKey="construction"
+          label={labels.construction}
+          icon={Hammer}
+          release={releaseFor("construction", "beta")}
+          releaseLabel={releaseText(labels, releaseFor("construction", "beta"))}
+          onClick={() => onWorkspaceNavigate("construction")}
         />
         <WorkspaceButton
           activeWorkspace={activeWorkspace}

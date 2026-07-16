@@ -7,6 +7,7 @@ export const WORKSPACE_ROUTES = {
   documents: "/documents",
   fitness: "/fitness",
   crm: "/crm",
+  construction: "/construction",
   invoicing: "/invoicing",
   images: "/images",
   creative: "/creative",

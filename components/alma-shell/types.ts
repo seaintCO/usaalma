@@ -21,6 +21,7 @@ export type AlmaShellLabels = {
   documents: string;
   fitness: string;
   crm: string;
+  construction: string;
   invoices: string;
   alma: string;
   images: string;

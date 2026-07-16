@@ -165,7 +165,7 @@ export default function DashboardPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState("");
   const [activeWorkspace, setActiveWorkspace] =
-    useState<AlmaWorkspaceNavigationKey>("chat");
+    useState<AlmaWorkspaceNavigationKey>(launchPrompt ? "chat" : "home");
   const [language, setLanguage] = useState<AlmaLanguage>("en");
   const [durableChatEnabled, setDurableChatEnabled] = useState(false);
   const t = almaText[language];
@@ -443,8 +443,10 @@ export default function DashboardPage() {
       const id = new URLSearchParams(window.location.search).get(
         "conversation",
       );
-      if (id) void loadConversation(id);
-      else {
+      if (id) {
+        setActiveWorkspace("chat");
+        void loadConversation(id);
+      } else {
         conversationRequest.current?.abort();
         setConversationId(null);
         setMessages([]);
@@ -608,8 +610,11 @@ export default function DashboardPage() {
 
         {activeWorkspace === "home" ? (
           <OperatingDashboard
+            conversations={history}
+            conversationStatuses={conversationStatuses}
             language={language}
             onAsk={() => setActiveWorkspace("chat")}
+            onConversationSelect={selectConversation}
           />
         ) : (
           <ChatWorkspace

@@ -4,13 +4,52 @@ import { FileText, FolderOpen, Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 import AlmaShell from "@/components/alma-shell/AlmaShell";
 import type { AlmaShellLanguage } from "@/components/alma-shell/types";
-import { DASHBOARD_ROUTE } from "@/lib/platform/workspaceRoutes";
+
+type DocumentRecord = {
+  id: string;
+  title: string;
+  content?: string | null;
+};
+
+function readStoredLanguage(): AlmaShellLanguage {
+  if (typeof window === "undefined") return "en";
+  const saved = window.localStorage.getItem("alma_language");
+  return saved === "en" || saved === "es" ? saved : "en";
+}
+
+const copy = {
+  en: {
+    title: "Documents",
+    subtitle: "Save important information so ALMA can use it as knowledge.",
+    add: "Add knowledge",
+    titlePlaceholder: "Document title",
+    contentPlaceholder:
+      "Paste content, policies, FAQs, processes, or important information...",
+    save: "Save document",
+    empty: "You do not have documents yet.",
+    noContent: "No content",
+  },
+  es: {
+    title: "Documentos",
+    subtitle:
+      "Guarda información importante para que ALMA pueda usarla como conocimiento.",
+    add: "Agregar conocimiento",
+    titlePlaceholder: "Título del documento",
+    contentPlaceholder:
+      "Pega aquí el contenido, políticas, FAQs, procesos o información importante...",
+    save: "Guardar documento",
+    empty: "No tienes documentos todavía.",
+    noContent: "Sin contenido",
+  },
+};
 
 export default function DocumentsPage() {
-  const [language, setLanguage] = useState<AlmaShellLanguage>("en");
-  const [documents, setDocuments] = useState<any[]>([]);
+  const [language, setLanguage] =
+    useState<AlmaShellLanguage>(readStoredLanguage);
+  const [documents, setDocuments] = useState<DocumentRecord[]>([]);
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
+  const t = copy[language];
 
   async function loadDocuments() {
     const res = await fetch("/api/documents/list");
@@ -33,9 +72,8 @@ export default function DocumentsPage() {
   }
 
   useEffect(() => {
-    const saved = localStorage.getItem("alma_language");
-    if (saved === "en" || saved === "es") setLanguage(saved);
-    loadDocuments();
+    const timer = window.setTimeout(() => void loadDocuments(), 0);
+    return () => window.clearTimeout(timer);
   }, []);
 
   function updateLanguage(next: AlmaShellLanguage) {
@@ -47,68 +85,58 @@ export default function DocumentsPage() {
     <AlmaShell
       language={language}
       activeWorkspace="documents"
-      title="Documentos"
+      title={t.title}
       onLanguageChange={updateLanguage}
     >
-      <div className="mx-auto max-w-6xl px-4 py-8 text-[#111111] md:px-6 md:py-10">
-        <a
-          href={DASHBOARD_ROUTE}
-          className="text-sm text-[#6B7280] hover:text-black"
-        >
-          â† Volver a ALMA
-        </a>
-
-        <div className="mt-8">
+      <div className="mx-auto w-full max-w-6xl px-3 py-4 text-[#111111] md:px-6 md:py-10">
+        <div>
           <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl border border-[#E5E7EB] bg-white">
             <FolderOpen className="h-5 w-5" />
           </div>
-          <h1 className="text-4xl font-medium tracking-tight">Documentos</h1>
-          <p className="mt-4 max-w-2xl text-[#6B7280]">
-            Guarda informaciÃ³n importante para que ALMA pueda usarla como
-            conocimiento.
-          </p>
+          <h1 className="text-4xl font-medium tracking-tight">{t.title}</h1>
+          <p className="mt-4 max-w-2xl text-[#6B7280]">{t.subtitle}</p>
         </div>
 
-        <div className="mt-8 rounded-[2rem] border border-[#E5E7EB] bg-white p-6">
-          <h2 className="text-2xl font-medium">Agregar conocimiento</h2>
+        <div className="mt-6 rounded-2xl border border-[#E5E7EB] bg-white p-4 md:mt-8 md:rounded-[2rem] md:p-6">
+          <h2 className="text-2xl font-medium">{t.add}</h2>
 
           <input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="TÃ­tulo del documento"
-            className="mt-6 w-full rounded-2xl border border-[#E5E7EB] bg-[#F7F7F8] px-4 py-3 outline-none"
+            placeholder={t.titlePlaceholder}
+            className="mt-6 w-full min-w-0 rounded-2xl border border-[#E5E7EB] bg-[#F7F7F8] px-4 py-3 outline-none"
           />
 
           <textarea
             value={content}
             onChange={(e) => setContent(e.target.value)}
-            placeholder="Pega aquÃ­ el contenido, polÃ­ticas, FAQs, procesos o informaciÃ³n importante..."
-            className="mt-4 min-h-40 w-full rounded-2xl border border-[#E5E7EB] bg-[#F7F7F8] p-4 outline-none"
+            placeholder={t.contentPlaceholder}
+            className="mt-4 min-h-40 w-full min-w-0 resize-none rounded-2xl border border-[#E5E7EB] bg-[#F7F7F8] p-4 outline-none"
           />
 
           <button
             onClick={createDocument}
-            className="mt-5 flex items-center gap-2 rounded-full bg-black px-5 py-3 text-sm font-medium text-white"
+            className="mt-5 flex w-full items-center justify-center gap-2 rounded-full bg-black px-5 py-3 text-sm font-medium text-white sm:w-auto"
           >
-            <Plus className="h-4 w-4" /> Guardar documento
+            <Plus className="h-4 w-4" /> {t.save}
           </button>
         </div>
 
-        <div className="mt-8 grid gap-5 md:grid-cols-3">
+        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {documents.length === 0 ? (
-            <div className="rounded-[1.5rem] border border-[#E5E7EB] bg-white p-6 text-sm text-[#6B7280]">
-              No tienes documentos todavÃ­a.
+            <div className="rounded-2xl border border-[#E5E7EB] bg-white p-5 text-sm text-[#6B7280]">
+              {t.empty}
             </div>
           ) : (
             documents.map((doc) => (
               <div
                 key={doc.id}
-                className="rounded-[1.5rem] border border-[#E5E7EB] bg-white p-6"
+                className="min-w-0 rounded-2xl border border-[#E5E7EB] bg-white p-5"
               >
                 <FileText className="mb-5 h-5 w-5 text-[#6B7280]" />
-                <h3 className="font-medium">{doc.title}</h3>
+                <h3 className="truncate font-medium">{doc.title}</h3>
                 <p className="mt-3 line-clamp-5 text-sm leading-6 text-[#6B7280]">
-                  {doc.content || "Sin contenido"}
+                  {doc.content || t.noContent}
                 </p>
               </div>
             ))

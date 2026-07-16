@@ -47,9 +47,8 @@ function renderMessage(content: string) {
           alt="ALMA generated image"
         />
         <p className="text-[#6B7280]">
-          Imagen generada. Puedes pedirme cambios como: Ã¢â‚¬Å“hazlo mÃƒÂ¡s
-          realistaÃ¢â‚¬Â, Ã¢â‚¬Å“en 16:9Ã¢â‚¬Â, Ã¢â‚¬Å“fondo negroÃ¢â‚¬Â, o
-          Ã¢â‚¬Å“estilo anuncio premiumÃ¢â‚¬Â.
+          Imagen generada. Puedes pedirme cambios como: “hazlo más realista”,
+          “en 16:9”, “fondo negro”, o “estilo anuncio premium”.
         </p>
       </div>
     );

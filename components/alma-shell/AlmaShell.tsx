@@ -73,14 +73,14 @@ export const ALMA_SHELL_LABELS: Record<AlmaShellLanguage, AlmaShellLabels> = {
     crm: "CRM",
     invoices: "Facturas",
     alma: "ALMA",
-    images: "Imagenes",
+    images: "Imágenes",
     creativeStudio: "Estudio Creativo",
     launchStudio: "Launch Studio",
     trader: "Trader",
     agentBuilder: "Agent Builder",
     marketplace: "Marketplace",
     billing: "Pagos",
-    settings: "Configuracion",
+    settings: "Configuración",
   },
 };
 
@@ -131,7 +131,7 @@ export default function AlmaShell({
   }
 
   return (
-    <main className="flex h-[100dvh] w-full overflow-hidden bg-white text-[#111111]">
+    <main className="flex h-[100dvh] w-full max-w-full overflow-hidden bg-white text-[#111111]">
       <div className="hidden md:block">
         <AlmaDesktopSidebar
           language={language}
@@ -175,7 +175,7 @@ export default function AlmaShell({
           onMenuClick={() => setMobileOpen(true)}
           onAskAlma={openDashboard}
         />
-        <div className="min-h-0 flex-1 overflow-y-auto bg-[#F7F7F8]">
+        <div className="min-h-0 w-full max-w-full flex-1 overflow-y-auto bg-[#F7F7F8]">
           {children}
         </div>
       </section>

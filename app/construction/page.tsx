@@ -191,7 +191,7 @@ const copy = {
     created: "Created",
     updated: "Updated",
     disclaimer:
-      "Estimates only. Verify all field measurements. Not engineering or architectural advice. Not code-compliance approval.",
+      "Estimates only. Verify all field measurements. Not engineering or architectural advice. Not code-compliance approval. Not an automated professional takeoff.",
     nextStep:
       "Next: add plans/photos and measurements after the next checkpoint is approved.",
     masonry: "Masonry",
@@ -428,7 +428,7 @@ const copy = {
     created: "Creado",
     updated: "Actualizado",
     disclaimer:
-      "Solo estimaciones. Verifica todas las medidas en campo. No es asesoria de ingenieria o arquitectura. No es aprobacion de codigo.",
+      "Solo estimaciones. Verifica todas las medidas en campo. No es asesoria de ingenieria o arquitectura. No es aprobacion de codigo. No es un takeoff profesional automatizado.",
     nextStep:
       "Siguiente: agrega planos/fotos y medidas despues de aprobar el proximo checkpoint.",
     masonry: "Mamposteria",

@@ -2,6 +2,7 @@ import { SubscriptionRepository } from "@/lib/db/repositories/billing/subscripti
 import { IntegrationRepository } from "@/lib/db/repositories/integrations/integration.repository";
 import { ModuleRepository } from "@/lib/db/repositories/modules/module.repository";
 import { OAuthRepository } from "@/lib/db/repositories/oauth/oauth.repository";
+import { WORKSPACE_ROUTES } from "@/lib/platform/workspaceRoutes";
 import type {
   MarketplaceAccessStatus,
   MarketplaceCatalogResponse,
@@ -98,6 +99,24 @@ const INTERNAL_MODULES: readonly InternalModuleDefinition[] = [
     entitlementKey: "crm",
     installKey: "crm",
     requiredPlan: "business",
+  },
+  {
+    key: "construction",
+    name: "Construction Blueprint",
+    category: "Business",
+    description:
+      "Manual project takeoff and crew documentation with plan/photo upload, verified measurements, material estimates, scope notes, crew instructions, and private PDF export.",
+    route: WORKSPACE_ROUTES.construction,
+    releaseStatus: "beta",
+    requiredPlan: "business",
+    installKey: "construction",
+    limitations: [
+      "No automatic takeoff, OCR, or scale detection.",
+      "No engineering, architectural, or code-compliance approval.",
+      "No supplier pricing or ordering.",
+      "Measurements require field verification.",
+      "Quantity and waste assumptions may vary.",
+    ],
   },
   {
     key: "invoicing",

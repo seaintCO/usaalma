@@ -9,6 +9,7 @@ import AlmaShell from "@/components/alma-shell/AlmaShell";
 import type { AlmaShellLanguage } from "@/components/alma-shell/types";
 import {
   getMarketplaceCopy,
+  localizeMarketplaceItem,
   MARKETPLACE_CATEGORIES,
   type MarketplaceLanguage,
 } from "@/components/marketplace/marketplaceCopy";
@@ -244,9 +245,17 @@ export default function MarketplacePage() {
     [copy.unavailable, loadCatalog, mutatingKey],
   );
 
+  const localizedItems = useMemo(
+    () =>
+      (catalog?.items ?? []).map((item) =>
+        localizeMarketplaceItem(item, language),
+      ),
+    [catalog, language],
+  );
+
   const filteredItems = useMemo(() => {
     const normalizedSearch = search.trim().toLocaleLowerCase();
-    return (catalog?.items ?? []).filter((item) => {
+    return localizedItems.filter((item) => {
       const searchable =
         `${item.name} ${item.description} ${item.category}`.toLocaleLowerCase();
       const matchesSearch =
@@ -263,7 +272,7 @@ export default function MarketplacePage() {
         matchesSearch && matchesCategory && matchesRelease && matchesStatus
       );
     });
-  }, [catalog, category, release, search, status]);
+  }, [category, localizedItems, release, search, status]);
 
   const modules = filteredItems.filter(
     (item) => item.itemType === "internal_module",
@@ -288,7 +297,7 @@ export default function MarketplacePage() {
             href={DASHBOARD_ROUTE}
             className="text-sm text-[#6B7280] hover:text-black"
           >
-            ← {copy.back}
+            &larr; {copy.back}
           </a>
 
           <div className="mt-10">

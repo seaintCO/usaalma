@@ -3,6 +3,7 @@ import type {
   MarketplaceCategory,
   MarketplaceConnectionStatus,
   MarketplaceInstallStatus,
+  MarketplaceItem,
   MarketplaceReleaseStatus,
 } from "@/lib/platform/marketplace/types";
 
@@ -22,13 +23,13 @@ const COPY = {
     release: "Release",
     status: "Status",
     all: "All",
-    loading: "Loading your marketplace…",
+    loading: "Loading your marketplace...",
     retry: "Retry",
     empty: "No marketplace items match these filters.",
     unavailable: "The marketplace is temporarily unavailable.",
     open: "Open",
     install: "Install",
-    installing: "Installing…",
+    installing: "Installing...",
     installed: "Installed",
     upgrade: "Upgrade Required",
     comingSoon: "Coming Soon",
@@ -56,45 +57,45 @@ const COPY = {
     back: "Volver a ALMA",
     eyebrow: "Marketplace",
     title:
-      "Conecta las partes de ALMA que están listas para tu espacio de trabajo.",
+      "Conecta las partes de ALMA que estan listas para tu espacio de trabajo.",
     description:
-      "Explora módulos reales de ALMA y conexiones de proveedores. La disponibilidad refleja tu plan actual y el estado guardado de tu espacio.",
-    modules: "Módulos de ALMA",
+      "Explora modulos reales de ALMA y conexiones de proveedores. La disponibilidad refleja tu plan actual y el estado guardado de tu espacio.",
+    modules: "Modulos de ALMA",
     connections: "Conexiones",
     search: "Buscar en Marketplace",
-    category: "Categoría",
+    category: "Categoria",
     release: "Lanzamiento",
     status: "Estado",
     all: "Todos",
-    loading: "Cargando tu Marketplace…",
+    loading: "Cargando tu Marketplace...",
     retry: "Reintentar",
-    empty: "Ningún elemento coincide con estos filtros.",
-    unavailable: "Marketplace no está disponible temporalmente.",
+    empty: "Ningun elemento coincide con estos filtros.",
+    unavailable: "Marketplace no esta disponible temporalmente.",
     open: "Abrir",
     install: "Instalar",
-    installing: "Instalando…",
+    installing: "Instalando...",
     installed: "Instalado",
     upgrade: "Requiere mejora",
-    comingSoon: "Próximamente",
+    comingSoon: "Proximamente",
     connect: "Conectar",
     connected: "Conectado",
     disconnect: "Desconectar",
     reconnect: "Reconectar",
-    requiresSetup: "Requiere configuración",
+    requiresSetup: "Requiere configuracion",
     details: "Detalles",
     close: "Cerrar",
     limitations: "Limitaciones",
     permissions: "Permisos",
-    setup: "Requisitos de configuración",
+    setup: "Requisitos de configuracion",
     requiredPlan: "Plan requerido",
     included: "Incluido",
     available: "Disponible",
     active: "Activo",
     beta: "Beta",
-    connection: "Conexión",
-    module: "Módulo",
+    connection: "Conexion",
+    module: "Modulo",
     account: "Cuenta conectada",
-    installFailed: "ALMA no pudo instalar este módulo. Inténtalo de nuevo.",
+    installFailed: "ALMA no pudo instalar este modulo. Intentalo de nuevo.",
   },
 } as const;
 
@@ -164,3 +165,45 @@ export const MARKETPLACE_CATEGORIES: MarketplaceCategory[] = [
   "Communication",
   "Developer",
 ];
+
+const ITEM_COPY: Partial<
+  Record<
+    MarketplaceLanguage,
+    Partial<Record<string, Pick<MarketplaceItem, "name" | "description">>>
+  >
+> = {
+  es: {
+    construction: {
+      name: "Construction Blueprint",
+      description:
+        "Takeoff manual de proyectos y documentacion de equipo con planos/fotos, medidas verificadas, estimaciones de materiales, alcance, instrucciones de equipo y PDF privado.",
+    },
+  },
+};
+
+const LIMITATION_COPY: Partial<
+  Record<MarketplaceLanguage, Partial<Record<string, string[]>>>
+> = {
+  es: {
+    construction: [
+      "Sin takeoff automatico, OCR ni deteccion de escala.",
+      "No es aprobacion de ingenieria, arquitectura ni codigo.",
+      "Sin precios de proveedores ni ordenes de compra.",
+      "Las medidas requieren verificacion en campo.",
+      "Las cantidades y factores de desperdicio pueden variar.",
+    ],
+  },
+};
+
+export function localizeMarketplaceItem(
+  item: MarketplaceItem,
+  language: MarketplaceLanguage,
+): MarketplaceItem {
+  const itemCopy = ITEM_COPY[language]?.[item.key];
+  const limitations = LIMITATION_COPY[language]?.[item.key];
+  return {
+    ...item,
+    ...(itemCopy ?? {}),
+    ...(limitations ? { limitations } : {}),
+  };
+}

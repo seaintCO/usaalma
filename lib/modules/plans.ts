@@ -1,4 +1,4 @@
-export function allowedModulesForPlan(plan:string) {
+export function allowedModulesForPlan(plan: string) {
   if (plan === "business") {
     return [
       "planner",
@@ -7,6 +7,7 @@ export function allowedModulesForPlan(plan:string) {
       "documents",
       "image_generator",
       "crm",
+      "construction",
       "invoicing",
       "workflows",
       "workspaces",
@@ -33,7 +34,6 @@ export function allowedModulesForPlan(plan:string) {
   return [];
 }
 
-export function moduleAllowed(plan:string, moduleKey:string) {
+export function moduleAllowed(plan: string, moduleKey: string) {
   return allowedModulesForPlan(plan).includes(moduleKey);
 }
-

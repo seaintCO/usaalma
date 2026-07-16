@@ -12,12 +12,12 @@ export type AlmaRoute =
   | "fitness"
   | "invoice";
 
-export async function classifyAlmaRoute(message:string):Promise<AlmaRoute> {
+export async function classifyAlmaRoute(message: string): Promise<AlmaRoute> {
   if (!process.env.OPENAI_API_KEY) return "chat";
 
   const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-  const result:any = await client.responses.create({
+  const result = await client.responses.create({
     model: (await import("@/lib/ai/models")).OPENAI_MODELS.router,
     input: `
 Classify the user's intent for ALMA.
@@ -36,7 +36,7 @@ invoice
 
 Rules:
 - If the user asks to translate, rewrite, explain, continue, or respond normally, return chat.
-- If user says "en espaÃ±ol", "in Spanish", or "translate", return chat.
+- If user says "en espanol", "in Spanish", or "translate", return chat.
 - Only return finance_analysis if they clearly ask about trading, markets, stocks, crypto, calls, puts, charts, SPY, SPX, AAPL, etc.
 - Only return image_generate if they clearly ask to create/generate/draw/render an image.
 - Only return image_edit if they ask to modify an uploaded image.
@@ -44,7 +44,7 @@ Rules:
 
 User message:
 ${message}
-`
+`,
   });
 
   const label = String(result.output_text || "chat").trim();
@@ -62,6 +62,5 @@ ${message}
     "invoice",
   ];
 
-  return allowed.includes(label) ? label as AlmaRoute : "chat";
+  return allowed.includes(label) ? (label as AlmaRoute) : "chat";
 }
-

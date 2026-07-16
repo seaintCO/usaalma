@@ -1,5 +1,6 @@
 import {
   Activity,
+  Bot,
   Calendar,
   CheckCircle2,
   CreditCard,
@@ -264,6 +265,15 @@ export default function WorkspaceNavigation({
           release={releaseFor("trader", "pro")}
           releaseLabel={releaseText(labels, releaseFor("trader", "pro"))}
           onClick={() => onWorkspaceNavigate("trader")}
+        />
+        <WorkspaceButton
+          activeWorkspace={activeWorkspace}
+          itemKey="agents"
+          label={labels.agentBuilder}
+          icon={Bot}
+          release={releaseFor("agents", "beta")}
+          releaseLabel={releaseText(labels, releaseFor("agents", "beta"))}
+          onClick={() => onWorkspaceNavigate("agents")}
         />
       </div>
 

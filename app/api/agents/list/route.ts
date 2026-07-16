@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
-import { ALMA_AGENTS } from "@/lib/ai/agents/agents";
+import { agentRoute } from "@/lib/alma/agent-builder/http";
+import { listAgents } from "@/lib/alma/agent-builder/service";
 
 export async function GET() {
-  return NextResponse.json(ALMA_AGENTS);
+  return agentRoute(null, async (userId) =>
+    NextResponse.json(await listAgents(userId)),
+  );
 }

@@ -47,6 +47,7 @@ export const ALMA_SHELL_LABELS: Record<AlmaShellLanguage, AlmaShellLabels> = {
     creativeStudio: "Creative Studio",
     launchStudio: "Launch Studio",
     trader: "Trader",
+    agentBuilder: "Agent Builder",
     marketplace: "Marketplace",
     billing: "Billing",
     settings: "Settings",
@@ -76,6 +77,7 @@ export const ALMA_SHELL_LABELS: Record<AlmaShellLanguage, AlmaShellLabels> = {
     creativeStudio: "Estudio Creativo",
     launchStudio: "Launch Studio",
     trader: "Trader",
+    agentBuilder: "Agent Builder",
     marketplace: "Marketplace",
     billing: "Pagos",
     settings: "Configuracion",
@@ -88,6 +90,7 @@ const SHELL_WORKSPACE_RELEASES: AlmaWorkspaceReleaseOverrides = {
   creative: "beta",
   launch: "beta",
   trader: "beta",
+  agents: "beta",
 };
 
 type AlmaShellProps = {

@@ -27,6 +27,7 @@ export type AlmaShellLabels = {
   creativeStudio: string;
   launchStudio: string;
   trader: string;
+  agentBuilder: string;
   marketplace: string;
   billing: string;
   settings: string;

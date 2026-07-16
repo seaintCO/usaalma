@@ -151,6 +151,21 @@ const INTERNAL_MODULES: readonly InternalModuleDefinition[] = [
     limitations: ["No live prices, brokerage execution, or investment advice."],
   },
   {
+    key: "agent_builder",
+    name: "Agent Builder",
+    category: "Developer",
+    description:
+      "Create persisted ALMA agents with scoped tools and approvals.",
+    route: "/agents",
+    releaseStatus: "beta",
+    requiredPlan: "business",
+    limitations: [
+      "No autonomous schedules.",
+      "No multi-agent delegation.",
+      "No unrestricted external actions.",
+    ],
+  },
+  {
     key: "automations",
     name: "Automations",
     category: "Developer",

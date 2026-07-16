@@ -23,8 +23,12 @@ import { useEffect, useMemo, useState } from "react";
 import AlmaShell from "@/components/alma-shell/AlmaShell";
 import type { AlmaShellLanguage } from "@/components/alma-shell/types";
 import { AnnotationWorkspace } from "@/components/construction/AnnotationWorkspace";
+import { ConstructionSummary } from "@/components/construction/ConstructionSummary";
+import { CrewWorkspace } from "@/components/construction/CrewWorkspace";
 import { FileUpload } from "@/components/construction/FileUpload";
+import { MaterialsWorkspace } from "@/components/construction/MaterialsWorkspace";
 import { MeasurementCalculator } from "@/components/construction/MeasurementCalculator";
+import { ScopeWorkspace } from "@/components/construction/ScopeWorkspace";
 
 type RequestState = "idle" | "loading" | "success" | "error";
 type ProjectType =
@@ -240,6 +244,7 @@ const copy = {
     quantity: "Quantity",
     unit: "Unit",
     waste: "Waste",
+    wasteFactor: "Waste Factor",
     label: "Label",
     linkedPlan: "Plan or photo",
     noLinkedPlan: "No linked plan",
@@ -248,7 +253,9 @@ const copy = {
     estimate: "Estimate",
     formula: "Formula",
     loadingMeasurements: "Loading measurements",
+    loadingMaterials: "Loading materials",
     noMeasurements: "No measurements yet.",
+    noMaterials: "No materials yet.",
     measurementLoadError: "Measurements could not be loaded.",
     measurementSaveError:
       "Measurement could not be saved. Your values are still here.",
@@ -294,6 +301,70 @@ const copy = {
     textLabelRequired: "Text annotations require a label.",
     unsavedChanges: "You have unsaved annotation changes.",
     confirmDeleteAnnotation: "Delete this selected annotation on Save?",
+    addMaterial: "Add Material",
+    editMaterial: "Edit Material",
+    template: "Template",
+    manualItem: "Manual item",
+    conversionFactor: "Conversion Factor",
+    calculatedQuantity: "Calculated Quantity",
+    manualOverride: "Manual Override",
+    finalQuantity: "Final Quantity",
+    materialLoadError: "Materials could not be loaded.",
+    materialSaveError:
+      "Material could not be saved. Your values are still here.",
+    materialDeleteError: "Material could not be deleted.",
+    invalidMaterial: "Material values are invalid.",
+    confirmDeleteMaterial: "Tap Delete again to remove this material item.",
+    materialDisclaimer:
+      "Estimates only. Verify field measurements before ordering. Conversion factors and waste assumptions may vary. Not engineering or architectural advice.",
+    scopeSections: "Scope Sections",
+    projectSummary: "Project Summary",
+    includedWork: "Included Work",
+    exclusions: "Exclusions",
+    assumptions: "Assumptions",
+    materialNotes: "Material Notes",
+    accessSiteNotes: "Access / Site Notes",
+    customerNotes: "Customer Notes",
+    editSection: "Edit Section",
+    moveUp: "Move Up",
+    moveDown: "Move Down",
+    clearSection: "Clear Section",
+    loadingScope: "Loading scope",
+    noScope: "No scope content yet.",
+    scopeLoadError: "Scope could not be loaded.",
+    scopeSaveError: "Scope could not be saved. Your draft is still here.",
+    scopeDisclaimer:
+      "Use user-entered content only. ALMA does not generate legal scope language or code-compliance statements.",
+    addInstruction: "Add Instruction",
+    editInstruction: "Edit Instruction",
+    checklist: "Checklist",
+    workSequence: "Work Sequence",
+    safetyNote: "Safety Note",
+    assignedCrew: "Assigned Crew",
+    instructionTitle: "Instruction title",
+    instructionBody: "Instruction / body",
+    linkedMaterial: "Linked material",
+    noLinkedMaterial: "No linked material",
+    loadingCrew: "Loading crew instructions",
+    noCrew: "No crew instructions yet.",
+    crewLoadError: "Crew instructions could not be loaded.",
+    crewSaveError:
+      "Crew instructions could not be saved. Your draft is still here.",
+    crewDeleteConfirm: "Tap Delete again to remove this instruction.",
+    createTask: "Create Task",
+    addToPlanner: "Add to Planner",
+    taskCreated: "Task created.",
+    plannerAdded: "Planner item added.",
+    taskPlannerError: "The canonical record could not be created.",
+    crewDisclaimer:
+      "Crew notes are user-entered field instructions. No payroll, GPS, live collaboration, or compliance certification is included.",
+    summaryCounts: "Project Summary",
+    filesCount: "Plans / Photos",
+    measurementsCount: "Measurements",
+    materialsCount: "Materials",
+    scopeCount: "Scope Sections",
+    crewCount: "Crew Items",
+    annotationsCount: "Annotations",
   },
   es: {
     title: "Construccion",
@@ -400,6 +471,7 @@ const copy = {
     quantity: "Cantidad",
     unit: "Unidad",
     waste: "Desperdicio",
+    wasteFactor: "Factor de desperdicio",
     label: "Etiqueta",
     linkedPlan: "Plano o foto",
     noLinkedPlan: "Sin plano vinculado",
@@ -408,7 +480,9 @@ const copy = {
     estimate: "Estimacion",
     formula: "Formula",
     loadingMeasurements: "Cargando medidas",
+    loadingMaterials: "Cargando materiales",
     noMeasurements: "Aun no hay medidas.",
+    noMaterials: "Aun no hay materiales.",
     measurementLoadError: "No se pudieron cargar las medidas.",
     measurementSaveError:
       "No se pudo guardar la medida. Tus valores siguen aqui.",
@@ -454,6 +528,70 @@ const copy = {
     textLabelRequired: "Las anotaciones de texto requieren etiqueta.",
     unsavedChanges: "Tienes cambios de anotaciones sin guardar.",
     confirmDeleteAnnotation: "Eliminar esta anotacion seleccionada al guardar?",
+    addMaterial: "Agregar material",
+    editMaterial: "Editar material",
+    template: "Plantilla",
+    manualItem: "Item manual",
+    conversionFactor: "Factor de conversion",
+    calculatedQuantity: "Cantidad calculada",
+    manualOverride: "Ajuste manual",
+    finalQuantity: "Cantidad final",
+    materialLoadError: "No se pudieron cargar los materiales.",
+    materialSaveError:
+      "No se pudo guardar el material. Tus valores siguen aqui.",
+    materialDeleteError: "No se pudo eliminar el material.",
+    invalidMaterial: "Los valores del material no son validos.",
+    confirmDeleteMaterial: "Toca Eliminar otra vez para quitar este material.",
+    materialDisclaimer:
+      "Solo estimaciones. Verifica las medidas antes de ordenar. Los factores y desperdicios pueden variar. No es asesoria de ingenieria o arquitectura.",
+    scopeSections: "Secciones de alcance",
+    projectSummary: "Resumen del proyecto",
+    includedWork: "Trabajo incluido",
+    exclusions: "Exclusiones",
+    assumptions: "Supuestos",
+    materialNotes: "Notas de materiales",
+    accessSiteNotes: "Acceso / sitio",
+    customerNotes: "Notas del cliente",
+    editSection: "Editar seccion",
+    moveUp: "Subir",
+    moveDown: "Bajar",
+    clearSection: "Limpiar seccion",
+    loadingScope: "Cargando alcance",
+    noScope: "Sin contenido de alcance todavia.",
+    scopeLoadError: "No se pudo cargar el alcance.",
+    scopeSaveError: "No se pudo guardar el alcance. Tu borrador sigue aqui.",
+    scopeDisclaimer:
+      "Usa solo contenido ingresado por el usuario. ALMA no genera lenguaje legal ni declaraciones de codigo.",
+    addInstruction: "Agregar instruccion",
+    editInstruction: "Editar instruccion",
+    checklist: "Checklist",
+    workSequence: "Secuencia de trabajo",
+    safetyNote: "Nota de seguridad",
+    assignedCrew: "Equipo asignado",
+    instructionTitle: "Titulo de instruccion",
+    instructionBody: "Instruccion / detalle",
+    linkedMaterial: "Material vinculado",
+    noLinkedMaterial: "Sin material vinculado",
+    loadingCrew: "Cargando instrucciones",
+    noCrew: "Sin instrucciones todavia.",
+    crewLoadError: "No se pudieron cargar las instrucciones.",
+    crewSaveError:
+      "No se pudieron guardar las instrucciones. Tu borrador sigue aqui.",
+    crewDeleteConfirm: "Toca Eliminar otra vez para quitar esta instruccion.",
+    createTask: "Crear tarea",
+    addToPlanner: "Agregar al planner",
+    taskCreated: "Tarea creada.",
+    plannerAdded: "Item agregado al planner.",
+    taskPlannerError: "No se pudo crear el registro canonico.",
+    crewDisclaimer:
+      "Las notas de equipo son instrucciones ingresadas por el usuario. No incluye nomina, GPS, colaboracion en vivo ni certificacion de cumplimiento.",
+    summaryCounts: "Resumen del proyecto",
+    filesCount: "Planos / Fotos",
+    measurementsCount: "Medidas",
+    materialsCount: "Materiales",
+    scopeCount: "Secciones",
+    crewCount: "Instrucciones",
+    annotationsCount: "Anotaciones",
   },
 };
 
@@ -1158,6 +1296,22 @@ function ProjectDetail({
       ) : workflowStep === "annotations" ? (
         <div className="mt-5">
           <AnnotationWorkspace projectId={project.id} text={text} />
+        </div>
+      ) : workflowStep === "materials" ? (
+        <div className="mt-5">
+          <MaterialsWorkspace projectId={project.id} text={text} />
+        </div>
+      ) : workflowStep === "scope" ? (
+        <div className="mt-5">
+          <ScopeWorkspace projectId={project.id} text={text} />
+        </div>
+      ) : workflowStep === "crew" ? (
+        <div className="mt-5">
+          <CrewWorkspace projectId={project.id} text={text} />
+        </div>
+      ) : workflowStep === "preview" ? (
+        <div className="mt-5">
+          <ConstructionSummary projectId={project.id} text={text} />
         </div>
       ) : (
         <div className="mt-5 rounded-3xl border border-dashed border-[#D1D5DB] bg-[#F7F7F8] p-6">

@@ -6,6 +6,7 @@ import {
   type ConstructionMeasurementType,
   type ConstructionUnit,
 } from "@/lib/construction/calculations";
+import { isCompatibleMaterialSource } from "@/lib/construction/materials";
 import {
   constructionAnnotationTypes,
   constructionFileLimits,
@@ -47,6 +48,28 @@ type ConstructionCrewInput = {
 type MeasurementSummaryRow = {
   measurement_type: string;
   adjusted_total?: number | string | null;
+};
+
+type ConstructionMeasurementRow = {
+  id: string;
+  measurement_type: string;
+};
+
+type ConstructionMaterialRow = {
+  id: string;
+  unit?: string | null;
+  calculated_quantity?: number | string | null;
+  manual_quantity_override?: number | string | null;
+};
+
+type CrewChecklistItem = {
+  id?: string;
+  title?: string;
+  body?: string;
+  completed?: boolean;
+  measurementId?: string | null;
+  materialId?: string | null;
+  planFileId?: string | null;
 };
 
 function normalizeProject(input: ConstructionProjectInput) {
@@ -98,6 +121,43 @@ function assertCoordinate(value: number, field: string) {
   if (!Number.isFinite(value) || value < 0 || value > 1) {
     throw new Error(`${field} must be between 0 and 1`);
   }
+}
+
+function assertNonNegativeFinite(
+  value: number | null | undefined,
+  field: string,
+) {
+  if (value === null || value === undefined) return;
+  if (!Number.isFinite(value) || value < 0) {
+    throw new Error(`invalid_${field}`);
+  }
+}
+
+function normalizeCrewChecklist(input: unknown): CrewChecklistItem[] {
+  if (!Array.isArray(input)) return [];
+  return input
+    .filter((item): item is Record<string, unknown> =>
+      Boolean(item && typeof item === "object"),
+    )
+    .map((item, index) => ({
+      id: typeof item.id === "string" ? item.id : crypto.randomUUID(),
+      title:
+        typeof item.title === "string"
+          ? item.title.slice(0, 180)
+          : `Item ${index + 1}`,
+      body: typeof item.body === "string" ? item.body.slice(0, 2000) : "",
+      completed: item.completed === true,
+      measurementId:
+        typeof item.measurementId === "string" ? item.measurementId : null,
+      materialId: typeof item.materialId === "string" ? item.materialId : null,
+      planFileId: typeof item.planFileId === "string" ? item.planFileId : null,
+    }));
+}
+
+function normalizeReferenceArray(input: unknown) {
+  return Array.isArray(input)
+    ? input.filter((value): value is string => typeof value === "string")
+    : [];
 }
 
 export class ConstructionRepository {
@@ -455,8 +515,31 @@ export class ConstructionRepository {
     input: ConstructionMaterialInput,
   ) {
     await this.assertProject(userId, projectId);
+    assertNonNegativeFinite(input.conversionFactor ?? 1, "conversion_factor");
+    assertNonNegativeFinite(
+      input.calculatedQuantity ?? 0,
+      "calculated_quantity",
+    );
+    assertNonNegativeFinite(
+      input.manualQuantityOverride,
+      "manual_quantity_override",
+    );
+    assertNonNegativeFinite(input.wasteFactor ?? 0, "waste_factor");
+    if ((input.wasteFactor ?? 0) > 100) throw new Error("invalid_waste_factor");
     if (input.measurementId) {
-      await this.assertMeasurement(userId, projectId, input.measurementId);
+      const measurement = await this.assertMeasurement(
+        userId,
+        projectId,
+        input.measurementId,
+      );
+      if (
+        !isCompatibleMaterialSource(
+          measurement.measurement_type,
+          input.sourceMeasurementType,
+        )
+      ) {
+        throw new Error("invalid_material_measurement_type");
+      }
     }
     const { data, error } = await (
       await createClient()
@@ -496,12 +579,42 @@ export class ConstructionRepository {
       .eq("user_id", userId)
       .maybeSingle();
     if (!existing) return null;
-    if (input.measurementId) {
-      await this.assertMeasurement(
+    const nextMeasurementId =
+      input.measurementId === undefined
+        ? existing.measurement_id
+        : input.measurementId;
+    const nextSourceMeasurementType =
+      input.sourceMeasurementType === undefined
+        ? existing.source_measurement_type
+        : input.sourceMeasurementType;
+    assertNonNegativeFinite(input.conversionFactor, "conversion_factor");
+    assertNonNegativeFinite(input.calculatedQuantity, "calculated_quantity");
+    assertNonNegativeFinite(
+      input.manualQuantityOverride,
+      "manual_quantity_override",
+    );
+    assertNonNegativeFinite(input.wasteFactor, "waste_factor");
+    if (
+      input.wasteFactor !== undefined &&
+      input.wasteFactor !== null &&
+      input.wasteFactor > 100
+    ) {
+      throw new Error("invalid_waste_factor");
+    }
+    if (nextMeasurementId) {
+      const measurement = await this.assertMeasurement(
         userId,
         existing.project_id,
-        input.measurementId,
+        nextMeasurementId,
       );
+      if (
+        !isCompatibleMaterialSource(
+          measurement.measurement_type,
+          nextSourceMeasurementType,
+        )
+      ) {
+        throw new Error("invalid_material_measurement_type");
+      }
     }
     const patch: Record<string, unknown> = {};
     if (input.templateId !== undefined) patch.template_id = input.templateId;
@@ -747,6 +860,30 @@ export class ConstructionRepository {
     input: ConstructionCrewInput,
   ) {
     await this.assertProject(userId, projectId);
+    const checklist = normalizeCrewChecklist(input.checklist);
+    const measurementReferences = normalizeReferenceArray(
+      input.measurementReferences,
+    );
+    const planFileReferences = normalizeReferenceArray(
+      input.planFileReferences,
+    );
+    for (const item of checklist) {
+      if (item.measurementId) {
+        await this.assertMeasurement(userId, projectId, item.measurementId);
+      }
+      if (item.materialId) {
+        await this.assertMaterial(userId, projectId, item.materialId);
+      }
+      if (item.planFileId) {
+        await this.assertPlanFile(userId, projectId, item.planFileId);
+      }
+    }
+    for (const measurementId of measurementReferences) {
+      await this.assertMeasurement(userId, projectId, measurementId);
+    }
+    for (const planFileId of planFileReferences) {
+      await this.assertPlanFile(userId, projectId, planFileId);
+    }
     const { data, error } = await (
       await createClient()
     )
@@ -755,16 +892,12 @@ export class ConstructionRepository {
         {
           user_id: userId,
           project_id: projectId,
-          checklist: Array.isArray(input.checklist) ? input.checklist : [],
+          checklist,
           work_sequence: input.workSequence ?? input.work_sequence ?? null,
-          measurement_references: Array.isArray(input.measurementReferences)
-            ? input.measurementReferences
-            : [],
+          measurement_references: measurementReferences,
           material_summary_notes:
             input.materialSummaryNotes ?? input.material_summary_notes ?? null,
-          plan_file_references: Array.isArray(input.planFileReferences)
-            ? input.planFileReferences
-            : [],
+          plan_file_references: planFileReferences,
           user_safety_notes:
             input.userSafetyNotes ?? input.user_safety_notes ?? null,
           assigned_crew_text:
@@ -780,13 +913,15 @@ export class ConstructionRepository {
 
   static async getSummary(userId: string, projectId: string) {
     const project = await this.assertProject(userId, projectId);
-    const [files, measurements, materials, scope, crew] = await Promise.all([
-      this.listFiles(userId, projectId),
-      this.listMeasurements(userId, projectId),
-      this.listMaterials(userId, projectId),
-      this.listScope(userId, projectId),
-      this.getCrewInstructions(userId, projectId),
-    ]);
+    const [files, measurements, materials, scope, crew, annotations] =
+      await Promise.all([
+        this.listFiles(userId, projectId),
+        this.listMeasurements(userId, projectId),
+        this.listMaterials(userId, projectId),
+        this.listScope(userId, projectId),
+        this.getCrewInstructions(userId, projectId),
+        this.listAnnotations(userId, projectId),
+      ]);
     const measurementTotals = measurements.reduce<Record<string, number>>(
       (totals, measurement: MeasurementSummaryRow) => ({
         ...totals,
@@ -796,6 +931,20 @@ export class ConstructionRepository {
       }),
       {},
     );
+    const materialTotals = (materials as ConstructionMaterialRow[]).reduce<
+      Record<string, number>
+    >((totals, material) => {
+      const unit = material.unit || "each";
+      const quantity = Number(
+        material.manual_quantity_override ?? material.calculated_quantity ?? 0,
+      );
+      if (!Number.isFinite(quantity)) return totals;
+      return {
+        ...totals,
+        [unit]: (totals[unit] ?? 0) + quantity,
+      };
+    }, {});
+    const crewChecklist = Array.isArray(crew?.checklist) ? crew.checklist : [];
     return {
       project,
       files,
@@ -803,7 +952,19 @@ export class ConstructionRepository {
       materials,
       scope,
       crew,
+      annotations,
+      counts: {
+        files: files.length,
+        measurements: measurements.length,
+        materials: materials.length,
+        scopeSections: scope.filter((section) =>
+          String(section.content ?? "").trim(),
+        ).length,
+        crewInstructions: crewChecklist.length,
+        annotations: annotations.length,
+      },
       measurementTotals,
+      materialTotals,
     };
   }
 
@@ -876,11 +1037,30 @@ export class ConstructionRepository {
       await createClient()
     )
       .from("construction_measurements")
-      .select("id")
+      .select("*")
       .eq("id", measurementId)
       .eq("project_id", projectId)
       .eq("user_id", userId)
       .maybeSingle();
     if (!data) throw new Error("invalid_measurement_reference");
+    return data as ConstructionMeasurementRow;
+  }
+
+  private static async assertMaterial(
+    userId: string,
+    projectId: string,
+    materialId: string,
+  ) {
+    const { data } = await (
+      await createClient()
+    )
+      .from("construction_material_items")
+      .select("id")
+      .eq("id", materialId)
+      .eq("project_id", projectId)
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (!data) throw new Error("invalid_material_reference");
+    return data as ConstructionMaterialRow;
   }
 }

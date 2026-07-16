@@ -1,11 +1,4 @@
-import {
-  cleanString,
-  fail,
-  numberOrDefault,
-  numberOrNull,
-  ok,
-  optionalString,
-} from "@/lib/construction/api";
+import { cleanString, fail, ok, optionalString } from "@/lib/construction/api";
 import {
   readJson,
   requireConstructionUser,
@@ -14,6 +7,26 @@ import {
 } from "@/lib/construction/routes";
 import type { ConstructionMaterialInput } from "@/lib/construction/types";
 import { ConstructionRepository } from "@/lib/db/repositories/construction/construction.repository";
+
+function numberOrValidationError(value: unknown, fallback: number) {
+  if (value === null || value === undefined || value === "") {
+    return { ok: true as const, value: fallback };
+  }
+  const parsed = Number(value);
+  return Number.isFinite(parsed)
+    ? { ok: true as const, value: parsed }
+    : { ok: false as const };
+}
+
+function nullableNumberOrValidationError(value: unknown) {
+  if (value === null || value === undefined || value === "") {
+    return { ok: true as const, value: null };
+  }
+  const parsed = Number(value);
+  return Number.isFinite(parsed)
+    ? { ok: true as const, value: parsed }
+    : { ok: false as const };
+}
 
 export async function PATCH(
   request: Request,
@@ -52,38 +65,81 @@ export async function PATCH(
     body.conversionFactor !== undefined ||
     body.conversion_factor !== undefined
   ) {
-    patch.conversionFactor = numberOrDefault(
+    const parsed = numberOrValidationError(
       body.conversionFactor ?? body.conversion_factor,
       1,
     );
+    if (!parsed.ok) {
+      return fail(
+        400,
+        "validation_error",
+        "Material numeric values are invalid.",
+      );
+    }
+    patch.conversionFactor = parsed.value;
   }
   if (body.unit !== undefined) patch.unit = cleanString(body.unit, 80);
   if (
     body.calculatedQuantity !== undefined ||
     body.calculated_quantity !== undefined
   ) {
-    patch.calculatedQuantity = numberOrDefault(
+    const parsed = numberOrValidationError(
       body.calculatedQuantity ?? body.calculated_quantity,
       0,
     );
+    if (!parsed.ok) {
+      return fail(
+        400,
+        "validation_error",
+        "Material numeric values are invalid.",
+      );
+    }
+    patch.calculatedQuantity = parsed.value;
   }
   if (
     body.manualQuantityOverride !== undefined ||
     body.manual_quantity_override !== undefined
   ) {
-    patch.manualQuantityOverride = numberOrNull(
+    const parsed = nullableNumberOrValidationError(
       body.manualQuantityOverride ?? body.manual_quantity_override,
     );
+    if (!parsed.ok) {
+      return fail(
+        400,
+        "validation_error",
+        "Material numeric values are invalid.",
+      );
+    }
+    patch.manualQuantityOverride = parsed.value;
   }
   if (body.wasteFactor !== undefined || body.waste_factor !== undefined) {
-    patch.wasteFactor = numberOrDefault(
+    const parsed = numberOrValidationError(
       body.wasteFactor ?? body.waste_factor,
       0,
     );
+    if (!parsed.ok) {
+      return fail(
+        400,
+        "validation_error",
+        "Material numeric values are invalid.",
+      );
+    }
+    patch.wasteFactor = parsed.value;
   }
   if (body.notes !== undefined) patch.notes = optionalString(body.notes, 2000);
   if (body.sortOrder !== undefined || body.sort_order !== undefined) {
-    patch.sortOrder = numberOrDefault(body.sortOrder ?? body.sort_order, 0);
+    const parsed = numberOrValidationError(
+      body.sortOrder ?? body.sort_order,
+      0,
+    );
+    if (!parsed.ok) {
+      return fail(
+        400,
+        "validation_error",
+        "Material numeric values are invalid.",
+      );
+    }
+    patch.sortOrder = parsed.value;
   }
   try {
     const material = await ConstructionRepository.updateMaterial(

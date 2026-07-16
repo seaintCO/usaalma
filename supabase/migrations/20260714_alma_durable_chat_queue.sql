@@ -64,9 +64,9 @@ declare v_execution_id uuid; begin
   update public.chat_runs set status='completed', lease_expires_at=null, updated_at=now()
    where id=p_id and claim_token=p_token and status='running' returning execution_id into v_execution_id;
   if not found then return false; end if;
-  update public.agent_executions set status='completed', completed_at=now(), lease_expires_at=null
-   where id=v_execution_id and claim_token=p_token and status='running';
-  return found;
+  update public.agent_executions set status='completed', completed_at=now(), claim_token=null, lease_expires_at=null
+   where id=v_execution_id and claim_token=p_token and status in ('pending','queued','running','completed');
+  return true;
 end $$;
 create or replace function public.fail_chat_run(p_id uuid, p_token uuid, p_error text, p_retry boolean default true)
 returns boolean language plpgsql security definer set search_path = public as $$
@@ -79,8 +79,8 @@ declare v_execution_id uuid; v_retry boolean; begin
   update public.agent_executions set status=case when v_retry then 'queued' else 'failed' end,
    error=case when v_retry then error else p_error end, completed_at=case when v_retry then null else now() end,
    claim_token=null, lease_expires_at=null
-   where id=v_execution_id and claim_token=p_token and status='running';
-  return found;
+   where id=v_execution_id and claim_token=p_token and status in ('pending','queued','running','failed');
+  return true;
 end $$;
 
 alter table public.chat_runs enable row level security;

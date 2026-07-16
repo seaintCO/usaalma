@@ -5,11 +5,14 @@ import {
   type MarketplaceCardAction,
 } from "@/components/marketplace/MarketplaceCatalogCard";
 import { MarketplaceDetailDialog } from "@/components/marketplace/MarketplaceDetailDialog";
+import AlmaShell from "@/components/alma-shell/AlmaShell";
+import type { AlmaShellLanguage } from "@/components/alma-shell/types";
 import {
   getMarketplaceCopy,
   MARKETPLACE_CATEGORIES,
   type MarketplaceLanguage,
 } from "@/components/marketplace/marketplaceCopy";
+import { DASHBOARD_ROUTE } from "@/lib/platform/workspaceRoutes";
 import type {
   MarketplaceCatalogErrorResponse,
   MarketplaceCatalogResponse,
@@ -137,6 +140,10 @@ export default function MarketplacePage() {
   const requestRef = useRef<AbortController | null>(null);
 
   const copy = getMarketplaceCopy(language);
+
+  function updateLanguage(next: AlmaShellLanguage) {
+    setLanguage(next);
+  }
 
   const loadCatalog = useCallback(async () => {
     requestRef.current?.abort();
@@ -269,195 +276,202 @@ export default function MarketplacePage() {
     : null;
 
   return (
-    <main className="min-h-screen bg-[#F7F7F8] px-6 py-10 text-[#111111]">
-      <div className="mx-auto max-w-7xl">
-        <a
-          href="/dashboard"
-          className="text-sm text-[#6B7280] hover:text-black"
-        >
-          ← {copy.back}
-        </a>
+    <AlmaShell
+      language={language}
+      activeWorkspace="marketplace"
+      title={copy.eyebrow}
+      onLanguageChange={updateLanguage}
+    >
+      <div className="px-6 py-10 text-[#111111]">
+        <div className="mx-auto max-w-7xl">
+          <a
+            href={DASHBOARD_ROUTE}
+            className="text-sm text-[#6B7280] hover:text-black"
+          >
+            ← {copy.back}
+          </a>
 
-        <div className="mt-10">
-          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl border border-[#E5E7EB] bg-white">
-            <Store className="h-5 w-5" aria-hidden="true" />
-          </div>
-          <p className="mb-2 text-xs font-medium uppercase tracking-[0.2em] text-[#6B7280]">
-            {copy.eyebrow}
-          </p>
-          <h1 className="max-w-4xl text-4xl font-medium tracking-tight md:text-5xl">
-            {copy.title}
-          </h1>
-          <p className="mt-4 max-w-3xl text-lg text-[#6B7280]">
-            {copy.description}
-          </p>
-        </div>
-
-        <section
-          className="mt-10 rounded-[1.5rem] border border-[#E5E7EB] bg-white p-4"
-          aria-label={copy.search}
-        >
-          <div className="grid gap-3 md:grid-cols-4">
-            <label className="relative block md:col-span-2">
-              <span className="sr-only">{copy.search}</span>
-              <Search
-                className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#6B7280]"
-                aria-hidden="true"
-              />
-              <input
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder={copy.search}
-                className="w-full rounded-xl border border-[#E5E7EB] py-3 pl-10 pr-3 text-sm outline-none focus:ring-2 focus:ring-black"
-              />
-            </label>
-            <label>
-              <span className="sr-only">{copy.category}</span>
-              <select
-                value={category}
-                onChange={(event) =>
-                  setCategory(event.target.value as typeof category)
-                }
-                className="w-full rounded-xl border border-[#E5E7EB] bg-white px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-black"
-              >
-                <option value="all">
-                  {copy.category}: {copy.all}
-                </option>
-                {MARKETPLACE_CATEGORIES.map((entry) => (
-                  <option key={entry} value={entry}>
-                    {entry}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              <span className="sr-only">{copy.release}</span>
-              <select
-                value={release}
-                onChange={(event) =>
-                  setRelease(event.target.value as ReleaseFilter)
-                }
-                className="w-full rounded-xl border border-[#E5E7EB] bg-white px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-black"
-              >
-                <option value="all">
-                  {copy.release}: {copy.all}
-                </option>
-                <option value="active">{copy.active}</option>
-                <option value="beta">{copy.beta}</option>
-                <option value="coming_soon">{copy.comingSoon}</option>
-              </select>
-            </label>
-            <label>
-              <span className="sr-only">{copy.status}</span>
-              <select
-                value={status}
-                onChange={(event) =>
-                  setStatus(event.target.value as StatusFilter)
-                }
-                className="w-full rounded-xl border border-[#E5E7EB] bg-white px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-black"
-              >
-                {STATUS_FILTERS.map((entry) => (
-                  <option key={entry} value={entry}>
-                    {copy.status}: {labelForStatus(entry, copy)}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-        </section>
-
-        {state === "loading" ? (
-          <p className="mt-12 text-sm text-[#6B7280]" role="status">
-            {copy.loading}
-          </p>
-        ) : null}
-        {state === "error" ? (
-          <section className="mt-12 rounded-[1.5rem] border border-[#E5E7EB] bg-white p-6">
-            <p className="text-sm text-[#6B7280]">
-              {error || copy.unavailable}
+          <div className="mt-10">
+            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl border border-[#E5E7EB] bg-white">
+              <Store className="h-5 w-5" aria-hidden="true" />
+            </div>
+            <p className="mb-2 text-xs font-medium uppercase tracking-[0.2em] text-[#6B7280]">
+              {copy.eyebrow}
             </p>
-            <button
-              type="button"
-              onClick={() => void loadCatalog()}
-              className="mt-4 rounded-2xl bg-black px-4 py-3 text-sm font-medium text-white"
-            >
-              {copy.retry}
-            </button>
+            <h1 className="max-w-4xl text-4xl font-medium tracking-tight md:text-5xl">
+              {copy.title}
+            </h1>
+            <p className="mt-4 max-w-3xl text-lg text-[#6B7280]">
+              {copy.description}
+            </p>
+          </div>
+
+          <section
+            className="mt-10 rounded-[1.5rem] border border-[#E5E7EB] bg-white p-4"
+            aria-label={copy.search}
+          >
+            <div className="grid gap-3 md:grid-cols-4">
+              <label className="relative block md:col-span-2">
+                <span className="sr-only">{copy.search}</span>
+                <Search
+                  className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#6B7280]"
+                  aria-hidden="true"
+                />
+                <input
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder={copy.search}
+                  className="w-full rounded-xl border border-[#E5E7EB] py-3 pl-10 pr-3 text-sm outline-none focus:ring-2 focus:ring-black"
+                />
+              </label>
+              <label>
+                <span className="sr-only">{copy.category}</span>
+                <select
+                  value={category}
+                  onChange={(event) =>
+                    setCategory(event.target.value as typeof category)
+                  }
+                  className="w-full rounded-xl border border-[#E5E7EB] bg-white px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-black"
+                >
+                  <option value="all">
+                    {copy.category}: {copy.all}
+                  </option>
+                  {MARKETPLACE_CATEGORIES.map((entry) => (
+                    <option key={entry} value={entry}>
+                      {entry}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                <span className="sr-only">{copy.release}</span>
+                <select
+                  value={release}
+                  onChange={(event) =>
+                    setRelease(event.target.value as ReleaseFilter)
+                  }
+                  className="w-full rounded-xl border border-[#E5E7EB] bg-white px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-black"
+                >
+                  <option value="all">
+                    {copy.release}: {copy.all}
+                  </option>
+                  <option value="active">{copy.active}</option>
+                  <option value="beta">{copy.beta}</option>
+                  <option value="coming_soon">{copy.comingSoon}</option>
+                </select>
+              </label>
+              <label>
+                <span className="sr-only">{copy.status}</span>
+                <select
+                  value={status}
+                  onChange={(event) =>
+                    setStatus(event.target.value as StatusFilter)
+                  }
+                  className="w-full rounded-xl border border-[#E5E7EB] bg-white px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-black"
+                >
+                  {STATUS_FILTERS.map((entry) => (
+                    <option key={entry} value={entry}>
+                      {copy.status}: {labelForStatus(entry, copy)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
           </section>
-        ) : null}
-        {state === "ready" ? (
-          <>
-            <section className="mt-12" aria-labelledby="alma-modules-heading">
-              <h2
-                id="alma-modules-heading"
-                className="text-2xl font-medium tracking-tight"
+
+          {state === "loading" ? (
+            <p className="mt-12 text-sm text-[#6B7280]" role="status">
+              {copy.loading}
+            </p>
+          ) : null}
+          {state === "error" ? (
+            <section className="mt-12 rounded-[1.5rem] border border-[#E5E7EB] bg-white p-6">
+              <p className="text-sm text-[#6B7280]">
+                {error || copy.unavailable}
+              </p>
+              <button
+                type="button"
+                onClick={() => void loadCatalog()}
+                className="mt-4 rounded-2xl bg-black px-4 py-3 text-sm font-medium text-white"
               >
-                {copy.modules}
-              </h2>
-              {modules.length ? (
-                <div className="mt-5 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-                  {modules.map((item) => (
-                    <MarketplaceCatalogCard
-                      key={item.key}
-                      item={item}
-                      copy={copy}
-                      action={actionForItem(item, copy)}
-                      isMutating={mutatingKey === item.key}
-                      onInstall={(target) => void installModule(target)}
-                      onDisconnect={(target) =>
-                        void disconnectConnection(target)
-                      }
-                      onDetails={setSelectedItem}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <p className="mt-5 text-sm text-[#6B7280]">{copy.empty}</p>
-              )}
+                {copy.retry}
+              </button>
             </section>
-            <section
-              className="mt-12 pb-10"
-              aria-labelledby="connections-heading"
-            >
-              <h2
-                id="connections-heading"
-                className="text-2xl font-medium tracking-tight"
+          ) : null}
+          {state === "ready" ? (
+            <>
+              <section className="mt-12" aria-labelledby="alma-modules-heading">
+                <h2
+                  id="alma-modules-heading"
+                  className="text-2xl font-medium tracking-tight"
+                >
+                  {copy.modules}
+                </h2>
+                {modules.length ? (
+                  <div className="mt-5 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+                    {modules.map((item) => (
+                      <MarketplaceCatalogCard
+                        key={item.key}
+                        item={item}
+                        copy={copy}
+                        action={actionForItem(item, copy)}
+                        isMutating={mutatingKey === item.key}
+                        onInstall={(target) => void installModule(target)}
+                        onDisconnect={(target) =>
+                          void disconnectConnection(target)
+                        }
+                        onDetails={setSelectedItem}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <p className="mt-5 text-sm text-[#6B7280]">{copy.empty}</p>
+                )}
+              </section>
+              <section
+                className="mt-12 pb-10"
+                aria-labelledby="connections-heading"
               >
-                {copy.connections}
-              </h2>
-              {connections.length ? (
-                <div className="mt-5 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-                  {connections.map((item) => (
-                    <MarketplaceCatalogCard
-                      key={item.key}
-                      item={item}
-                      copy={copy}
-                      action={actionForItem(item, copy)}
-                      isMutating={false}
-                      onInstall={(target) => void installModule(target)}
-                      onDisconnect={(target) =>
-                        void disconnectConnection(target)
-                      }
-                      onDetails={setSelectedItem}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <p className="mt-5 text-sm text-[#6B7280]">{copy.empty}</p>
-              )}
-            </section>
-          </>
-        ) : null}
+                <h2
+                  id="connections-heading"
+                  className="text-2xl font-medium tracking-tight"
+                >
+                  {copy.connections}
+                </h2>
+                {connections.length ? (
+                  <div className="mt-5 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+                    {connections.map((item) => (
+                      <MarketplaceCatalogCard
+                        key={item.key}
+                        item={item}
+                        copy={copy}
+                        action={actionForItem(item, copy)}
+                        isMutating={false}
+                        onInstall={(target) => void installModule(target)}
+                        onDisconnect={(target) =>
+                          void disconnectConnection(target)
+                        }
+                        onDetails={setSelectedItem}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <p className="mt-5 text-sm text-[#6B7280]">{copy.empty}</p>
+                )}
+              </section>
+            </>
+          ) : null}
+        </div>
+        <MarketplaceDetailDialog
+          item={selectedItem}
+          copy={copy}
+          action={selectedAction}
+          isMutating={selectedItem?.key === mutatingKey}
+          onClose={() => setSelectedItem(null)}
+          onInstall={(target) => void installModule(target)}
+          onDisconnect={(target) => void disconnectConnection(target)}
+        />
       </div>
-      <MarketplaceDetailDialog
-        item={selectedItem}
-        copy={copy}
-        action={selectedAction}
-        isMutating={selectedItem?.key === mutatingKey}
-        onClose={() => setSelectedItem(null)}
-        onInstall={(target) => void installModule(target)}
-        onDisconnect={(target) => void disconnectConnection(target)}
-      />
-    </main>
+    </AlmaShell>
   );
 }

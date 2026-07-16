@@ -11,17 +11,21 @@ export default function BillingSuccessPage() {
     async function check() {
       attempts++;
 
-      const res = await fetch("/api/billing/status", { cache:"no-store" });
+      const res = await fetch("/api/billing/status", { cache: "no-store" });
       const data = await res.json();
 
-      if (["active", "trialing"].includes(data.status)) {
+      if (["active", "trialing"].includes(data.subscription?.status)) {
         setMessage("Your ALMA workspace is ready.");
-        setTimeout(()=>{ window.location.href = "/dashboard"; }, 900);
+        setTimeout(() => {
+          window.location.href = "/dashboard";
+        }, 900);
         return;
       }
 
       if (attempts > 12) {
-        setMessage("Payment received. ALMA is still syncing your access. Refresh in a moment.");
+        setMessage(
+          "Payment received. ALMA is still syncing your access. Refresh in a moment.",
+        );
         return;
       }
 

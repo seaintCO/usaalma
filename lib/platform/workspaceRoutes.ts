@@ -5,6 +5,7 @@ export const WORKSPACE_ROUTES = {
   files: "/files",
   apps: "/dashboard/apps",
   connections: "/connections",
+  communications: "/communications",
   translator: "/translator",
   office: "/office",
   tasks: "/tasks",

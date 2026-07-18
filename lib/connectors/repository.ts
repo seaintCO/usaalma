@@ -87,6 +87,13 @@ function summaryFor(
       : (row?.connection_status ?? "not_connected"),
     connectedEmail: row?.provider_account_email ?? null,
     connectedName: row?.provider_account_name ?? null,
+    providerAccountId: row?.provider_account_id ?? null,
+    metadata: row
+      ? {
+          scopes: row.granted_scopes ?? [],
+          expiresAt: row.access_token_expires_at ?? null,
+        }
+      : null,
     lastSuccessfulUse: row?.last_successful_action_at ?? null,
     lastErrorCode: configurationBlocked
       ? "server_configuration_required"
@@ -233,6 +240,98 @@ export class ConnectorRepository {
     return connection.id as string;
   }
 
+  static async saveWhatsAppConnection(input: {
+    userId: string;
+    workspaceId: string;
+    accessToken: string;
+    expiresAt: string | null;
+    wabaId: string;
+    phoneNumberId: string;
+    displayPhoneNumber: string | null;
+    businessName: string | null;
+    metadata?: Record<string, unknown>;
+  }) {
+    assertServerConfigured("whatsapp_business");
+    const supabase = admin();
+    const now = new Date().toISOString();
+    const { data: connection, error } = await supabase
+      .from("provider_connections")
+      .upsert(
+        {
+          user_id: input.userId,
+          workspace_id: input.workspaceId,
+          provider: "whatsapp_business",
+          provider_account_id: input.phoneNumberId,
+          provider_account_email: input.displayPhoneNumber,
+          provider_account_name: input.businessName,
+          connection_status: "connected",
+          granted_scopes: [
+            "whatsapp_business_management",
+            "whatsapp_business_messaging",
+          ],
+          access_token_expires_at: input.expiresAt,
+          has_refresh_token: false,
+          connected_by_user_id: input.userId,
+          connected_at: now,
+          disconnected_at: null,
+          revoked_at: null,
+          last_error_code: null,
+          last_error_message: null,
+          provider_metadata: {
+            ...(input.metadata ?? {}),
+            wabaId: input.wabaId,
+            phoneNumberId: input.phoneNumberId,
+          },
+        },
+        { onConflict: "workspace_id,provider" },
+      )
+      .select("id")
+      .single();
+    if (error) throw error;
+
+    const { error: secretError } = await supabase
+      .from("provider_connection_secrets")
+      .upsert(
+        {
+          connection_id: connection.id,
+          user_id: input.userId,
+          workspace_id: input.workspaceId,
+          provider: "whatsapp_business",
+          encrypted_access_token: encryptSecret(input.accessToken),
+          encrypted_refresh_token: null,
+          scope: "whatsapp_business_management whatsapp_business_messaging",
+          expires_at: input.expiresAt,
+          provider_metadata: {
+            encrypted: true,
+            wabaId: input.wabaId,
+            phoneNumberId: input.phoneNumberId,
+          },
+          token_version: 1,
+        },
+        { onConflict: "connection_id" },
+      );
+    if (secretError) throw secretError;
+    return connection.id as string;
+  }
+
+  static async getConnectedWhatsAppConnection(input: {
+    userId: string;
+    workspaceId: string;
+  }) {
+    assertServerConfigured("whatsapp_business");
+    const supabase = admin();
+    const { data, error } = await supabase
+      .from("provider_connections")
+      .select("*")
+      .eq("user_id", input.userId)
+      .eq("workspace_id", input.workspaceId)
+      .eq("provider", "whatsapp_business")
+      .eq("connection_status", "connected")
+      .maybeSingle();
+    if (error) throw error;
+    return (data as ProviderConnectionRow | null) ?? null;
+  }
+
   static async getConnectedEmailConnection(input: {
     userId: string;
     workspaceId: string;
@@ -358,6 +457,41 @@ export class ConnectorRepository {
   static async disconnect(input: {
     userId: string;
     provider: EmailConnectorProvider;
+  }) {
+    assertServerConfigured(input.provider);
+    const workspaceId = await this.resolveDefaultWorkspaceId(input.userId);
+    if (!workspaceId) return null;
+    const supabase = admin();
+    const { data: connection, error: readError } = await supabase
+      .from("provider_connections")
+      .select("id")
+      .eq("user_id", input.userId)
+      .eq("workspace_id", workspaceId)
+      .eq("provider", input.provider)
+      .maybeSingle();
+    if (readError) throw readError;
+    if (!connection?.id) return null;
+    await supabase
+      .from("provider_connection_secrets")
+      .delete()
+      .eq("connection_id", connection.id);
+    const { error } = await supabase
+      .from("provider_connections")
+      .update({
+        connection_status: "disconnected",
+        has_refresh_token: false,
+        access_token_expires_at: null,
+        disconnected_at: new Date().toISOString(),
+        revoked_at: new Date().toISOString(),
+      })
+      .eq("id", connection.id);
+    if (error) throw error;
+    return connection.id as string;
+  }
+
+  static async disconnectProvider(input: {
+    userId: string;
+    provider: ConnectorProvider;
   }) {
     assertServerConfigured(input.provider);
     const workspaceId = await this.resolveDefaultWorkspaceId(input.userId);

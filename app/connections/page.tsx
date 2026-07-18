@@ -71,7 +71,7 @@ const COPY = {
   },
 } as const;
 
-const ACTIVE_PROVIDERS = new Set(["gmail", "outlook"]);
+const ACTIVE_PROVIDERS = new Set(["gmail", "outlook", "whatsapp_business"]);
 
 export default function ConnectionsPage() {
   const [language, setLanguage] = useState<AlmaShellLanguage>("en");
@@ -114,7 +114,9 @@ export default function ConnectionsPage() {
     setMutatingProvider(provider);
     try {
       const response = await fetch(
-        `/api/connectors/oauth/${provider}/disconnect`,
+        provider === "whatsapp_business"
+          ? "/api/connectors/whatsapp/disconnect"
+          : `/api/connectors/oauth/${provider}/disconnect`,
         { method: "POST" },
       );
       if (!response.ok) throw new Error("disconnect_failed");
@@ -247,7 +249,11 @@ export default function ConnectionsPage() {
                         ) : null}
                         {!connected && !blocked ? (
                           <a
-                            href={`/api/connectors/oauth/${connection.provider}/start?returnTo=%2Fconnections`}
+                            href={
+                              connection.provider === "whatsapp_business"
+                                ? "/api/connectors/whatsapp/start?returnTo=%2Fconnections"
+                                : `/api/connectors/oauth/${connection.provider}/start?returnTo=%2Fconnections`
+                            }
                             className="inline-flex h-10 items-center gap-2 rounded-xl bg-black px-3 text-sm font-medium text-white"
                           >
                             <PlugZap className="h-4 w-4" />

@@ -383,32 +383,40 @@ export default function ApprovalsPage() {
                       </h3>
                       {selected.editable &&
                       (selected.actionKey === "gmail.send" ||
-                        selected.actionKey === "office.estimate.deliver") ? (
+                        selected.actionKey === "office.estimate.deliver" ||
+                        selected.actionKey === "whatsapp.message.send") ? (
                         <div className="space-y-3">
                           <Field
                             label={copy.to}
                             value={safeString(
-                              draftPayload.to ?? draftPayload.recipient,
+                              draftPayload.to ??
+                                draftPayload.recipient ??
+                                draftPayload.toPhone,
                             )}
                             onChange={(value) =>
                               setDraftPayload((current) => ({
                                 ...current,
                                 ...(selected.actionKey === "gmail.send"
                                   ? { to: value }
-                                  : { recipient: value }),
+                                  : selected.actionKey ===
+                                      "whatsapp.message.send"
+                                    ? { toPhone: value }
+                                    : { recipient: value }),
                               }))
                             }
                           />
-                          <Field
-                            label={copy.subject}
-                            value={safeString(draftPayload.subject)}
-                            onChange={(value) =>
-                              setDraftPayload((current) => ({
-                                ...current,
-                                subject: value,
-                              }))
-                            }
-                          />
+                          {selected.actionKey !== "whatsapp.message.send" ? (
+                            <Field
+                              label={copy.subject}
+                              value={safeString(draftPayload.subject)}
+                              onChange={(value) =>
+                                setDraftPayload((current) => ({
+                                  ...current,
+                                  subject: value,
+                                }))
+                              }
+                            />
+                          ) : null}
                           <Field
                             label={copy.body}
                             value={safeString(
@@ -420,7 +428,10 @@ export default function ApprovalsPage() {
                                 ...current,
                                 ...(selected.actionKey === "gmail.send"
                                   ? { body: value }
-                                  : { message: value }),
+                                  : selected.actionKey ===
+                                      "whatsapp.message.send"
+                                    ? { body: value }
+                                    : { message: value }),
                               }))
                             }
                           />
@@ -443,7 +454,10 @@ export default function ApprovalsPage() {
                                   ...current,
                                   ...(selected.actionKey === "gmail.send"
                                     ? { body: value }
-                                    : { message: value }),
+                                    : selected.actionKey ===
+                                        "whatsapp.message.send"
+                                      ? { body: value }
+                                      : { message: value }),
                                 }))
                               }
                             />

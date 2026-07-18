@@ -51,9 +51,15 @@ export const CONNECTOR_DEFINITIONS: Record<
   },
   whatsapp_business: {
     name: "WhatsApp Business",
-    operational: false,
-    env: [],
-    scopes: [],
+    operational: true,
+    env: [
+      "META_APP_ID",
+      "META_APP_SECRET",
+      "META_EMBEDDED_SIGNUP_CONFIG_ID",
+      "META_WEBHOOK_VERIFY_TOKEN",
+      "APP_ENCRYPTION_KEY",
+    ],
+    scopes: ["whatsapp_business_management", "whatsapp_business_messaging"],
   },
 };
 
@@ -73,6 +79,10 @@ export function getAppBaseUrl() {
 
 export function getConnectorCallbackUrl(provider: EmailConnectorProvider) {
   return `${getAppBaseUrl()}/api/connectors/oauth/${provider}/callback`;
+}
+
+export function getWhatsAppCallbackUrl() {
+  return `${getAppBaseUrl()}/api/connectors/whatsapp/callback`;
 }
 
 export function getMissingConnectorEnv(provider: ConnectorProvider) {

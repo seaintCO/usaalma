@@ -104,6 +104,7 @@ export const ALMA_MODULE_REGISTRY = [
     category: "Communication",
     description:
       "Correct, translate, and prepare owned business messages in English and Spanish.",
+    route: WORKSPACE_ROUTES.communications,
     releaseStatus: "active",
     requiredPlan: "free",
     entitlementKey: "communications",

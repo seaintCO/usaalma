@@ -449,6 +449,66 @@ Remaining blockers:
 - Browser WebRTC end-to-end audio requires a valid authenticated session,
   microphone permission, and configured OpenAI Realtime access.
 
+### Phase 3: Secure WhatsApp Business Connector And Communications Inbox
+
+Status: completed in this milestone.
+
+Completed work:
+
+- Made `whatsapp_business` an operational provider in the existing connector
+  registry when Meta server configuration is present.
+- Added Meta Embedded Signup start/callback routes under
+  `/api/connectors/whatsapp/*`. Customers connect their own WABA/phone number;
+  ALMA does not provide one shared sending number.
+- Stored WhatsApp access tokens through the existing encrypted
+  `provider_connection_secrets` system. Tokens are never returned to the
+  browser.
+- Added webhook GET challenge verification and POST signature verification
+  using `x-hub-signature-256` and constant-time comparison.
+- Added idempotent inbound webhook normalization for text, image captions,
+  documents, audio metadata, and provider statuses.
+- Added additive migration
+  `20260718007000_alma_secure_whatsapp_communications.sql` for communication
+  threads, messages, drafts, WhatsApp templates, opt-in state, delivery
+  records, and webhook events.
+- Added `/communications`, a minimal unified inbox for WhatsApp/email/future
+  channels with translated previews, unread/delivery state, and bilingual reply
+  drafting.
+- Added `whatsapp.message.send` approval creation and allowlisted execution.
+  Approved sends use duplicate-send prevention through
+  `whatsapp_delivery_records` and are marked accepted only after Meta accepts
+  the API request.
+- Added service-window/template-required enforcement. Free-form WhatsApp sends
+  are blocked outside the customer service window unless a template name is
+  provided.
+- Added `scripts/check-alma-whatsapp.mjs`.
+
+Policy boundary:
+
+- WhatsApp is implemented only for business-specific communication: customer
+  support, estimates, invoices, project updates, scheduling, reminders, and
+  operational messages. It is not a general-purpose ALMA assistant distribution
+  channel.
+
+Compatibility notes:
+
+- Gmail/Outlook connector routes remain unchanged.
+- WhatsApp disconnect uses a server-only route that deletes encrypted secrets
+  and marks connection metadata disconnected.
+- Outbound WhatsApp, like outbound email, must pass through the shared Approval
+  Center before execution.
+
+Remaining blockers:
+
+- Apply the WhatsApp communications migration before persisted inbox records,
+  webhook idempotency, templates, opt-ins, and delivery records are available.
+- Configure Meta app credentials, Embedded Signup configuration, production
+  callback URL, webhook URL, webhook verify token, and app review/business
+  verification before live WhatsApp use.
+- Provider media download/transcription for WhatsApp voice notes is normalized
+  and storage-ready, but real media fetching requires live Meta credentials and
+  should be verified after webhook configuration.
+
 The older split milestones below are retained as planning history. Their shell,
 Home, Apps/Files, and Approval Center portions are superseded by this completed
 assistant-first milestone.

@@ -27,11 +27,35 @@ export type ConnectorSummary = {
   status: ConnectorStatus;
   connectedEmail: string | null;
   connectedName: string | null;
+  providerAccountId?: string | null;
+  metadata?: Record<string, unknown> | null;
   lastSuccessfulUse: string | null;
   lastErrorCode: string | null;
   lastErrorMessage: string | null;
   canConnect: boolean;
   canDisconnect: boolean;
+};
+
+export type WhatsAppSendInput = {
+  userId: string;
+  workspaceId: string;
+  approvalId: string;
+  connectionId: string;
+  toPhone: string;
+  body: string;
+  templateName?: string | null;
+  language?: "en" | "es";
+};
+
+export type WhatsAppSendResult = {
+  ok: boolean;
+  providerMessageId?: string | null;
+  status?: string | null;
+  error?: {
+    code: string;
+    message: string;
+    retryable?: boolean;
+  };
 };
 
 export type EmailDeliveryInput = {

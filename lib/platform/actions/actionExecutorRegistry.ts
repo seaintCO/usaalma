@@ -2,6 +2,11 @@ import type { ActionApprovalRecord } from "@/lib/platform/approvals/types";
 import { OfficeRepository } from "@/lib/office/repository";
 import { sendConnectedEmail } from "@/lib/connectors/emailDelivery";
 import { ConnectorRepository } from "@/lib/connectors/repository";
+import { sendWhatsAppMessage } from "@/lib/connectors/providers/whatsapp";
+import {
+  createWhatsAppDeliveryRecord,
+  updateWhatsAppDelivery,
+} from "@/lib/communications/inboxRepository";
 
 export type ActionExecutionResult = {
   success: boolean;
@@ -236,6 +241,93 @@ const EXECUTORS: Record<string, Executor> = {
           providerMessageId: sendResult.providerMessageId,
           deliveredAt,
         },
+      };
+    },
+  },
+  "whatsapp.message.send": {
+    key: "whatsapp.message.send",
+    editable: true,
+    validate(payload) {
+      return {
+        threadId: typeof payload.threadId === "string" ? payload.threadId : "",
+        workspaceId: readRequiredString(payload, "workspaceId", 80),
+        connectionId: readRequiredString(payload, "connectionId", 80),
+        toPhone: readRequiredString(payload, "toPhone", 32),
+        body: readRequiredString(payload, "body", 4096),
+        templateName:
+          typeof payload.templateName === "string" ? payload.templateName : "",
+        language: payload.language === "es" ? "es" : "en",
+      };
+    },
+    async execute(userId, payload, approval) {
+      const workspaceId = readRequiredString(payload, "workspaceId", 80);
+      const connectionId = readRequiredString(payload, "connectionId", 80);
+      const toPhone = readRequiredString(payload, "toPhone", 32);
+      const body = readRequiredString(payload, "body", 4096);
+      const delivery = await createWhatsAppDeliveryRecord({
+        userId,
+        workspaceId,
+        approvalId: approval.id,
+        threadId:
+          typeof payload.threadId === "string" && payload.threadId
+            ? payload.threadId
+            : null,
+        connectionId,
+        recipientPhone: toPhone,
+      });
+      if (
+        ["accepted", "sent", "delivered", "read"].includes(delivery.status) &&
+        delivery.provider_message_id
+      ) {
+        return {
+          success: true,
+          message: "WhatsApp message was already accepted.",
+          result: {
+            providerMessageId: delivery.provider_message_id,
+            status: delivery.status,
+          },
+        };
+      }
+      const result = await sendWhatsAppMessage({
+        userId,
+        workspaceId,
+        approvalId: approval.id,
+        connectionId,
+        toPhone,
+        body,
+        templateName:
+          typeof payload.templateName === "string" && payload.templateName
+            ? payload.templateName
+            : null,
+        language: payload.language === "es" ? "es" : "en",
+      });
+      if (!result.ok || !result.providerMessageId) {
+        await updateWhatsAppDelivery({
+          deliveryId: delivery.id,
+          status:
+            result.error?.code === "whatsapp_connection_required"
+              ? "blocked"
+              : "failed",
+          errorCode: result.error?.code ?? "whatsapp_send_failed",
+          errorMessage:
+            result.error?.message ?? "WhatsApp message could not be sent.",
+        });
+        return {
+          success: false,
+          message:
+            result.error?.message ?? "WhatsApp message could not be sent.",
+          result: result as Record<string, unknown>,
+        };
+      }
+      await updateWhatsAppDelivery({
+        deliveryId: delivery.id,
+        status: "accepted",
+        providerMessageId: result.providerMessageId,
+      });
+      return {
+        success: true,
+        message: "WhatsApp message accepted by Meta.",
+        result: result as Record<string, unknown>,
       };
     },
   },

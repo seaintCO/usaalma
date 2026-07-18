@@ -133,6 +133,25 @@ export const ALMA_MODULE_REGISTRY = [
     approvalPolicy: "automatic",
   },
   {
+    key: "voice",
+    name: "Realtime Voice",
+    group: "free_core",
+    category: "Communication",
+    description:
+      "Talk with ALMA using a secure server-created realtime voice session.",
+    releaseStatus: "beta",
+    requiredPlan: "personal",
+    entitlementKey: "voice",
+    installKey: "voice",
+    capabilities: ["voice.realtime", "voice.transcribe", "voice.speech"],
+    defaultRisk: "external",
+    approvalPolicy: "approval_required",
+    limitations: [
+      "External, financial, destructive, or state-changing voice requests still require approval.",
+      "No raw audio is stored by default.",
+    ],
+  },
+  {
     key: "workspaces",
     name: "Workspaces",
     group: "free_core",

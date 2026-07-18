@@ -17,6 +17,7 @@ import {
   useState,
 } from "react";
 import BilingualComposer from "@/components/communications/BilingualComposer";
+import AlmaVoiceControls from "@/components/voice/AlmaVoiceControls";
 import {
   CHAT_REQUEST_TIMEOUT_MS,
   createChatSubmissionKey,
@@ -312,6 +313,7 @@ export function ChatComposer({
   const fileRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
   const [composerOpen, setComposerOpen] = useState(false);
+  const [voiceOpen, setVoiceOpen] = useState(false);
   return (
     <div className="border-t border-[#E5E7EB] bg-white px-3 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 md:px-6">
       <div className="mx-auto w-full max-w-3xl">
@@ -392,7 +394,15 @@ export function ChatComposer({
             >
               <Languages className="h-5 w-5" />
             </button>
-            <Mic className="h-5 w-5 p-0.5 text-[#6B7280]" />
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => setVoiceOpen((current) => !current)}
+              className="rounded-md p-1 text-[#6B7280] hover:bg-gray-200 hover:text-black"
+              aria-label="Open ALMA voice"
+            >
+              <Mic className="h-5 w-5" />
+            </button>
           </div>
           <button
             type="button"
@@ -406,6 +416,11 @@ export function ChatComposer({
         <p className="pt-2 text-center text-[10px] text-gray-400">
           {copy[language].disclaimer}
         </p>
+        {voiceOpen ? (
+          <div className="pt-2">
+            <AlmaVoiceControls language={language === "es" ? "es" : "en"} />
+          </div>
+        ) : null}
       </div>
     </div>
   );

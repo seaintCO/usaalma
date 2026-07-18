@@ -405,6 +405,50 @@ Remaining blockers:
 - Real provider translation requires `OPENAI_API_KEY`; otherwise ALMA returns a
   review-required local fallback.
 
+### Phase 2: Translator, Realtime Voice, And Safe Memory Foundation
+
+Status: completed in this milestone.
+
+Completed work:
+
+- Added `/translator` and registered it through the canonical Apps/module
+  registry. It supports text translation, push-to-talk transcription, and a
+  two-sided English/Spanish conversation mode.
+- Added server-only Realtime session bootstrap at `/api/realtime/session`.
+  It authenticates the user, resolves workspace ownership, checks voice
+  entitlements, rate-limits session creation, and requests a short-lived
+  OpenAI Realtime client secret without exposing the permanent API key.
+- Added `/api/translator/transcribe` using the configured OpenAI transcription
+  model and the shared communication translation service.
+- Added `/api/translator/speech` using the configured OpenAI speech model with
+  browser speech synthesis as a local playback fallback.
+- Added `components/voice/AlmaVoiceControls.tsx` to the ALMA chat composer with
+  start, mute, end, status, and disclosure states. The browser surface creates
+  no provider sessions unless the server bootstrap succeeds.
+- Added additive migration
+  `20260718006000_alma_realtime_voice_memory.sql` for voice preferences,
+  voice session metadata, transcripts, and proposed conversation memories.
+- Added `/api/memory` and a Settings memory surface showing proposed memories.
+  Raw audio is not stored by default.
+- Added `scripts/check-alma-realtime-voice.mjs`.
+
+Compatibility notes:
+
+- Voice does not create a second ALMA brain. It uses the existing ALMA chat
+  surface and keeps external/state-changing actions behind the shared approval
+  boundary.
+- Realtime, transcription, and speech model names are environment-configurable
+  and validated against supported allowlists.
+- Missing OpenAI configuration returns honest blocked states. No fake realtime
+  connection or fake provider audio is reported as successful.
+
+Remaining blockers:
+
+- Apply the realtime voice memory migration before persisted voice/session
+  memory records are available in Supabase.
+- Browser WebRTC end-to-end audio requires a valid authenticated session,
+  microphone permission, and configured OpenAI Realtime access.
+
 The older split milestones below are retained as planning history. Their shell,
 Home, Apps/Files, and Approval Center portions are superseded by this completed
 assistant-first milestone.

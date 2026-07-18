@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import AlmaShell from "@/components/alma-shell/AlmaShell";
+import BilingualComposer from "@/components/communications/BilingualComposer";
 import type { AlmaShellLanguage } from "@/components/alma-shell/types";
 
 type Tab = "overview" | "customers" | "estimates" | "invoices" | "priceBook";
@@ -70,6 +71,8 @@ const COPY = {
     openInvoices: "Open Invoices",
     createEstimate: "Create estimate",
     addCustomer: "Add customer",
+    deliveryHelper: "Estimate delivery helper",
+    deliveryDraft: "Write the customer message for this estimate here.",
   },
   es: {
     title: "Alma Office",
@@ -90,6 +93,8 @@ const COPY = {
     openInvoices: "Abrir Facturas",
     createEstimate: "Crear estimado",
     addCustomer: "Agregar cliente",
+    deliveryHelper: "Ayuda para enviar estimado",
+    deliveryDraft: "Escribe aqui el mensaje del estimado para el cliente.",
   },
 } as const;
 
@@ -311,33 +316,42 @@ export default function OfficePage() {
               ) : null}
 
               {tab === "estimates" ? (
-                <section className="rounded-2xl border border-[#E5E7EB] bg-white p-4">
-                  <h2 className="text-lg font-semibold">{copy.estimates}</h2>
-                  {estimates.length ? (
-                    <div className="mt-3 divide-y divide-[#E5E7EB]">
-                      {estimates.map((estimate) => (
-                        <div
-                          key={estimate.id}
-                          className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between"
-                        >
-                          <div>
-                            <p className="text-sm font-medium">
-                              {estimate.estimate_number}
-                            </p>
-                            <p className="text-xs text-[#6B7280]">
-                              {estimate.status}
+                <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(320px,420px)]">
+                  <section className="rounded-2xl border border-[#E5E7EB] bg-white p-4">
+                    <h2 className="text-lg font-semibold">{copy.estimates}</h2>
+                    {estimates.length ? (
+                      <div className="mt-3 divide-y divide-[#E5E7EB]">
+                        {estimates.map((estimate) => (
+                          <div
+                            key={estimate.id}
+                            className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between"
+                          >
+                            <div>
+                              <p className="text-sm font-medium">
+                                {estimate.estimate_number}
+                              </p>
+                              <p className="text-xs text-[#6B7280]">
+                                {estimate.status}
+                              </p>
+                            </div>
+                            <p className="text-sm font-semibold">
+                              {estimate.total} {estimate.currency}
                             </p>
                           </div>
-                          <p className="text-sm font-semibold">
-                            {estimate.total} {estimate.currency}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <EmptyState text={copy.emptyEstimates} />
-                  )}
-                </section>
+                        ))}
+                      </div>
+                    ) : (
+                      <EmptyState text={copy.emptyEstimates} />
+                    )}
+                  </section>
+                  <div className="min-w-0">
+                    <BilingualComposer
+                      channel="office"
+                      initialText={copy.deliveryDraft}
+                      language={language}
+                    />
+                  </div>
+                </div>
               ) : null}
 
               {tab === "invoices" ? (

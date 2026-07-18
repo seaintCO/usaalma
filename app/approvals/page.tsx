@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import AlmaShell from "@/components/alma-shell/AlmaShell";
+import BilingualComposer from "@/components/communications/BilingualComposer";
 import type { AlmaShellLanguage } from "@/components/alma-shell/types";
 
 type ApprovalStatus =
@@ -69,6 +70,7 @@ const COPY = {
     subject: "Subject",
     body: "Body",
     readOnly: "This approval cannot be edited here.",
+    composer: "Message helper",
   },
   es: {
     title: "Aprobaciones",
@@ -94,6 +96,7 @@ const COPY = {
     subject: "Asunto",
     body: "Cuerpo",
     readOnly: "Esta aprobacion no se puede editar aqui.",
+    composer: "Ayuda para mensaje",
   },
 } as const;
 
@@ -421,6 +424,30 @@ export default function ApprovalsPage() {
                               }))
                             }
                           />
+                          <div>
+                            <p className="mb-2 text-xs font-medium text-[#6B7280]">
+                              {copy.composer}
+                            </p>
+                            <BilingualComposer
+                              channel={
+                                selected.actionKey === "office.estimate.deliver"
+                                  ? "office"
+                                  : "email"
+                              }
+                              initialText={safeString(
+                                draftPayload.body ?? draftPayload.message,
+                              )}
+                              language={language}
+                              onUse={(value) =>
+                                setDraftPayload((current) => ({
+                                  ...current,
+                                  ...(selected.actionKey === "gmail.send"
+                                    ? { body: value }
+                                    : { message: value }),
+                                }))
+                              }
+                            />
+                          </div>
                         </div>
                       ) : (
                         <pre className="max-h-[420px] overflow-auto rounded-xl bg-[#F7F7F8] p-3 text-xs leading-5 text-[#374151]">

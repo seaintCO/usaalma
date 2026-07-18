@@ -357,6 +357,54 @@ Remaining blockers:
   in `docs/alma-connector-setup.md`.
 - Real end-to-end OAuth and send verification requires provider authorization.
 
+## Milestone 5: Bilingual Communications, Voice, Translator, And WhatsApp
+
+Status: in progress.
+
+### Phase 1: Shared Bilingual Communication Domain
+
+Status: completed in this milestone.
+
+Completed work:
+
+- Added shared communication language and tone registry for English and Spanish.
+- Added one server-side communication operation service for language detection,
+  grammar correction, translation, tone rewrite, summary, bilingual reply, and
+  external-message preparation requests.
+- Added business-token preservation for email addresses, URLs, phone numbers,
+  invoice/project/job references, dates, currency, measurements, addresses, and
+  quoted text before provider translation.
+- Added OpenAI-backed translation through the existing fast model path, with a
+  clearly marked local fallback when the provider is unconfigured or fails.
+- Added additive migration
+  `20260718005000_alma_bilingual_communications.sql` for workspace language
+  preferences, workspace glossary terms, and translation job audit records.
+- Added `components/communications/BilingualComposer.tsx` for original,
+  corrected, translated, preview, warning, copy, listen, and use-version flows.
+- Integrated the composer into ALMA message drafting, Approval Center editable
+  email/Office approvals, and the Office estimate workspace delivery-prep area.
+- Registered `communications` and `translator` through the canonical module
+  registry and route registry. The Translator route is implemented in the next
+  phase.
+- Added `scripts/check-alma-bilingual-communications.mjs`.
+
+Compatibility notes:
+
+- External sends still use the Approval Center and allowlisted action
+  executors.
+- The translation API authenticates users and checks module access through the
+  canonical entitlement service.
+- Translation job persistence degrades if the migration is not present; user
+  translation responses still return an honest provider/fallback state.
+- No provider secrets are referenced by client components.
+
+Remaining blockers:
+
+- Apply the bilingual communications migration to Supabase before expecting
+  persisted glossary and translation audit history.
+- Real provider translation requires `OPENAI_API_KEY`; otherwise ALMA returns a
+  review-required local fallback.
+
 The older split milestones below are retained as planning history. Their shell,
 Home, Apps/Files, and Approval Center portions are superseded by this completed
 assistant-first milestone.

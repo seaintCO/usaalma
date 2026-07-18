@@ -3,6 +3,7 @@
 import {
   ArrowUp,
   Camera,
+  Languages,
   LogIn,
   Mic,
   Paperclip,
@@ -15,6 +16,7 @@ import {
   useRef,
   useState,
 } from "react";
+import BilingualComposer from "@/components/communications/BilingualComposer";
 import {
   CHAT_REQUEST_TIMEOUT_MS,
   createChatSubmissionKey,
@@ -309,9 +311,23 @@ export function ChatComposer({
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
+  const [composerOpen, setComposerOpen] = useState(false);
   return (
     <div className="border-t border-[#E5E7EB] bg-white px-3 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 md:px-6">
       <div className="mx-auto w-full max-w-3xl">
+        {composerOpen ? (
+          <div className="mb-3">
+            <BilingualComposer
+              channel="chat"
+              initialText={value}
+              language={language === "es" ? "es" : "en"}
+              onUse={(next) => {
+                onChange(next);
+                setComposerOpen(false);
+              }}
+            />
+          </div>
+        ) : null}
         <div className="relative flex flex-col overflow-hidden rounded-2xl border border-[#E5E7EB] bg-[#F7F7F8] shadow-sm">
           <textarea
             value={value}
@@ -366,6 +382,15 @@ export function ChatComposer({
               className="rounded-md p-1 text-[#6B7280] hover:bg-gray-200 hover:text-black"
             >
               <Camera className="h-5 w-5" />
+            </button>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => setComposerOpen((current) => !current)}
+              className="rounded-md p-1 text-[#6B7280] hover:bg-gray-200 hover:text-black"
+              aria-label="Open bilingual composer"
+            >
+              <Languages className="h-5 w-5" />
             </button>
             <Mic className="h-5 w-5 p-0.5 text-[#6B7280]" />
           </div>

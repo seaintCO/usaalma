@@ -43,7 +43,7 @@ const checks = [
   },
   {
     file: "lib/platform/actions/actionExecutorRegistry.ts",
-    required: ['"gmail.send"', "sendGmailTool", "validate"],
+    required: ['"gmail.send"', "sendConnectedEmail", "validate"],
   },
   {
     file: "lib/platform/actions/executionBoundary.ts",

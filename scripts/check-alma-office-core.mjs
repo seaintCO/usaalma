@@ -57,7 +57,7 @@ const checks = [
     file: "lib/platform/actions/actionExecutorRegistry.ts",
     required: [
       '"office.estimate.deliver"',
-      "OfficeRepository.transitionEstimate",
+      "OfficeRepository.markEstimateDelivered",
     ],
   },
   {

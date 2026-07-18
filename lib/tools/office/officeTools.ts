@@ -4,6 +4,7 @@ import { cleanString } from "@/lib/ai/tools/utils";
 import { OfficeRepository } from "@/lib/office/repository";
 import { officeNumber } from "@/lib/office/calculations";
 import type { OfficeEstimateLineInput } from "@/lib/office/types";
+import { ConnectorRepository } from "@/lib/connectors/repository";
 
 function officeClean(value: unknown, fallback = "") {
   const cleaned = cleanString(value);
@@ -157,8 +158,34 @@ export async function officeTool(
       ? await OfficeRepository.getEstimate(userId, estimateId)
       : null;
     if (!estimate) return { success: false, message: "Estimate not found." };
+    const workspaceId =
+      cleanString(estimate.workspace_id) ||
+      (await ConnectorRepository.resolveDefaultWorkspaceId(userId));
+    if (!workspaceId) {
+      return {
+        success: false,
+        blocked: true,
+        message: "Create or select a workspace before sending estimates.",
+      };
+    }
+    const connection = await ConnectorRepository.getConnectedEmailConnection({
+      userId,
+      workspaceId,
+      provider:
+        cleanString(input.deliveryProvider) === "outlook" ? "outlook" : null,
+    }).catch(() => null);
+    if (!connection) {
+      return {
+        success: false,
+        blocked: true,
+        message: "Connect Gmail or Outlook before sending estimates.",
+      };
+    }
+    const subject =
+      cleanString(input.subject) || `Estimate ${estimate.estimate_number}`;
     const approval = await prepareAuditedAction({
       userId,
+      workspaceId,
       executionId,
       domain: "office",
       actionKey: "office.estimate.deliver",
@@ -169,13 +196,20 @@ export async function officeTool(
         estimateId,
         customer: cleanString(input.customer),
         recipient: cleanString(input.recipient),
+        subject,
         estimateNumber: estimate.estimate_number,
         scope: estimate.scope,
         lineItems: estimate.office_estimate_line_items ?? [],
         total: estimate.total,
         deposit: estimate.deposit_amount,
+        currency: estimate.currency,
         message: cleanString(input.message) || estimate.message,
-        deliveryChannel: officeClean(input.deliveryChannel, "email"),
+        deliveryProvider: connection.provider,
+        sendingAccount: connection.provider_account_email,
+        connectionId: connection.id,
+        attachments: estimate.office_estimate_attachments ?? [],
+        followUpDueAt: cleanString(input.followUpDueAt),
+        followUpMessage: cleanString(input.followUpMessage),
       },
     });
     return {

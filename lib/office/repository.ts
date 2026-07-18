@@ -432,6 +432,62 @@ export class OfficeRepository {
     return data;
   }
 
+  static async markEstimateDelivered(input: {
+    userId: string;
+    estimateId: string;
+    provider: string;
+    connectionId: string;
+    providerMessageId: string;
+    approvalId?: string | null;
+  }) {
+    const supabase = await createClient();
+    const deliveredAt = new Date().toISOString();
+    const { error } = await supabase
+      .from("office_estimates")
+      .update({
+        delivery_provider: input.provider,
+        delivery_connection_id: input.connectionId,
+        delivery_message_id: input.providerMessageId,
+        delivered_at: deliveredAt,
+      })
+      .eq("id", input.estimateId)
+      .eq("user_id", input.userId);
+    if (error) throw error;
+    return this.transitionEstimate(
+      input.userId,
+      input.estimateId,
+      "sent",
+      "Estimate delivered by approved email connector.",
+      input.approvalId,
+    );
+  }
+
+  static async scheduleEstimateFollowUp(input: {
+    userId: string;
+    workspaceId: string;
+    estimateId: string;
+    approvalId?: string | null;
+    dueAt: string;
+    message?: string | null;
+  }) {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from("office_estimate_follow_ups")
+      .insert({
+        user_id: input.userId,
+        workspace_id: input.workspaceId,
+        estimate_id: input.estimateId,
+        approval_id: input.approvalId ?? null,
+        due_at: input.dueAt,
+        message: cleanString(input.message),
+        status: "scheduled",
+      })
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  }
+
   static async recordStatus(
     userId: string,
     estimateId: string,

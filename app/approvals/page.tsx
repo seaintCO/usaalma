@@ -379,15 +379,20 @@ export default function ApprovalsPage() {
                         {copy.payload}
                       </h3>
                       {selected.editable &&
-                      selected.actionKey === "gmail.send" ? (
+                      (selected.actionKey === "gmail.send" ||
+                        selected.actionKey === "office.estimate.deliver") ? (
                         <div className="space-y-3">
                           <Field
                             label={copy.to}
-                            value={safeString(draftPayload.to)}
+                            value={safeString(
+                              draftPayload.to ?? draftPayload.recipient,
+                            )}
                             onChange={(value) =>
                               setDraftPayload((current) => ({
                                 ...current,
-                                to: value,
+                                ...(selected.actionKey === "gmail.send"
+                                  ? { to: value }
+                                  : { recipient: value }),
                               }))
                             }
                           />
@@ -403,12 +408,16 @@ export default function ApprovalsPage() {
                           />
                           <Field
                             label={copy.body}
-                            value={safeString(draftPayload.body)}
+                            value={safeString(
+                              draftPayload.body ?? draftPayload.message,
+                            )}
                             rows={8}
                             onChange={(value) =>
                               setDraftPayload((current) => ({
                                 ...current,
-                                body: value,
+                                ...(selected.actionKey === "gmail.send"
+                                  ? { body: value }
+                                  : { message: value }),
                               }))
                             }
                           />

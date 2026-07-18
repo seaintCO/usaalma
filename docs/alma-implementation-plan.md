@@ -297,6 +297,66 @@ Remaining blockers:
 - Payment-link generation is deferred until a real payment provider is connected
   and approved.
 
+## Milestone 4: Production Connector Center And Approval-Controlled Email
+
+Status: completed in this milestone.
+
+Goal: give Alma workspaces a one-click connector foundation and route Office
+estimate delivery through owner approval and real Gmail/Outlook sends.
+
+Runtime verification:
+
+- The owner confirmed the shared platform and Office migrations were applied.
+- A read-only Supabase REST probe confirmed `office_profiles`,
+  `office_services`, `office_estimates`, `office_estimate_line_items`, and
+  `office_estimate_status_history` are reachable.
+- `oauth_connections` denied anon access, which is the desired posture for the
+  legacy token-bearing OAuth table.
+- `action_approvals` returned `42P17 infinite recursion detected in policy for
+relation "workspaces"` under anon/RLS probing. Milestone 4 adds an additive
+  policy repair with security-definer workspace access helpers.
+- Authenticated Office CRUD could not be truthfully exercised in this shell
+  because no signed-in browser session or test credentials were available.
+
+Completed work:
+
+- Added additive connector migration `20260718004000_alma_secure_connectors.sql`.
+- Added safe connector metadata table `provider_connections`.
+- Added server-only encrypted token table `provider_connection_secrets`.
+- Added `email_delivery_records` for duplicate-send prevention and provider
+  result storage.
+- Added `office_estimate_follow_ups` for follow-up intent storage.
+- Added Office estimate delivery metadata columns for provider, connection,
+  provider message ID, and delivery timestamp.
+- Added signed OAuth state, PKCE verifier storage, workspace binding, and
+  return-path allowlisting.
+- Added Gmail OAuth, identity lookup, refresh, revoke helper, and Gmail send
+  adapter using the minimum send scope.
+- Added Outlook OAuth, identity lookup, refresh, and Microsoft Graph send
+  adapter using delegated `Mail.Send`.
+- Rebuilt `/connections` as a focused Connection Center for Gmail and Outlook.
+- Routed Office estimate delivery through the connector email abstraction and
+  approval executor. Estimates remain unsent unless the provider send succeeds.
+
+Compatibility notes:
+
+- Legacy Google Workspace and Stripe OAuth code remains in place for Marketplace
+  and existing Agent Builder compatibility.
+- New Office delivery uses `provider_connections` and
+  `provider_connection_secrets`, not legacy `oauth_connections`.
+- QuickBooks, Stripe Connect, and WhatsApp Business are represented in the
+  connector schema for future work but are not operational.
+
+Remaining blockers:
+
+- Apply `20260718004000_alma_secure_connectors.sql` to the target Supabase
+  project before production connector persistence.
+- Configure `SUPABASE_SERVICE_ROLE_KEY`; the inspected local `.env.local` did
+  not include it.
+- Configure Google and Microsoft OAuth credentials and callback URLs documented
+  in `docs/alma-connector-setup.md`.
+- Real end-to-end OAuth and send verification requires provider authorization.
+
 The older split milestones below are retained as planning history. Their shell,
 Home, Apps/Files, and Approval Center portions are superseded by this completed
 assistant-first milestone.

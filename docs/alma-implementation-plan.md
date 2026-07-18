@@ -557,6 +557,42 @@ Remaining blockers:
 - Live audio verification still requires a signed-in browser session,
   microphone permission, and valid OpenAI access for the configured models.
 
+### Phase 5: Browser Audio Format Compatibility
+
+Status: completed in this milestone.
+
+Completed work:
+
+- Repaired browser MediaRecorder uploads for Microsoft Edge/Chromium by
+  normalizing MIME types before server validation:
+  - lowercases and trims values
+  - removes codec parameters such as `;codecs=opus`
+  - maps `video/webm` recorder output into the OpenAI-supported WebM container
+- Added a canonical upload-format helper at `lib/voice/audioUpload.ts`.
+  Supported server containers are limited to OpenAI transcription formats:
+  `webm`, `mp4`, `mp3/mpeg`, `wav`, and `m4a`.
+- Removed the unsupported OGG acceptance path unless a future milestone adds
+  real transcoding.
+- The transcribe route now ignores browser filenames, creates a sanitized
+  `recording.*` `File`, preserves the 25 MB limit, and returns structured 415
+  responses with only the normalized MIME and supported container list.
+- Updated `/translator` recording setup to prefer:
+  - `audio/webm;codecs=opus`
+  - `audio/webm`
+  - `audio/mp4;codecs=mp4a.40.2`
+  - `audio/mp4`
+- Added microphone cleanup on recording stop, failure, tab visibility changes,
+  and component unmount.
+- Expanded deterministic verification so codec-parameter regressions cannot
+  pass without live OpenAI calls.
+
+Compatibility notes:
+
+- Push to Talk and Conversation mode still send real provider-backed
+  transcription requests only after authentication and upload validation.
+- Unsupported browsers now get a clear client state instead of uploading an
+  arbitrary default recording container.
+
 The older split milestones below are retained as planning history. Their shell,
 Home, Apps/Files, and Approval Center portions are superseded by this completed
 assistant-first milestone.

@@ -13,24 +13,27 @@ import {
 } from "@/lib/communications/languages";
 import { resolveTenantWorkspace } from "@/lib/platform/workspace/tenantResolver";
 import {
+  getTranscriptionAudioFileInfo,
+  MAX_TRANSCRIPTION_AUDIO_BYTES,
+  normalizeAudioMimeType,
+  SUPPORTED_TRANSCRIPTION_CONTAINERS,
+} from "@/lib/voice/audioUpload";
+import {
   getOpenAIApiKey,
   getTranscriptionModel,
   VoiceConfigurationError,
 } from "@/lib/voice/config";
 import { recordVoiceTranscript } from "@/lib/voice/repository";
 
-const MAX_AUDIO_BYTES = 25 * 1024 * 1024;
-const SUPPORTED_AUDIO_TYPES = new Map([
-  ["audio/webm", "webm"],
-  ["audio/ogg", "ogg"],
-  ["audio/mp4", "mp4"],
-  ["audio/mpeg", "mp3"],
-  ["audio/wav", "wav"],
-  ["audio/x-wav", "wav"],
-]);
-
-function jsonError(code: string, status: number) {
-  return NextResponse.json({ ok: false, error: { code } }, { status });
+function jsonError(
+  code: string,
+  status: number,
+  details?: Record<string, unknown>,
+) {
+  return NextResponse.json(
+    { ok: false, error: { code, ...details } },
+    { status },
+  );
 }
 
 function providerStatus(error: unknown) {
@@ -47,16 +50,6 @@ function mapProviderError(error: unknown) {
   if (status === 401) return jsonError("openai_auth_failed", 503);
   if (status === 400) return jsonError("transcription_rejected", 400);
   return jsonError("transcription_provider_failed", 502);
-}
-
-function fileForOpenAI(audio: File) {
-  const mimeType = audio.type || "audio/webm";
-  const extension = SUPPORTED_AUDIO_TYPES.get(mimeType);
-  if (!extension) return null;
-  return {
-    mimeType,
-    extension,
-  };
 }
 
 export async function POST(req: Request) {
@@ -88,13 +81,16 @@ export async function POST(req: Request) {
   if (!(audio instanceof File) || audio.size === 0) {
     return jsonError("empty_audio", 400);
   }
-  if (audio.size > MAX_AUDIO_BYTES) {
+  if (audio.size > MAX_TRANSCRIPTION_AUDIO_BYTES) {
     return jsonError("audio_too_large", 413);
   }
 
-  const fileInfo = fileForOpenAI(audio);
+  const fileInfo = getTranscriptionAudioFileInfo(audio.type);
   if (!fileInfo) {
-    return jsonError("unsupported_audio_type", 415);
+    return jsonError("unsupported_audio_type", 415, {
+      receivedMimeType: normalizeAudioMimeType(audio.type),
+      supportedContainers: SUPPORTED_TRANSCRIPTION_CONTAINERS,
+    });
   }
 
   const targetLanguage = normalizeCommunicationLanguage(
@@ -112,7 +108,7 @@ export async function POST(req: Request) {
   try {
     const normalizedAudio = new File(
       [await audio.arrayBuffer()],
-      `alma-recording.${fileInfo.extension}`,
+      fileInfo.fileName,
       { type: fileInfo.mimeType },
     );
     const transcription = await client.audio.transcriptions.create({

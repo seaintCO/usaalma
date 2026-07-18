@@ -13,6 +13,7 @@ type RecorderState =
   | "processing"
   | "permission_denied"
   | "blocked"
+  | "unsupported_browser"
   | "invalid_recording"
   | "usage_limit"
   | "provider_unavailable"
@@ -31,6 +32,8 @@ const COPY = {
     translation: "Translation",
     permission: "Microphone permission is required.",
     blocked: "Speech translation requires OpenAI audio configuration.",
+    unsupportedBrowser:
+      "This browser cannot create a supported audio recording.",
     invalidRecording: "This recording format is not supported.",
     usageLimit: "Usage limit reached. Try again shortly.",
     providerUnavailable: "Speech provider is temporarily unavailable.",
@@ -51,6 +54,8 @@ const COPY = {
     translation: "Traduccion",
     permission: "Se requiere permiso del microfono.",
     blocked: "La traduccion de voz requiere configuracion de OpenAI.",
+    unsupportedBrowser:
+      "Este navegador no puede crear una grabacion de audio compatible.",
     invalidRecording: "Este formato de grabacion no es compatible.",
     usageLimit: "Limite de uso alcanzado. Intenta de nuevo en breve.",
     providerUnavailable: "El proveedor de voz no esta disponible.",
@@ -69,6 +74,8 @@ export default function TranslatorPage() {
   const [translation, setTranslation] = useState("");
   const [side, setSide] = useState<"en" | "es">("en");
   const recorder = useRef<MediaRecorder | null>(null);
+  const recorderStream = useRef<MediaStream | null>(null);
+  const activeTargetLanguage = useRef<"en" | "es">("es");
   const chunks = useRef<Blob[]>([]);
   const audio = useRef<HTMLAudioElement | null>(null);
   const audioUrl = useRef<string | null>(null);
@@ -84,10 +91,49 @@ export default function TranslatorPage() {
     }
   }, []);
 
+  const stopMicrophoneTracks = useCallback(() => {
+    recorderStream.current?.getTracks().forEach((track) => track.stop());
+    recorderStream.current = null;
+  }, []);
+
+  const stopAudio = useCallback(() => {
+    audio.current?.pause();
+    audio.current = null;
+    if (audioUrl.current) {
+      URL.revokeObjectURL(audioUrl.current);
+      audioUrl.current = null;
+    }
+  }, []);
+
+  const cancelRecording = useCallback(() => {
+    if (recorder.current?.state === "recording") {
+      recorder.current.onstop = () => stopMicrophoneTracks();
+      recorder.current.stop();
+    } else {
+      stopMicrophoneTracks();
+    }
+    chunks.current = [];
+    recorder.current = null;
+  }, [stopMicrophoneTracks]);
+
   useEffect(() => {
     const id = window.setTimeout(() => void loadLanguage(), 0);
     return () => window.clearTimeout(id);
   }, [loadLanguage]);
+
+  useEffect(() => {
+    function handleVisibilityChange() {
+      if (document.hidden) {
+        cancelRecording();
+      }
+    }
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      cancelRecording();
+      stopAudio();
+    };
+  }, [cancelRecording, stopAudio]);
 
   async function startRecording(
     targetLanguage: "en" | "es" = side === "en" ? "es" : "en",
@@ -98,25 +144,34 @@ export default function TranslatorPage() {
         return;
       }
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      recorderStream.current = stream;
+      activeTargetLanguage.current = targetLanguage;
       chunks.current = [];
-      const mimeType = MediaRecorder.isTypeSupported("audio/webm")
-        ? "audio/webm"
-        : MediaRecorder.isTypeSupported("audio/mp4")
-          ? "audio/mp4"
-          : "";
-      recorder.current = mimeType
+      const mimeType = selectRecorderMimeType();
+      const nextRecorder = mimeType
         ? new MediaRecorder(stream, { mimeType })
         : new MediaRecorder(stream);
+      const actualMimeType = normalizedBrowserAudioMimeType(
+        nextRecorder.mimeType || mimeType,
+      );
+      if (!actualMimeType) {
+        stream.getTracks().forEach((track) => track.stop());
+        recorderStream.current = null;
+        setState("unsupported_browser");
+        return;
+      }
+      recorder.current = nextRecorder;
       recorder.current.ondataavailable = (event) => {
         if (event.data.size) chunks.current.push(event.data);
       };
       recorder.current.onstop = () => {
-        stream.getTracks().forEach((track) => track.stop());
-        void transcribe(targetLanguage);
+        stopMicrophoneTracks();
+        void transcribe(activeTargetLanguage.current);
       };
       recorder.current.start();
       setState("recording");
     } catch {
+      stopMicrophoneTracks();
       setState("permission_denied");
     }
   }
@@ -133,17 +188,18 @@ export default function TranslatorPage() {
         recorder.current?.mimeType ||
         "audio/webm";
       const blob = new Blob(chunks.current, { type: mimeType });
+      recorder.current = null;
       if (!blob.size) {
         setState("error");
         return;
       }
       const form = new FormData();
-      const extension = blob.type.includes("mp4")
-        ? "mp4"
-        : blob.type.includes("ogg")
-          ? "ogg"
-          : "webm";
-      form.append("audio", blob, `speech.${extension}`);
+      const fileName = fileNameForBrowserAudio(blob.type);
+      if (!fileName) {
+        setState("unsupported_browser");
+        return;
+      }
+      form.append("audio", blob, fileName);
       form.append("targetLanguage", targetLanguage);
       const response = await fetch("/api/translator/transcribe", {
         method: "POST",
@@ -159,16 +215,8 @@ export default function TranslatorPage() {
       setState("idle");
       speak(payload.translated?.translation ?? "", targetLanguage);
     } catch {
+      stopMicrophoneTracks();
       setState("error");
-    }
-  }
-
-  function stopAudio() {
-    audio.current?.pause();
-    audio.current = null;
-    if (audioUrl.current) {
-      URL.revokeObjectURL(audioUrl.current);
-      audioUrl.current = null;
     }
   }
 
@@ -310,17 +358,19 @@ export default function TranslatorPage() {
                     ? copy.permission
                     : state === "blocked"
                       ? copy.blocked
-                      : state === "invalid_recording"
-                        ? copy.invalidRecording
-                        : state === "usage_limit"
-                          ? copy.usageLimit
-                          : state === "provider_unavailable"
-                            ? copy.providerUnavailable
-                            : state === "processing"
-                              ? "Processing..."
-                              : state === "recording"
-                                ? "Recording..."
-                                : copy.disconnected}
+                      : state === "unsupported_browser"
+                        ? copy.unsupportedBrowser
+                        : state === "invalid_recording"
+                          ? copy.invalidRecording
+                          : state === "usage_limit"
+                            ? copy.usageLimit
+                            : state === "provider_unavailable"
+                              ? copy.providerUnavailable
+                              : state === "processing"
+                                ? "Processing..."
+                                : state === "recording"
+                                  ? "Recording..."
+                                  : copy.disconnected}
                 </p>
               ) : null}
 
@@ -391,4 +441,34 @@ function stateForError(
     return "provider_unavailable";
   }
   return "error";
+}
+
+function selectRecorderMimeType() {
+  const preferred = [
+    "audio/webm;codecs=opus",
+    "audio/webm",
+    "audio/mp4;codecs=mp4a.40.2",
+    "audio/mp4",
+  ];
+  return preferred.find((type) => MediaRecorder.isTypeSupported(type)) ?? "";
+}
+
+function normalizedBrowserAudioMimeType(value: string) {
+  const normalized = value.toLowerCase().trim().split(";")[0]?.trim();
+  return normalized === "audio/webm" ||
+    normalized === "video/webm" ||
+    normalized === "audio/mp4"
+    ? normalized
+    : "";
+}
+
+function fileNameForBrowserAudio(value: string) {
+  const normalized = normalizedBrowserAudioMimeType(value);
+  if (normalized === "audio/webm" || normalized === "video/webm") {
+    return "recording.webm";
+  }
+  if (normalized === "audio/mp4") {
+    return "recording.mp4";
+  }
+  return "";
 }

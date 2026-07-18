@@ -237,6 +237,66 @@ Remaining blockers:
 - Real provider connection states depend on existing OAuth/voice configuration
   tables and provider credentials.
 
+## Milestone 3: Alma Office Core
+
+Status: completed in this milestone.
+
+Goal: create the operational foundation for the Office loop:
+Ask Alma -> prepare work -> owner reviews -> owner approves -> Alma executes.
+
+Completed work:
+
+- Added additive Office schema migration:
+  - `office_profiles`
+  - `office_services`
+  - `office_projects`
+  - `office_estimates`
+  - `office_estimate_line_items`
+  - `office_estimate_attachments`
+  - `office_estimate_status_history`
+- Reused existing CRM `contacts` and `companies` as customer records.
+- Reused existing `invoices` and `invoice_line_items` for estimate conversion.
+- Added deterministic estimate calculation helpers for subtotal, discounts,
+  taxes, total, deposit, and remaining balance.
+- Added Alma Office repository and API routes for overview, customers,
+  services, estimates, delivery approval preparation, and invoice conversion.
+- Added `/office` workspace reachable from Apps through the canonical module
+  registry.
+- Added controlled Office tools to the canonical tool registry:
+  - find customer
+  - create customer draft
+  - find services
+  - draft/revise estimate
+  - attach project photos
+  - analyze project photos into preliminary scope
+  - prepare estimate delivery
+  - convert accepted estimate to invoice
+  - prepare deposit request
+  - schedule estimate follow-up
+- Registered `office.estimate.deliver` with the audited action executor.
+  Estimate delivery cannot mark an estimate sent unless the real executor
+  succeeds.
+- Added contextual Home shortcuts for estimate/customer/approval/invoice work.
+- Added `scripts/check-alma-office-core.mjs`.
+
+Compatibility notes:
+
+- No QuickBooks, WhatsApp, or new OAuth provider was added.
+- AI tools cannot invent prices; estimate tools require explicit line rates
+  supplied from saved services or owner-provided input.
+- Project photo analysis is preliminary only and explicitly avoids claiming
+  exact image measurements without confirmed scale/dimensions.
+- Payment/deposit requests remain blocked unless a real provider is connected.
+
+Remaining blockers:
+
+- The new Office migration must be applied to the target Supabase project before
+  `/office` can load persisted Office records there.
+- Real estimate delivery depends on a connected email provider. Without Gmail,
+  the approval executor fails safely and does not mark estimates as sent.
+- Payment-link generation is deferred until a real payment provider is connected
+  and approved.
+
 The older split milestones below are retained as planning history. Their shell,
 Home, Apps/Files, and Approval Center portions are superseded by this completed
 assistant-first milestone.

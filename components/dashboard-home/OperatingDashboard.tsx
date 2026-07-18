@@ -4,6 +4,7 @@ import {
   AlertCircle,
   AppWindow,
   Bot,
+  Calculator,
   CheckCircle2,
   Clock3,
   FileText,
@@ -13,6 +14,7 @@ import {
   Send,
   ShieldCheck,
   Sparkles,
+  Users,
   type LucideIcon,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -142,10 +144,17 @@ const COPY = {
     commandFollowUp: "Draft a customer follow-up from my CRM context.",
     commandAnalyzeDoc: "Analyze the latest document or uploaded file.",
     commandEstimate: "Prepare a construction project summary and next steps.",
+    commandOfficeEstimate:
+      "Create an estimate using my saved Alma Office price book.",
+    commandAddCustomer: "Add a customer draft in Alma Office.",
+    commandUnpaidInvoices: "Check my unpaid invoices.",
     planDay: "Plan my day",
     followUp: "Follow up",
     analyzeDoc: "Analyze files",
     estimate: "Prepare estimate",
+    createEstimate: "Create estimate",
+    addCustomer: "Add customer",
+    unpaidInvoices: "Check unpaid invoices",
   },
   es: {
     title: "Que debe manejar ALMA ahora?",
@@ -179,10 +188,17 @@ const COPY = {
     commandAnalyzeDoc: "Analiza el documento o archivo mas reciente.",
     commandEstimate:
       "Prepara un resumen de proyecto de construccion y siguientes pasos.",
+    commandOfficeEstimate:
+      "Crea un estimado usando mis precios guardados de Alma Office.",
+    commandAddCustomer: "Agrega un borrador de cliente en Alma Office.",
+    commandUnpaidInvoices: "Revisa mis facturas pendientes.",
     planDay: "Planificar dia",
     followUp: "Seguimiento",
     analyzeDoc: "Analizar archivos",
     estimate: "Preparar estimado",
+    createEstimate: "Crear estimado",
+    addCustomer: "Agregar cliente",
+    unpaidInvoices: "Facturas pendientes",
   },
 } as const;
 
@@ -556,6 +572,34 @@ function buildShortcuts(
   );
 
   const shortcuts: Shortcut[] = [];
+  if (enabled.has("office")) {
+    shortcuts.push(
+      {
+        id: "create-estimate",
+        label: t.createEstimate,
+        prompt: t.commandOfficeEstimate,
+        icon: Calculator,
+      },
+      {
+        id: "add-customer",
+        label: t.addCustomer,
+        prompt: t.commandAddCustomer,
+        icon: Users,
+      },
+      {
+        id: "review-approvals",
+        label: t.reviewApprovals,
+        href: WORKSPACE_ROUTES.approvals,
+        icon: ShieldCheck,
+      },
+      {
+        id: "unpaid-invoices",
+        label: t.unpaidInvoices,
+        prompt: t.commandUnpaidInvoices,
+        icon: FileText,
+      },
+    );
+  }
   if (enabled.has("tasks") || enabled.has("planner")) {
     shortcuts.push({
       id: "plan-day",

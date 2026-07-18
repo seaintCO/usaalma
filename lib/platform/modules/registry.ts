@@ -112,6 +112,33 @@ export const ALMA_MODULE_REGISTRY = [
     approvalPolicy: "automatic",
   },
   {
+    key: "office",
+    name: "Alma Office",
+    group: "office",
+    category: "Business",
+    description:
+      "Prepare customers, price books, estimates, approvals, and invoice handoff.",
+    route: WORKSPACE_ROUTES.office,
+    releaseStatus: "beta",
+    requiredPlan: "business",
+    entitlementKey: "office",
+    installKey: "office",
+    legacyKeys: ["crm", "invoicing"],
+    capabilities: [
+      "office.customers",
+      "office.price_book",
+      "office.estimates",
+      "office.approvals",
+    ],
+    defaultRisk: "external",
+    approvalPolicy: "approval_required",
+    limitations: [
+      "No QuickBooks or WhatsApp OAuth in this milestone.",
+      "Payment links require a real connected provider.",
+      "AI may use only saved service prices.",
+    ],
+  },
+  {
     key: "crm",
     name: "CRM",
     group: "office",

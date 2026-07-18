@@ -22,7 +22,7 @@ Baseline blockers:
 
 ## Milestone 0: Audit And Baseline
 
-Status: in progress.
+Status: completed at `080d1de`.
 
 Deliverables:
 
@@ -37,7 +37,74 @@ Exit criteria:
 - No app code changed.
 - Working tree clean after commit.
 
-## Milestone 1: Foundational Stabilization
+## Milestone 1: Shared Platform Foundation
+
+Status: completed in this milestone.
+
+Goal: establish one shared platform layer for tenant/workspace resolution,
+module entitlement reads, module metadata, approvals, and audited execution
+boundaries without redesigning the frontend shell.
+
+Completed work:
+
+- Added canonical module registry at `lib/platform/modules/registry.ts`.
+  - Formalized Free/Core, Office, Creator, Studio, Trader, and Fitness groups.
+  - Preserved existing route strings through `WORKSPACE_ROUTES`.
+  - Preserved legacy install aliases such as `image_generator`.
+  - Added module capability, release, risk, and approval-policy metadata.
+- Added canonical entitlement service at `lib/platform/entitlements/service.ts`.
+  - Existing `subscriptions` rows remain the paid-plan compatibility source.
+  - Free/Core modules are represented explicitly.
+  - Marketplace and module install now read access through the same service.
+  - `lib/modules/plans.ts` remains as a compatibility wrapper over the registry.
+- Added canonical tenant/workspace resolver at
+  `lib/platform/workspace/tenantResolver.ts`.
+  - Existing users resolve to a personal tenant without needing a workspace row.
+  - Workspace resolution validates owner or member access.
+- Added shared approval domain types and services:
+  - `proposed`
+  - `awaiting_approval`
+  - `approved`
+  - `rejected`
+  - `executing`
+  - `completed`
+  - `failed`
+- Added additive migration
+  `supabase/migrations/20260718001000_alma_shared_platform_foundation.sql`.
+  - Creates/hardens `workspaces`, `workspace_members`, and `workspace_invites`.
+  - Adds `action_approvals` and `action_audit_logs`.
+  - Adds RLS policies and workspace ownership trigger checks.
+- Added audited action boundary at
+  `lib/platform/actions/executionBoundary.ts`.
+  - External or protected actions create approval records before execution.
+  - `send_gmail` now pauses behind the shared approval boundary.
+- Added focused static verification script:
+  `scripts/check-shared-platform-foundation.mjs`.
+
+Compatibility notes:
+
+- Existing CRM, invoicing, memory, agent, subscription, Marketplace, and module
+  install records are preserved.
+- Existing agent-specific `agent_approvals` remain untouched for Agent Builder
+  compatibility.
+- The frontend shell, durable chat transport, OAuth provider architecture, and
+  product workspace UIs are not redesigned in this milestone.
+- Module install persists canonical install keys, so `images` still installs as
+  `image_generator`.
+
+Remaining blockers:
+
+- Existing agent approval UI still reads `agent_approvals`; a later milestone
+  should add a shared approval center that can display both agent and platform
+  approvals.
+- External execution approval resume endpoints are not implemented yet; the
+  foundation prevents bypass and records approvals, but does not add provider
+  execution UX.
+- Existing database instances may already have workspace tables outside tracked
+  migrations; the new migration is defensive and additive but must still be
+  reviewed before application.
+
+## Milestone 2: Foundational Stabilization
 
 Goal: make the current foundation safer before visual restructuring.
 
@@ -68,7 +135,7 @@ Commit:
 
 - `fix(alma): stabilize platform foundation`
 
-## Milestone 2: Simplified Shell Foundation
+## Milestone 3: Simplified Shell Foundation
 
 Goal: introduce the target navigation model without breaking existing routes.
 
@@ -98,7 +165,7 @@ Commit:
 
 - `refactor(alma): simplify primary shell navigation`
 
-## Milestone 3: Simplified Home
+## Milestone 4: Simplified Home
 
 Goal: make `/dashboard` assistant-first.
 
@@ -131,7 +198,7 @@ Commit:
 
 - `refactor(alma): simplify operating home`
 
-## Milestone 4: Apps And Files
+## Milestone 5: Apps And Files
 
 Goal: make modules discoverable without clutter.
 
@@ -159,7 +226,7 @@ Commit:
 
 - `refactor(alma): add apps and files surfaces`
 
-## Milestone 5: Approval Center V1
+## Milestone 6: Approval Center V1
 
 Goal: complete user-facing approval model before external action expansion.
 
@@ -187,7 +254,7 @@ Commit:
 
 - `feat(alma): add approval center foundation`
 
-## Milestone 6: Alma Office Data Foundation
+## Milestone 7: Alma Office Data Foundation
 
 Goal: complete Office records without duplicating CRM/Invoicing.
 
@@ -214,7 +281,7 @@ Commit:
 
 - `feat(alma): add office estimate foundation`
 
-## Milestone 7: Alma Office End-To-End
+## Milestone 8: Alma Office End-To-End
 
 Goal: customer to estimate to invoice to approved follow-up.
 
@@ -246,7 +313,7 @@ Commit:
 
 - `feat(alma): complete office workflow`
 
-## Milestone 8: Verification And Hardening
+## Milestone 9: Verification And Hardening
 
 Scope:
 

@@ -1,10 +1,9 @@
-import { SubscriptionRepository } from "@/lib/db/repositories/billing/subscription.repository";
 import { IntegrationRepository } from "@/lib/db/repositories/integrations/integration.repository";
 import { ModuleRepository } from "@/lib/db/repositories/modules/module.repository";
 import { OAuthRepository } from "@/lib/db/repositories/oauth/oauth.repository";
-import { WORKSPACE_ROUTES } from "@/lib/platform/workspaceRoutes";
+import { EntitlementService } from "@/lib/platform/entitlements/service";
+import { listAlmaModules } from "@/lib/platform/modules/registry";
 import type {
-  MarketplaceAccessStatus,
   MarketplaceCatalogResponse,
   MarketplaceCategory,
   MarketplaceConnectionRecord,
@@ -12,19 +11,6 @@ import type {
   MarketplaceItem,
   MarketplaceReleaseStatus,
 } from "./types";
-
-type InternalModuleDefinition = {
-  key: string;
-  name: string;
-  category: MarketplaceCategory;
-  description: string;
-  route?: string;
-  releaseStatus: MarketplaceReleaseStatus;
-  entitlementKey?: string;
-  requiredPlan?: string;
-  installKey?: string;
-  limitations?: string[];
-};
 
 type ProviderDefinition = {
   key: string;
@@ -37,164 +23,6 @@ type ProviderDefinition = {
   setupRequirements?: string[];
   connectionKind: "oauth" | "custom" | "unavailable";
 };
-
-// This is intentionally metadata only. User-specific entitlement, installation, and
-// connection state are resolved below from owned records.
-const INTERNAL_MODULES: readonly InternalModuleDefinition[] = [
-  {
-    key: "tasks",
-    name: "Tasks",
-    category: "Productivity",
-    description: "Organize owned work.",
-    route: "/tasks",
-    releaseStatus: "active",
-    entitlementKey: "tasks",
-    installKey: "tasks",
-  },
-  {
-    key: "notes",
-    name: "Notes",
-    category: "Productivity",
-    description: "Capture and retrieve notes.",
-    route: "/notes",
-    releaseStatus: "active",
-    entitlementKey: "notes",
-    installKey: "notes",
-  },
-  {
-    key: "planner",
-    name: "Planner",
-    category: "Productivity",
-    description: "Plan time, meetings, and reminders.",
-    route: "/planner",
-    releaseStatus: "active",
-    entitlementKey: "planner",
-  },
-  {
-    key: "documents",
-    name: "Documents",
-    category: "Productivity",
-    description: "Store and work with owned documents.",
-    route: "/documents",
-    releaseStatus: "active",
-    entitlementKey: "documents",
-    installKey: "documents",
-  },
-  {
-    key: "fitness",
-    name: "Fitness",
-    category: "Fitness",
-    description: "Track health and fitness records.",
-    route: "/fitness",
-    releaseStatus: "active",
-    entitlementKey: "fitness",
-  },
-  {
-    key: "crm",
-    name: "CRM",
-    category: "Business",
-    description: "Manage contacts, companies, and opportunities.",
-    route: "/crm",
-    releaseStatus: "active",
-    entitlementKey: "crm",
-    installKey: "crm",
-    requiredPlan: "business",
-  },
-  {
-    key: "construction",
-    name: "Construction Blueprint",
-    category: "Business",
-    description:
-      "Manual project takeoff and crew documentation with plan/photo upload, verified measurements, material estimates, scope notes, crew instructions, and private PDF export.",
-    route: WORKSPACE_ROUTES.construction,
-    releaseStatus: "beta",
-    requiredPlan: "business",
-    installKey: "construction",
-    limitations: [
-      "No automatic takeoff, OCR, or scale detection.",
-      "No engineering, architectural, or code-compliance approval.",
-      "No supplier pricing or ordering.",
-      "Measurements require field verification.",
-      "Quantity and waste assumptions may vary.",
-    ],
-  },
-  {
-    key: "invoicing",
-    name: "Invoices",
-    category: "Business",
-    description: "Create and manage owned invoices.",
-    route: "/invoicing",
-    releaseStatus: "active",
-    entitlementKey: "invoicing",
-    installKey: "invoicing",
-    requiredPlan: "business",
-  },
-  {
-    key: "images",
-    name: "Images",
-    category: "Creative",
-    description: "Generate and manage owned visual assets.",
-    route: "/images",
-    releaseStatus: "active",
-    entitlementKey: "image_generator",
-    installKey: "image_generator",
-  },
-  {
-    key: "creative_studio",
-    name: "Creative Studio",
-    category: "Creative",
-    description: "Create brand and campaign workspaces.",
-    route: "/creative",
-    releaseStatus: "beta",
-    requiredPlan: "business",
-    limitations: ["Lifecycle management remains in beta."],
-  },
-  {
-    key: "launch_studio",
-    name: "Launch Studio",
-    category: "Business",
-    description: "Build and persist launch plans.",
-    route: "/launch-studio",
-    releaseStatus: "beta",
-    requiredPlan: "business",
-    limitations: ["Some project lifecycle workflows remain in beta."],
-  },
-  {
-    key: "trader",
-    name: "Trader",
-    category: "Finance",
-    description: "Record and review educational trading analysis.",
-    route: "/trader",
-    releaseStatus: "beta",
-    requiredPlan: "business",
-    limitations: ["No live prices, brokerage execution, or investment advice."],
-  },
-  {
-    key: "agent_builder",
-    name: "Agent Builder",
-    category: "Developer",
-    description:
-      "Create persisted ALMA agents with scoped tools and approvals.",
-    route: "/agents",
-    releaseStatus: "beta",
-    requiredPlan: "business",
-    limitations: [
-      "No autonomous schedules.",
-      "No multi-agent delegation.",
-      "No unrestricted external actions.",
-    ],
-  },
-  {
-    key: "automations",
-    name: "Automations",
-    category: "Developer",
-    description: "Build automated workflows.",
-    releaseStatus: "coming_soon",
-    entitlementKey: "automations",
-    installKey: "automations",
-    limitations: ["Not yet verified as an end-to-end release workflow."],
-  },
-];
 
 const PROVIDERS: readonly ProviderDefinition[] = [
   {
@@ -293,26 +121,6 @@ const PROVIDERS: readonly ProviderDefinition[] = [
   },
 ];
 
-function hasActivePlan(
-  subscription: { plan?: string | null; status?: string | null } | null,
-) {
-  return Boolean(
-    subscription?.plan &&
-    ["active", "trialing"].includes(subscription.status ?? ""),
-  );
-}
-
-function accessForModule(
-  definition: InternalModuleDefinition,
-  plan: string | null,
-  subscription: { plan?: string | null; status?: string | null } | null,
-): MarketplaceAccessStatus {
-  if (definition.releaseStatus === "coming_soon") return "unavailable";
-  if (!plan || !hasActivePlan(subscription)) return "unavailable";
-  if (!definition.requiredPlan) return "included";
-  return plan === definition.requiredPlan ? "included" : "upgrade_required";
-}
-
 function connectionStatusFor(
   definition: ProviderDefinition,
   records: readonly MarketplaceConnectionRecord[],
@@ -352,20 +160,24 @@ function connectionStatusFor(
 
 export class MarketplaceCatalogService {
   static async getForUser(userId: string): Promise<MarketplaceCatalogResponse> {
-    const [subscription, installedModuleKeys, connections, voiceProviders] =
+    const [entitlements, installedModuleKeys, connections, voiceProviders] =
       await Promise.all([
-        SubscriptionRepository.get(userId),
+        EntitlementService.getForUser(userId),
         ModuleRepository.listInstalledKeys(userId),
         OAuthRepository.listConnectionStates(userId),
         IntegrationRepository.listConfiguredVoiceProviders(userId),
       ]);
-    const plan = hasActivePlan(subscription)
-      ? (subscription?.plan ?? null)
-      : null;
     const installed = new Set(installedModuleKeys);
+    const accessByModuleKey = new Map(
+      entitlements.modules.map((entitlement) => [
+        entitlement.module.key,
+        entitlement.accessStatus,
+      ]),
+    );
     const items: MarketplaceItem[] = [
-      ...INTERNAL_MODULES.map((definition) => {
-        const accessStatus = accessForModule(definition, plan, subscription);
+      ...listAlmaModules().map((definition) => {
+        const accessStatus =
+          accessByModuleKey.get(definition.key) ?? "unavailable";
         return {
           key: definition.key,
           name: definition.name,
@@ -386,7 +198,7 @@ export class MarketplaceCatalogService {
             ? { requiredPlan: definition.requiredPlan }
             : {}),
           ...(definition.limitations
-            ? { limitations: definition.limitations }
+            ? { limitations: [...definition.limitations] }
             : {}),
         };
       }),
@@ -431,6 +243,6 @@ export class MarketplaceCatalogService {
         };
       }),
     ];
-    return { ok: true, items, currentPlan: plan };
+    return { ok: true, items, currentPlan: entitlements.currentPlan };
   }
 }

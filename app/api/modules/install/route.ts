@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth/user";
-import { SubscriptionRepository } from "@/lib/db/repositories/billing/subscription.repository";
 import { ModuleRepository } from "@/lib/db/repositories/modules/module.repository";
-import { moduleAllowed } from "@/lib/modules/plans";
+import { EntitlementService } from "@/lib/platform/entitlements/service";
 
 export async function POST(req: Request) {
   const user = await getCurrentUser();
@@ -17,17 +16,23 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Missing moduleKey" }, { status: 400 });
   }
 
-  const subscription = await SubscriptionRepository.get(user.id);
-  const plan = subscription?.plan ?? "free";
+  const access = await EntitlementService.checkModuleAccess(
+    user.id,
+    body.moduleKey,
+  );
 
-  if (!moduleAllowed(plan, body.moduleKey)) {
+  if (!access || access.accessStatus !== "included") {
     return NextResponse.json(
       { error: "This module is not included in your plan." },
       { status: 403 },
     );
   }
 
-  const installed = await ModuleRepository.install(user.id, body.moduleKey);
+  const installKey =
+    access.module.installKey ??
+    access.module.entitlementKey ??
+    access.module.key;
+  const installed = await ModuleRepository.install(user.id, installKey);
 
   return NextResponse.json(installed);
 }

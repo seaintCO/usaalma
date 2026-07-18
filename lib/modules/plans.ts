@@ -1,39 +1,28 @@
+import { planIncludesModule } from "@/lib/platform/entitlements/service";
+import {
+  listAlmaModules,
+  resolveAlmaModuleKey,
+} from "@/lib/platform/modules/registry";
+
 export function allowedModulesForPlan(plan: string) {
-  if (plan === "business") {
-    return [
-      "planner",
-      "tasks",
-      "notes",
-      "documents",
-      "image_generator",
-      "crm",
-      "construction",
-      "invoicing",
-      "workflows",
-      "workspaces",
-      "ai_receptionist",
-      "automations",
-      "email_marketing",
-      "sms",
-      "website_builder",
-      "image_generator",
-    ];
-  }
-
-  if (plan === "personal") {
-    return [
-      "planner",
-      "tasks",
-      "notes",
-      "documents",
-      "image_generator",
-      "workspaces",
-    ];
-  }
-
-  return [];
+  return listAlmaModules()
+    .filter(
+      (module) =>
+        module.releaseStatus !== "coming_soon" &&
+        planIncludesModule(plan, module),
+    )
+    .flatMap((module) => [
+      module.installKey ?? module.entitlementKey,
+      module.key,
+      ...(module.legacyKeys ?? []),
+    ]);
 }
 
 export function moduleAllowed(plan: string, moduleKey: string) {
-  return allowedModulesForPlan(plan).includes(moduleKey);
+  const definition = resolveAlmaModuleKey(moduleKey);
+  return Boolean(
+    definition &&
+    definition.releaseStatus !== "coming_soon" &&
+    planIncludesModule(plan, definition),
+  );
 }

@@ -13,6 +13,9 @@ type RecorderState =
   | "processing"
   | "permission_denied"
   | "blocked"
+  | "invalid_recording"
+  | "usage_limit"
+  | "provider_unavailable"
   | "error";
 
 const COPY = {
@@ -28,6 +31,9 @@ const COPY = {
     translation: "Translation",
     permission: "Microphone permission is required.",
     blocked: "Speech translation requires OpenAI audio configuration.",
+    invalidRecording: "This recording format is not supported.",
+    usageLimit: "Usage limit reached. Try again shortly.",
+    providerUnavailable: "Speech provider is temporarily unavailable.",
     empty: "No speech captured yet.",
     replay: "Replay",
     slower: "Speak slower",
@@ -45,6 +51,9 @@ const COPY = {
     translation: "Traduccion",
     permission: "Se requiere permiso del microfono.",
     blocked: "La traduccion de voz requiere configuracion de OpenAI.",
+    invalidRecording: "Este formato de grabacion no es compatible.",
+    usageLimit: "Limite de uso alcanzado. Intenta de nuevo en breve.",
+    providerUnavailable: "El proveedor de voz no esta disponible.",
     empty: "Aun no hay audio capturado.",
     replay: "Repetir",
     slower: "Mas lento",
@@ -61,6 +70,8 @@ export default function TranslatorPage() {
   const [side, setSide] = useState<"en" | "es">("en");
   const recorder = useRef<MediaRecorder | null>(null);
   const chunks = useRef<Blob[]>([]);
+  const audio = useRef<HTMLAudioElement | null>(null);
+  const audioUrl = useRef<string | null>(null);
   const copy = COPY[language];
 
   const loadLanguage = useCallback(async () => {
@@ -88,7 +99,14 @@ export default function TranslatorPage() {
       }
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       chunks.current = [];
-      recorder.current = new MediaRecorder(stream);
+      const mimeType = MediaRecorder.isTypeSupported("audio/webm")
+        ? "audio/webm"
+        : MediaRecorder.isTypeSupported("audio/mp4")
+          ? "audio/mp4"
+          : "";
+      recorder.current = mimeType
+        ? new MediaRecorder(stream, { mimeType })
+        : new MediaRecorder(stream);
       recorder.current.ondataavailable = (event) => {
         if (event.data.size) chunks.current.push(event.data);
       };
@@ -110,13 +128,22 @@ export default function TranslatorPage() {
 
   async function transcribe(targetLanguage: "en" | "es") {
     try {
-      const blob = new Blob(chunks.current, { type: "audio/webm" });
+      const mimeType =
+        chunks.current.find((chunk) => chunk.type)?.type ||
+        recorder.current?.mimeType ||
+        "audio/webm";
+      const blob = new Blob(chunks.current, { type: mimeType });
       if (!blob.size) {
         setState("error");
         return;
       }
       const form = new FormData();
-      form.append("audio", blob, "speech.webm");
+      const extension = blob.type.includes("mp4")
+        ? "mp4"
+        : blob.type.includes("ogg")
+          ? "ogg"
+          : "webm";
+      form.append("audio", blob, `speech.${extension}`);
       form.append("targetLanguage", targetLanguage);
       const response = await fetch("/api/translator/transcribe", {
         method: "POST",
@@ -124,9 +151,7 @@ export default function TranslatorPage() {
       });
       const payload = await response.json();
       if (!response.ok || !payload.ok) {
-        setState(
-          payload.error?.code === "openai_unconfigured" ? "blocked" : "error",
-        );
+        setState(stateForError(payload.error?.code, response.status));
         return;
       }
       setTranscript(payload.transcript ?? "");
@@ -138,30 +163,48 @@ export default function TranslatorPage() {
     }
   }
 
+  function stopAudio() {
+    audio.current?.pause();
+    audio.current = null;
+    if (audioUrl.current) {
+      URL.revokeObjectURL(audioUrl.current);
+      audioUrl.current = null;
+    }
+  }
+
   async function speak(
     value = translation,
     targetLanguage = side === "en" ? "es" : "en",
   ) {
     if (!value) return;
+    stopAudio();
     try {
       const response = await fetch("/api/translator/speech", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text: value }),
       });
-      if (response.ok) {
-        const audio = new Audio(URL.createObjectURL(await response.blob()));
-        audio.playbackRate = targetLanguage === "es" ? 0.92 : 1;
-        await audio.play();
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        setState(stateForError(payload.error?.code, response.status));
         return;
       }
+      const url = URL.createObjectURL(await response.blob());
+      const player = new Audio(url);
+      player.playbackRate = targetLanguage === "es" ? 0.92 : 1;
+      player.onended = stopAudio;
+      player.onerror = () => {
+        stopAudio();
+        setState("provider_unavailable");
+      };
+      audio.current = player;
+      audioUrl.current = url;
+      await player.play();
+      return;
     } catch {
-      // Browser speech synthesis below is the safe local fallback.
+      stopAudio();
+      setState("provider_unavailable");
     }
-    const utterance = new SpeechSynthesisUtterance(value);
-    utterance.lang = targetLanguage === "es" ? "es-MX" : "en-US";
-    utterance.rate = 0.86;
-    window.speechSynthesis.speak(utterance);
   }
 
   return (
@@ -267,11 +310,17 @@ export default function TranslatorPage() {
                     ? copy.permission
                     : state === "blocked"
                       ? copy.blocked
-                      : state === "processing"
-                        ? "Processing..."
-                        : state === "recording"
-                          ? "Recording..."
-                          : copy.disconnected}
+                      : state === "invalid_recording"
+                        ? copy.invalidRecording
+                        : state === "usage_limit"
+                          ? copy.usageLimit
+                          : state === "provider_unavailable"
+                            ? copy.providerUnavailable
+                            : state === "processing"
+                              ? "Processing..."
+                              : state === "recording"
+                                ? "Recording..."
+                                : copy.disconnected}
                 </p>
               ) : null}
 
@@ -312,4 +361,34 @@ function TranscriptCard({ title, value }: { title: string; value: string }) {
       </p>
     </div>
   );
+}
+
+function stateForError(
+  code: unknown,
+  status: number,
+): Exclude<RecorderState, "idle" | "recording" | "processing"> {
+  if (
+    code === "openai_api_key_missing" ||
+    code === "invalid_transcription_model" ||
+    code === "invalid_speech_model" ||
+    code === "audio_configuration_failed"
+  ) {
+    return "blocked";
+  }
+  if (
+    code === "unsupported_audio_type" ||
+    code === "audio_too_large" ||
+    code === "empty_audio" ||
+    status === 413 ||
+    status === 415
+  ) {
+    return "invalid_recording";
+  }
+  if (code === "rate_limited" || status === 429) {
+    return "usage_limit";
+  }
+  if (status >= 500) {
+    return "provider_unavailable";
+  }
+  return "error";
 }

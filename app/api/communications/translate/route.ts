@@ -1,5 +1,10 @@
 import { NextResponse } from "next/server";
-import { runCommunicationOperation } from "@/lib/communications/translationService";
+import {
+  CommunicationProviderError,
+  CommunicationProviderUnavailableError,
+  CommunicationValidationError,
+  runCommunicationOperation,
+} from "@/lib/communications/translationService";
 import {
   normalizeCommunicationLanguage,
   normalizeTone,
@@ -87,15 +92,43 @@ export async function POST(req: Request) {
   const tone = normalizeTone(body.tone);
   const channel = typeof body.channel === "string" ? body.channel : "chat";
 
-  const result = await runCommunicationOperation({
-    operation,
-    text,
-    sourceLanguage: source,
-    targetLanguage: target,
-    tone,
-    channel: channel as "email" | "whatsapp" | "chat" | "office" | "translator",
-    glossary,
-  });
+  let result;
+  try {
+    result = await runCommunicationOperation({
+      operation,
+      text,
+      sourceLanguage: source,
+      targetLanguage: target,
+      tone,
+      channel: channel as
+        "email" | "whatsapp" | "chat" | "office" | "translator",
+      glossary,
+    });
+  } catch (error) {
+    if (error instanceof CommunicationProviderUnavailableError) {
+      return NextResponse.json(
+        { ok: false, error: { code: error.code } },
+        { status: 503 },
+      );
+    }
+    if (error instanceof CommunicationValidationError) {
+      return NextResponse.json(
+        { ok: false, error: { code: error.code, reasons: error.reasons } },
+        { status: 502 },
+      );
+    }
+    if (error instanceof CommunicationProviderError) {
+      const status = error.status === 429 ? 429 : 502;
+      return NextResponse.json(
+        { ok: false, error: { code: error.code } },
+        { status },
+      );
+    }
+    return NextResponse.json(
+      { ok: false, error: { code: "translation_failed" } },
+      { status: 502 },
+    );
+  }
 
   await recordTranslationJob({
     userId: user.id,

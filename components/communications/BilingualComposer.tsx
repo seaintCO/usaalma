@@ -9,7 +9,7 @@ import {
   Sparkles,
   Volume2,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   COMMUNICATION_LANGUAGES,
   COMMUNICATION_TONES,
@@ -21,13 +21,17 @@ import {
 
 type CommunicationResult = {
   originalText: string;
+  original: string;
   detectedLanguage: CommunicationLanguageCode;
   correctedSource: string;
+  corrected: string;
   translation: string;
+  translated: string;
+  sourceLanguage: CommunicationLanguageCode;
   targetLanguage: CommunicationLanguageCode;
   tone: CommunicationTone;
   warnings: string[];
-  provider: "openai" | "local_fallback";
+  provider: "openai";
 };
 
 type ComposerCopy = {
@@ -48,6 +52,7 @@ type ComposerCopy = {
   chars: string;
   retry: string;
   unavailable: string;
+  speechUnavailable: string;
 };
 
 const COPY: Record<"en" | "es", ComposerCopy> = {
@@ -69,6 +74,7 @@ const COPY: Record<"en" | "es", ComposerCopy> = {
     chars: "characters",
     retry: "Retry",
     unavailable: "Translation is temporarily unavailable.",
+    speechUnavailable: "Speech playback is temporarily unavailable.",
   },
   es: {
     title: "Compositor bilingue",
@@ -88,6 +94,7 @@ const COPY: Record<"en" | "es", ComposerCopy> = {
     chars: "caracteres",
     retry: "Reintentar",
     unavailable: "La traduccion no esta disponible temporalmente.",
+    speechUnavailable: "La reproduccion de voz no esta disponible.",
   },
 };
 
@@ -116,6 +123,9 @@ export default function BilingualComposer({
   const [result, setResult] = useState<CommunicationResult | null>(null);
   const [busy, setBusy] = useState<CommunicationOperation | null>(null);
   const [error, setError] = useState(false);
+  const [speechError, setSpeechError] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const audioUrlRef = useRef<string | null>(null);
 
   const preview = useMemo(
     () => result?.translation || result?.correctedSource || text,
@@ -156,13 +166,47 @@ export default function BilingualComposer({
     }
   }
 
-  function listen() {
+  function stopAudio() {
+    audioRef.current?.pause();
+    audioRef.current = null;
+    if (audioUrlRef.current) {
+      URL.revokeObjectURL(audioUrlRef.current);
+      audioUrlRef.current = null;
+    }
+  }
+
+  async function listen() {
     if (!preview || typeof window === "undefined") return;
-    const utterance = new SpeechSynthesisUtterance(preview);
-    utterance.lang = COMMUNICATION_LANGUAGES[targetLanguage].voiceLocale;
-    utterance.rate = 0.92;
-    window.speechSynthesis.cancel();
-    window.speechSynthesis.speak(utterance);
+    setSpeechError(false);
+    stopAudio();
+    try {
+      const response = await fetch("/api/translator/speech", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          text: preview,
+          voice: "alloy",
+        }),
+      });
+      if (!response.ok) throw new Error("speech_failed");
+      const url = URL.createObjectURL(await response.blob());
+      const audio = new Audio(url);
+      audio.playbackRate =
+        COMMUNICATION_LANGUAGES[targetLanguage].voiceLocale === "es-MX"
+          ? 0.92
+          : 1;
+      audio.onended = stopAudio;
+      audio.onerror = () => {
+        stopAudio();
+        setSpeechError(true);
+      };
+      audioRef.current = audio;
+      audioUrlRef.current = url;
+      await audio.play();
+    } catch {
+      stopAudio();
+      setSpeechError(true);
+    }
   }
 
   return (
@@ -272,6 +316,10 @@ export default function BilingualComposer({
         <p className="mt-3 text-sm text-[#B45309]">{copy.unavailable}</p>
       ) : null}
 
+      {speechError ? (
+        <p className="mt-3 text-sm text-[#B45309]">{copy.speechUnavailable}</p>
+      ) : null}
+
       {result ? (
         <div className="mt-4 grid gap-3 lg:grid-cols-2">
           <ResultPanel title={copy.corrected} value={result.correctedSource} />
@@ -300,7 +348,11 @@ export default function BilingualComposer({
       ) : null}
 
       <div className="mt-4 flex flex-wrap gap-2">
-        <ActionButton label={copy.listen} icon={Volume2} onClick={listen} />
+        <ActionButton
+          label={copy.listen}
+          icon={Volume2}
+          onClick={() => void listen()}
+        />
         <ActionButton
           label={copy.copy}
           icon={Clipboard}

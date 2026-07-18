@@ -14,12 +14,16 @@ const requiredFiles = [
 
 const requiredSnippets = [
   ["app/api/realtime/session/route.ts", "realtime/client_secrets"],
-  ["app/api/realtime/session/route.ts", "OPENAI_API_KEY"],
+  ["app/api/realtime/session/route.ts", "getOpenAIApiKey"],
+  ["lib/voice/config.ts", "OPENAI_API_KEY"],
   ["app/api/realtime/session/route.ts", "EntitlementService.checkModuleAccess"],
   ["components/voice/AlmaVoiceControls.tsx", "RTCPeerConnection"],
   ["app/translator/page.tsx", "MediaRecorder"],
   ["app/api/translator/transcribe/route.ts", "audio.transcriptions.create"],
+  ["app/api/translator/transcribe/route.ts", "SUPPORTED_AUDIO_TYPES"],
+  ["app/api/translator/transcribe/route.ts", "audio_too_large"],
   ["app/api/translator/speech/route.ts", "audio.speech.create"],
+  ["app/api/translator/speech/route.ts", "getSpeechModel"],
   [
     "supabase/migrations/20260718006000_alma_realtime_voice_memory.sql",
     "voice_sessions",

@@ -509,6 +509,54 @@ Remaining blockers:
   and storage-ready, but real media fetching requires live Meta credentials and
   should be verified after webhook configuration.
 
+### Phase 4: Translation And Audio Runtime Repair
+
+Status: completed in this milestone.
+
+Completed work:
+
+- Removed the local dictionary translation fallback from the shared bilingual
+  communication service. ALMA no longer reports fake or partial dictionary
+  output as a successful translation.
+- Added provider-output validation for bilingual translation:
+  - retries once when source-language contamination is detected
+  - rejects mixed-language output such as English words left in Spanish output
+  - preserves protected amounts, dates, project IDs, URLs, emails, and
+    construction measurements
+  - returns structured failures when OpenAI is unconfigured or unavailable
+- Kept the response shape compatible while adding explicit `original`,
+  `corrected`, `translated`, `sourceLanguage`, and `targetLanguage` fields.
+- Centralized voice runtime configuration in `lib/voice/config.ts`.
+  Transcription, speech, and Realtime routes now read `OPENAI_API_KEY` at
+  request time and validate configured model names with precise error codes.
+- Hardened `/api/translator/transcribe`:
+  - accepts browser MediaRecorder formats such as `audio/webm`, `audio/ogg`,
+    and `audio/mp4`
+  - validates MIME type and size before provider calls
+  - maps authorization, usage limit, unsupported media, provider, and config
+    failures to structured statuses
+- Hardened `/api/translator/speech` with text length, voice/model validation,
+  provider error mapping, and no-store generated audio responses.
+- Updated Translator and Bilingual Composer UI states so provider/config
+  failures are visible and generated audio object URLs are revoked after
+  playback.
+- Added deterministic verification in
+  `scripts/check-alma-translation-runtime.mjs` without live OpenAI calls.
+
+Compatibility notes:
+
+- Existing communication job persistence is preserved for successful provider
+  translations only.
+- Browser speech synthesis is no longer used to hide failed provider speech in
+  the translator surfaces.
+- `.env.local` already lists the required model variables, but a running
+  Next.js server must be restarted after editing environment values.
+
+Remaining blockers:
+
+- Live audio verification still requires a signed-in browser session,
+  microphone permission, and valid OpenAI access for the configured models.
+
 The older split milestones below are retained as planning history. Their shell,
 Home, Apps/Files, and Approval Center portions are superseded by this completed
 assistant-first milestone.

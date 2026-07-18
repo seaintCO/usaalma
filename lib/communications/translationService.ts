@@ -29,61 +29,106 @@ export type CommunicationRequest = {
 export type CommunicationResult = {
   operation: CommunicationOperation;
   originalText: string;
+  original: string;
   detectedLanguage: CommunicationLanguageCode;
   correctedSource: string;
+  corrected: string;
   translation: string;
+  translated: string;
+  sourceLanguage: CommunicationLanguageCode;
   targetLanguage: CommunicationLanguageCode;
   tone: CommunicationTone;
   warnings: string[];
-  provider: "openai" | "local_fallback";
+  provider: "openai";
 };
 
-const EN_TO_ES: Record<string, string> = {
-  hello: "hola",
-  hi: "hola",
-  thanks: "gracias",
-  thank: "gracias",
-  you: "usted",
-  please: "por favor",
-  estimate: "estimado",
-  invoice: "factura",
-  project: "proyecto",
-  job: "trabajo",
-  customer: "cliente",
-  tomorrow: "manana",
-  today: "hoy",
-  morning: "manana",
-  afternoon: "tarde",
-  payment: "pago",
-  deposit: "deposito",
-  schedule: "programar",
-  call: "llamada",
-  repair: "reparacion",
-  installation: "instalacion",
-  materials: "materiales",
+type ProviderPayload = Pick<
+  CommunicationResult,
+  "detectedLanguage" | "correctedSource" | "translation" | "targetLanguage"
+> & {
+  warnings?: string[];
 };
 
-const ES_TO_EN: Record<string, string> = {
-  hola: "hello",
-  gracias: "thank you",
-  usted: "you",
-  favor: "please",
-  estimado: "estimate",
-  factura: "invoice",
-  proyecto: "project",
-  trabajo: "job",
-  cliente: "customer",
-  manana: "tomorrow",
-  hoy: "today",
-  tarde: "afternoon",
-  pago: "payment",
-  deposito: "deposit",
-  programar: "schedule",
-  llamada: "call",
-  reparacion: "repair",
-  instalacion: "installation",
-  materiales: "materials",
-};
+type ProviderCall = (prompt: string) => Promise<string>;
+
+export class CommunicationProviderUnavailableError extends Error {
+  code = "openai_unconfigured";
+
+  constructor(message = "OpenAI translation configuration is unavailable.") {
+    super(message);
+    this.name = "CommunicationProviderUnavailableError";
+  }
+}
+
+export class CommunicationProviderError extends Error {
+  code = "translation_provider_failed";
+  status?: number;
+
+  constructor(
+    message = "Translation provider request failed.",
+    status?: number,
+  ) {
+    super(message);
+    this.name = "CommunicationProviderError";
+    this.status = status;
+  }
+}
+
+export class CommunicationValidationError extends Error {
+  code = "translation_validation_failed";
+  reasons: string[];
+
+  constructor(reasons: string[]) {
+    super("Translation output failed validation.");
+    this.name = "CommunicationValidationError";
+    this.reasons = reasons;
+  }
+}
+
+const ENGLISH_RESIDUE = new Set([
+  "hello",
+  "hi",
+  "how",
+  "are",
+  "you",
+  "thanks",
+  "thank",
+  "please",
+  "today",
+  "tomorrow",
+  "invoice",
+  "estimate",
+  "customer",
+  "project",
+  "payment",
+  "deposit",
+  "schedule",
+  "repair",
+  "installation",
+  "materials",
+]);
+
+const SPANISH_RESIDUE = new Set([
+  "hola",
+  "como",
+  "estas",
+  "usted",
+  "gracias",
+  "favor",
+  "manana",
+  "mañana",
+  "factura",
+  "cliente",
+  "proyecto",
+  "pago",
+  "deposito",
+  "depósito",
+  "reparacion",
+  "reparación",
+  "instalacion",
+  "instalación",
+  "materiales",
+]);
 
 function detectLanguage(text: string): CommunicationLanguageCode {
   const normalized = text
@@ -104,6 +149,9 @@ function detectLanguage(text: string): CommunicationLanguageCode {
     " por favor",
     " necesito",
     " podemos",
+    " hola ",
+    " como ",
+    " estas ",
   ];
   return spanishSignals.some((signal) => ` ${normalized} `.includes(signal))
     ? "es"
@@ -119,77 +167,198 @@ function cleanSpacing(text: string) {
   return compact.replace(/^./, (first) => first.toUpperCase());
 }
 
-function applyGlossary(text: string, glossary: CommunicationGlossaryTerm[]) {
-  return glossary.reduce((result, term) => {
-    if (!term.source || !term.target) return result;
-    return result.replaceAll(term.source, term.target);
-  }, text);
-}
-
-function localTranslate(
-  text: string,
-  targetLanguage: CommunicationLanguageCode,
-  glossary: CommunicationGlossaryTerm[],
-) {
-  const dictionary = targetLanguage === "es" ? EN_TO_ES : ES_TO_EN;
-  const translated = text.replace(/\b[\p{Letter}']+\b/gu, (word) => {
-    const lower = word.toLowerCase();
-    return dictionary[lower] ?? word;
-  });
-  return applyGlossary(translated, glossary);
-}
-
-function warningFor(text: string, provider: CommunicationResult["provider"]) {
+function warningFor(text: string) {
   const warnings: string[] = [];
   if (/\bsoon|later|asap|cuando pueda|pronto|luego\b/i.test(text)) {
     warnings.push(
       "Ambiguous timing detected. Confirm the exact date or deadline before sending.",
     );
   }
-  if (provider === "local_fallback") {
-    warnings.push(
-      "Provider translation is unavailable. Review the local fallback before sending externally.",
-    );
-  }
   return warnings;
 }
 
-function parseOpenAIResult(
-  raw: string,
-  fallback: CommunicationResult,
-): CommunicationResult {
+function parseProviderPayload(raw: string): ProviderPayload {
   try {
-    const parsed = JSON.parse(raw) as Partial<CommunicationResult>;
+    const parsed = JSON.parse(raw) as Partial<ProviderPayload>;
+    if (
+      typeof parsed.correctedSource !== "string" ||
+      typeof parsed.translation !== "string"
+    ) {
+      throw new Error("missing_required_translation_fields");
+    }
     return {
-      ...fallback,
       detectedLanguage: normalizeCommunicationLanguage(
         parsed.detectedLanguage,
-        fallback.detectedLanguage,
+        "en",
       ),
-      correctedSource:
-        typeof parsed.correctedSource === "string"
-          ? parsed.correctedSource
-          : fallback.correctedSource,
-      translation:
-        typeof parsed.translation === "string"
-          ? parsed.translation
-          : fallback.translation,
+      correctedSource: parsed.correctedSource,
+      translation: parsed.translation,
       targetLanguage: normalizeCommunicationLanguage(
         parsed.targetLanguage,
-        fallback.targetLanguage,
+        "es",
       ),
       warnings: Array.isArray(parsed.warnings)
         ? parsed.warnings.filter((warning) => typeof warning === "string")
-        : fallback.warnings,
-      provider: "openai",
+        : [],
     };
   } catch {
-    return fallback;
+    throw new CommunicationValidationError(["invalid_provider_json"]);
   }
 }
 
-export async function runCommunicationOperation(
+function wordSet(text: string) {
+  return new Set(
+    text
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/\p{Diacritic}/gu, "")
+      .match(/\b[\p{Letter}']+\b/gu) ?? [],
+  );
+}
+
+function hasSourceResidue(
+  original: string,
+  translated: string,
+  sourceLanguage: CommunicationLanguageCode,
+  targetLanguage: CommunicationLanguageCode,
+  protectedValues: string[],
+) {
+  if (sourceLanguage === targetLanguage) return false;
+  const translatedWithoutProtected = protectedValues.reduce(
+    (result, value) => result.split(value).join(" "),
+    translated,
+  );
+  const originalWords = wordSet(original);
+  const translatedWords = wordSet(translatedWithoutProtected);
+  const residue =
+    targetLanguage === "es" && sourceLanguage === "en"
+      ? ENGLISH_RESIDUE
+      : targetLanguage === "en" && sourceLanguage === "es"
+        ? SPANISH_RESIDUE
+        : new Set<string>();
+
+  let matches = 0;
+  for (const word of residue) {
+    const normalized = word
+      .normalize("NFD")
+      .replace(/\p{Diacritic}/gu, "")
+      .toLowerCase();
+    if (originalWords.has(normalized) && translatedWords.has(normalized)) {
+      matches += 1;
+    }
+  }
+  return matches >= 1;
+}
+
+function validateProviderPayload({
+  originalText,
+  payload,
+  sourceLanguage,
+  targetLanguage,
+  protectedValues,
+}: {
+  originalText: string;
+  payload: ProviderPayload;
+  sourceLanguage: CommunicationLanguageCode;
+  targetLanguage: CommunicationLanguageCode;
+  protectedValues: string[];
+}) {
+  const reasons: string[] = [];
+  const translation = payload.translation.trim();
+  const correctedSource = payload.correctedSource.trim();
+
+  if (!translation) reasons.push("empty_translation");
+  if (!correctedSource) reasons.push("empty_corrected_source");
+  if (payload.targetLanguage !== targetLanguage) {
+    reasons.push("target_language_mismatch");
+  }
+  if (
+    hasSourceResidue(
+      originalText,
+      translation,
+      sourceLanguage,
+      targetLanguage,
+      protectedValues,
+    )
+  ) {
+    reasons.push("source_language_contamination");
+  }
+
+  for (const value of protectedValues) {
+    if (!translation.includes(value)) {
+      reasons.push(`missing_protected_token:${value}`);
+    }
+  }
+
+  if (reasons.length) {
+    throw new CommunicationValidationError(reasons);
+  }
+}
+
+function buildPrompt({
+  input,
+  protectedText,
+  detectedLanguage,
+  targetLanguage,
+  tone,
+  retryReason,
+}: {
+  input: CommunicationRequest;
+  protectedText: string;
+  detectedLanguage: CommunicationLanguageCode;
+  targetLanguage: CommunicationLanguageCode;
+  tone: CommunicationTone;
+  retryReason?: string;
+}) {
+  return [
+    "You are ALMA's bilingual business communication editor.",
+    "Return only strict JSON with keys: detectedLanguage, correctedSource, translation, targetLanguage, warnings.",
+    "Supported languages are en and es.",
+    "The translation must be fully in the target language except protected placeholders, names, codes, URLs, emails, addresses, measurements, dates, currency, and quoted text.",
+    "Never add promises, prices, dates, warranties, measurements, or facts.",
+    "Preserve all __ALMA_TOKEN_n__ placeholders exactly.",
+    "Preserve construction and trade terminology while translating surrounding language naturally.",
+    "Warn about ambiguity instead of inventing missing facts.",
+    retryReason
+      ? `Previous output was rejected because: ${retryReason}. Retry with no source-language contamination.`
+      : "",
+    `Operation: ${input.operation}. Tone: ${tone}. Channel: ${input.channel ?? "chat"}.`,
+    `Source language: ${detectedLanguage}. Target language: ${targetLanguage}.`,
+    `Glossary: ${JSON.stringify(input.glossary ?? [])}`,
+    `Text: ${protectedText}`,
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
+async function callOpenAI(prompt: string) {
+  const apiKey = process.env.OPENAI_API_KEY?.trim();
+  if (!apiKey) {
+    throw new CommunicationProviderUnavailableError();
+  }
+  const client = new OpenAI({ apiKey });
+  try {
+    const response = await client.responses.create({
+      model: process.env.ALMA_TRANSLATION_MODEL || OPENAI_MODELS.fast,
+      input: prompt,
+      temperature: 0,
+    });
+    return response.output_text;
+  } catch (error) {
+    const status =
+      typeof error === "object" && error && "status" in error
+        ? Number((error as { status?: unknown }).status)
+        : undefined;
+    throw new CommunicationProviderError(
+      "Translation provider request failed.",
+      Number.isFinite(status) ? status : undefined,
+    );
+  }
+}
+
+export async function runCommunicationOperationWithProvider(
   input: CommunicationRequest,
+  provider: ProviderCall,
 ): Promise<CommunicationResult> {
   const originalText = input.text.trim();
   const detectedLanguage =
@@ -202,54 +371,87 @@ export async function runCommunicationOperation(
       : oppositeLanguage(detectedLanguage);
   const tone = normalizeTone(input.tone);
   const { protectedText, tokens } = protectBusinessTokens(originalText);
-  const correctedSource = cleanSpacing(originalText);
-  const localTranslation = restoreBusinessTokens(
-    localTranslate(protectedText, targetLanguage, input.glossary ?? []),
-    tokens,
-  );
-  const fallback: CommunicationResult = {
-    operation: input.operation,
-    originalText,
-    detectedLanguage,
-    correctedSource,
-    translation: cleanSpacing(localTranslation),
-    targetLanguage,
-    tone,
-    warnings: warningFor(originalText, "local_fallback"),
-    provider: "local_fallback",
-  };
+  const protectedValues = tokens.map((token) => token.value);
+  let retryReason: string | undefined;
+  let lastValidationError: CommunicationValidationError | null = null;
 
-  if (!originalText || !process.env.OPENAI_API_KEY) return fallback;
-
-  const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-  const prompt = [
-    "You are ALMA's bilingual business communication editor.",
-    "Return strict JSON with keys: detectedLanguage, correctedSource, translation, targetLanguage, warnings.",
-    "Supported languages are en and es.",
-    "Preserve meaning. Never add promises, prices, dates, warranties, measurements, or facts.",
-    "Preserve names, phone numbers, emails, URLs, invoice IDs, project IDs, dates, currency, measurements, addresses, and quoted text.",
-    "Preserve construction and trade terminology. Warn about ambiguity.",
-    `Operation: ${input.operation}. Tone: ${tone}. Channel: ${input.channel ?? "chat"}.`,
-    `Source language: ${detectedLanguage}. Target language: ${targetLanguage}.`,
-    `Glossary: ${JSON.stringify(input.glossary ?? [])}`,
-    `Text: ${protectedText}`,
-  ].join("\n");
-
-  try {
-    const response = await client.responses.create({
-      model: process.env.ALMA_TRANSLATION_MODEL || OPENAI_MODELS.fast,
-      input: prompt,
-      temperature: 0,
-    });
-    const parsed = parseOpenAIResult(response.output_text, fallback);
-    return {
-      ...parsed,
-      correctedSource: restoreBusinessTokens(parsed.correctedSource, tokens),
-      translation: restoreBusinessTokens(parsed.translation, tokens),
-      warnings: warningFor(originalText, "openai").concat(parsed.warnings),
-      provider: "openai",
-    };
-  } catch {
-    return fallback;
+  if (!originalText) {
+    throw new CommunicationValidationError(["empty_text"]);
   }
+
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const prompt = buildPrompt({
+      input,
+      protectedText,
+      detectedLanguage,
+      targetLanguage,
+      tone,
+      retryReason,
+    });
+    const raw = await provider(prompt);
+    const parsed = parseProviderPayload(raw);
+    const payload: ProviderPayload = {
+      ...parsed,
+      detectedLanguage: normalizeCommunicationLanguage(
+        parsed.detectedLanguage,
+        detectedLanguage,
+      ),
+      correctedSource: restoreBusinessTokens(
+        cleanSpacing(parsed.correctedSource),
+        tokens,
+      ),
+      translation: restoreBusinessTokens(
+        cleanSpacing(parsed.translation),
+        tokens,
+      ),
+      targetLanguage: normalizeCommunicationLanguage(
+        parsed.targetLanguage,
+        targetLanguage,
+      ),
+      warnings: parsed.warnings ?? [],
+    };
+
+    try {
+      validateProviderPayload({
+        originalText,
+        payload,
+        sourceLanguage: detectedLanguage,
+        targetLanguage,
+        protectedValues,
+      });
+      const warnings = Array.from(
+        new Set(warningFor(originalText).concat(payload.warnings ?? [])),
+      );
+      return {
+        operation: input.operation,
+        originalText,
+        original: originalText,
+        detectedLanguage: payload.detectedLanguage,
+        correctedSource: payload.correctedSource,
+        corrected: payload.correctedSource,
+        translation: payload.translation,
+        translated: payload.translation,
+        sourceLanguage: detectedLanguage,
+        targetLanguage,
+        tone,
+        warnings,
+        provider: "openai",
+      };
+    } catch (error) {
+      if (error instanceof CommunicationValidationError) {
+        lastValidationError = error;
+        retryReason = error.reasons.join(", ");
+        continue;
+      }
+      throw error;
+    }
+  }
+
+  throw lastValidationError ?? new CommunicationValidationError(["unknown"]);
+}
+
+export async function runCommunicationOperation(
+  input: CommunicationRequest,
+): Promise<CommunicationResult> {
+  return runCommunicationOperationWithProvider(input, callOpenAI);
 }

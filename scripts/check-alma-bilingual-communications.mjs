@@ -12,6 +12,7 @@ const requiredFiles = [
 const requiredSnippets = [
   ["lib/communications/translationService.ts", "protectBusinessTokens"],
   ["lib/communications/translationService.ts", "OPENAI_MODELS.fast"],
+  ["lib/communications/translationService.ts", "CommunicationValidationError"],
   ["lib/communications/preservation.ts", "ALMA_TOKEN"],
   ["components/communications/BilingualComposer.tsx", "Fix and translate"],
   [
@@ -50,6 +51,14 @@ if (
   throw new Error(
     "Client bilingual composer must not reference server secrets.",
   );
+}
+
+const service = readFileSync(
+  "lib/communications/translationService.ts",
+  "utf8",
+);
+if (service.includes("local_fallback") || service.includes("EN_TO_ES")) {
+  throw new Error("Translation must not report local fallback as success.");
 }
 
 console.log("ALMA bilingual communications verification passed.");

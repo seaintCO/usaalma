@@ -3,9 +3,11 @@ import { getCurrentUser } from "@/lib/auth/user";
 import { EntitlementService } from "@/lib/platform/entitlements/service";
 import { resolveTenantWorkspace } from "@/lib/platform/workspace/tenantResolver";
 import {
+  getOpenAIApiKey,
   getRealtimeModel,
   getRealtimeTranslationModel,
   normalizeVoice,
+  VoiceConfigurationError,
   voiceInstructions,
 } from "@/lib/voice/config";
 import { createVoiceSessionRecord } from "@/lib/voice/repository";
@@ -46,22 +48,31 @@ export async function POST(req: Request) {
       { status: 403 },
     );
   }
-  if (!process.env.OPENAI_API_KEY) {
-    return NextResponse.json(
-      { ok: false, error: { code: "openai_unconfigured" } },
-      { status: 503 },
-    );
-  }
-
   const body = await req.json().catch(() => ({}) as Record<string, unknown>);
   const workspaceId =
     typeof body.workspaceId === "string" ? body.workspaceId : null;
   const mode = body.mode === "translator" ? "translator" : "alma_voice";
   const tenant = await resolveTenantWorkspace({ userId: user.id, workspaceId });
-  const model =
-    mode === "translator"
-      ? getRealtimeTranslationModel()
-      : getRealtimeModel(false);
+  let apiKey: string;
+  let model: string;
+  try {
+    apiKey = getOpenAIApiKey();
+    model =
+      mode === "translator"
+        ? getRealtimeTranslationModel()
+        : getRealtimeModel(false);
+  } catch (error) {
+    if (error instanceof VoiceConfigurationError) {
+      return NextResponse.json(
+        { ok: false, error: { code: error.code } },
+        { status: 503 },
+      );
+    }
+    return NextResponse.json(
+      { ok: false, error: { code: "audio_configuration_failed" } },
+      { status: 503 },
+    );
+  }
   const voice = normalizeVoice(body.voice);
   const language =
     body.language === "es" || body.language === "en" ? body.language : "auto";
@@ -71,7 +82,7 @@ export async function POST(req: Request) {
     {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+        Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({

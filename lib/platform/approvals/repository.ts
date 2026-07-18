@@ -79,6 +79,32 @@ export class ActionApprovalRepository {
     return (data as ActionApprovalRecord | null) ?? null;
   }
 
+  static async listForUser(userId: string, limit = 50) {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from("action_approvals")
+      .select("*")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(limit);
+
+    if (error) throw error;
+    return (data ?? []) as ActionApprovalRecord[];
+  }
+
+  static async listAuditEventsForUser(userId: string, approvalId: string) {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from("action_audit_logs")
+      .select("*")
+      .eq("user_id", userId)
+      .eq("approval_id", approvalId)
+      .order("created_at", { ascending: true });
+
+    if (error) throw error;
+    return data ?? [];
+  }
+
   static async transition(input: TransitionActionApprovalInput) {
     const supabase = await createClient();
     const timestampColumn = statusTimestampColumn(input.status);

@@ -9,6 +9,7 @@ import {
   type RoutedWorkspace,
 } from "@/lib/platform/workspaceRoutes";
 import AlmaDesktopSidebar from "./AlmaDesktopSidebar";
+import AlmaMobileBottomNav from "./AlmaMobileBottomNav";
 import AlmaMobileDrawer from "./AlmaMobileDrawer";
 import WorkspaceHeader from "./WorkspaceHeader";
 import type {
@@ -31,10 +32,21 @@ export const ALMA_SHELL_LABELS: Record<AlmaShellLanguage, AlmaShellLabels> = {
     business: "Business",
     ai: "AI",
     platform: "Platform",
+    primary: "Primary",
+    secondary: "Secondary",
     active: "Active",
     pro: "Pro",
     beta: "Beta",
+    included: "Included",
+    upgradeRequired: "Upgrade",
+    comingSoon: "Soon",
+    unavailable: "Unavailable",
     home: "Home",
+    approvals: "Approvals",
+    files: "Files",
+    apps: "Apps",
+    connections: "Connections",
+    profile: "Profile",
     planner: "Planner",
     tasks: "Tasks",
     notes: "Notes",
@@ -62,10 +74,21 @@ export const ALMA_SHELL_LABELS: Record<AlmaShellLanguage, AlmaShellLabels> = {
     business: "Negocio",
     ai: "IA",
     platform: "Plataforma",
+    primary: "Principal",
+    secondary: "Secundario",
     active: "Activo",
     pro: "Pro",
     beta: "Beta",
+    included: "Incluido",
+    upgradeRequired: "Mejora",
+    comingSoon: "Pronto",
+    unavailable: "No disponible",
     home: "Inicio",
+    approvals: "Aprobaciones",
+    files: "Archivos",
+    apps: "Apps",
+    connections: "Conexiones",
+    profile: "Perfil",
     planner: "Planificador",
     tasks: "Tareas",
     notes: "Notas",
@@ -75,18 +98,22 @@ export const ALMA_SHELL_LABELS: Record<AlmaShellLanguage, AlmaShellLabels> = {
     construction: "Construccion",
     invoices: "Facturas",
     alma: "ALMA",
-    images: "Imágenes",
+    images: "Imagenes",
     creativeStudio: "Estudio Creativo",
     launchStudio: "Launch Studio",
     trader: "Trader",
     agentBuilder: "Agent Builder",
     marketplace: "Marketplace",
     billing: "Pagos",
-    settings: "Configuración",
+    settings: "Configuracion",
   },
 };
 
 const SHELL_WORKSPACE_RELEASES: AlmaWorkspaceReleaseOverrides = {
+  approvals: "active",
+  files: "beta",
+  apps: "active",
+  connections: "active",
   tasks: "active",
   images: "active",
   creative: "beta",
@@ -181,6 +208,13 @@ export default function AlmaShell({
         <div className="min-h-0 w-full max-w-full flex-1 overflow-y-auto bg-[#F7F7F8]">
           {children}
         </div>
+        <AlmaMobileBottomNav
+          activeWorkspace={activeWorkspace}
+          labels={labels}
+          onHome={openDashboard}
+          onAskAlma={openDashboard}
+          onWorkspaceNavigate={openWorkspace}
+        />
       </section>
     </main>
   );

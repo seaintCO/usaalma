@@ -1,34 +1,26 @@
 "use client";
 
 import {
-  Activity,
   AlertCircle,
-  Apple,
+  AppWindow,
   Bot,
   CheckCircle2,
   Clock3,
-  Dumbbell,
   FileText,
-  ImageIcon,
-  Inbox,
   Loader2,
   MessageSquare,
-  NotebookText,
-  Plus,
-  ReceiptText,
   RefreshCw,
-  Search,
-  TrendingUp,
+  Send,
+  ShieldCheck,
+  Sparkles,
   type LucideIcon,
 } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import type { MarketplaceCatalogResponse } from "@/lib/platform/marketplace/types";
 import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-  type ReactNode,
-} from "react";
-import { WORKSPACE_ROUTES } from "@/lib/platform/workspaceRoutes";
+  DASHBOARD_ROUTE,
+  WORKSPACE_ROUTES,
+} from "@/lib/platform/workspaceRoutes";
 
 type Language = "en" | "es";
 type RunStatus = "queued" | "running" | "failed" | "completed" | string;
@@ -68,21 +60,6 @@ type ActivityItem = {
   level?: string | null;
 };
 
-type FitnessGoals = {
-  daily_calories?: number | null;
-  daily_protein?: number | null;
-  daily_carbs?: number | null;
-  daily_fat?: number | null;
-  water_goal_oz?: number | null;
-};
-
-type FitnessTotals = {
-  calories: number;
-  protein: number;
-  carbs: number;
-  fat: number;
-};
-
 type DashboardSummary = {
   today: string;
   tasks: SummaryTask[];
@@ -91,10 +68,6 @@ type DashboardSummary = {
   documents: SummaryDocument[];
   runs: SummaryRun[];
   activity: ActivityItem[];
-  fitness: {
-    totals: FitnessTotals;
-    goals: FitnessGoals | null;
-  };
 };
 
 type Conversation = {
@@ -110,134 +83,105 @@ type ConversationStatus = {
   failed?: boolean;
 };
 
-type FocusItem = {
+type UnifiedApproval = {
   id: string;
-  title: string;
-  meta: string;
-  route?: string;
-  icon: LucideIcon;
-  tone?: "danger" | "active" | "normal";
-  onClick?: () => void;
+  kind: "action" | "agent";
+  status: string;
+  actionKey: string | null;
+  actionSummary: string;
+  requestedAt: string | null;
+  updatedAt: string | null;
 };
 
-type DashboardCopy = (typeof COPY)[keyof typeof COPY];
-
-type RunItem = {
+type Shortcut = {
   id: string;
-  status: string;
+  label: string;
+  prompt?: string;
+  href?: string;
+  icon: LucideIcon;
+};
+
+type AlertItem = {
+  id: string;
+  label: string;
   title: string;
-  timestamp?: string | null;
+  href?: string;
   onClick?: () => void;
 };
 
 const COPY = {
   en: {
-    greeting: "Good morning",
-    attention: "Here's what needs attention.",
-    loading: "Loading operating dashboard...",
-    unavailable: "Dashboard is temporarily unavailable.",
+    title: "What should ALMA handle next?",
+    subtitle:
+      "Use one command to start a conversation, review approvals, or jump into the workspace that is actually available.",
+    placeholder:
+      "Ask ALMA to plan, draft, analyze, or prepare the next step...",
+    send: "Send",
+    loading: "Loading Home...",
+    unavailable: "Home is temporarily unavailable.",
     retry: "Retry",
-    focus: "Today's Focus",
-    noFocus: "Nothing urgent needs attention right now.",
-    quickActions: "Quick Actions",
-    runs: "Active ALMA Runs",
-    noRuns: "No active or failed ALMA runs.",
-    productivity: "Productivity",
-    fitness: "Fitness Snapshot",
-    noFitness: "No fitness goals or entries yet.",
-    recentActivity: "Recent Activity",
+    shortcuts: "Contextual Shortcuts",
+    noShortcuts: "No enabled workspace shortcuts yet.",
+    approvals: "Approvals",
+    approvalsPending: "Pending approvals",
+    noApprovals: "No approvals waiting right now.",
+    reviewApprovals: "Review approvals",
+    activity: "Recent activity",
     noActivity: "No recent activity yet.",
-    conversations: "Recent Conversations",
-    noConversations: "No recent conversations yet.",
-    tasks: "Tasks",
-    planner: "Planner",
-    notes: "Notes",
-    documents: "Documents",
+    alerts: "Alerts",
+    noAlerts: "No blocked work right now.",
+    today: "Today",
     openTasks: "Open tasks",
     plannerToday: "Planner today",
-    recentNotes: "Recent notes",
-    recentDocuments: "Recent documents",
-    ask: "Ask ALMA",
-    newTask: "New Task",
-    newNote: "New Note",
-    plannerItem: "Planner Item",
-    document: "Upload Document",
-    image: "Generate Image",
-    crm: "Open CRM",
-    invoice: "Create Invoice",
-    food: "Add Food",
-    trader: "Open Trader",
-    failed: "Failed",
-    running: "Running",
-    queued: "Queued",
-    unread: "Unread",
-    completed: "Completed",
-    active: "Active",
-    calories: "Calories",
-    protein: "Protein",
-    carbs: "Carbs",
-    fat: "Fat",
-    targetWeight: "Target weight is managed in Fitness.",
-    setupFitness: "Set up Fitness",
+    failed: "Failed run",
+    active: "Active run",
+    unread: "Unread conversation",
+    commandPlanDay: "Plan my day from my open tasks and calendar.",
+    commandFollowUp: "Draft a customer follow-up from my CRM context.",
+    commandAnalyzeDoc: "Analyze the latest document or uploaded file.",
+    commandEstimate: "Prepare a construction project summary and next steps.",
+    planDay: "Plan my day",
+    followUp: "Follow up",
+    analyzeDoc: "Analyze files",
+    estimate: "Prepare estimate",
   },
   es: {
-    greeting: "Buenos dias",
-    attention: "Esto necesita tu atencion.",
-    loading: "Cargando panel operativo...",
-    unavailable: "El panel no esta disponible temporalmente.",
+    title: "Que debe manejar ALMA ahora?",
+    subtitle:
+      "Usa un comando para iniciar una conversacion, revisar aprobaciones o entrar al espacio disponible.",
+    placeholder:
+      "Pidele a ALMA planear, redactar, analizar o preparar el siguiente paso...",
+    send: "Enviar",
+    loading: "Cargando Inicio...",
+    unavailable: "Inicio no esta disponible temporalmente.",
     retry: "Reintentar",
-    focus: "Enfoque de hoy",
-    noFocus: "Nada urgente necesita atencion ahora.",
-    quickActions: "Acciones rapidas",
-    runs: "Ejecuciones ALMA activas",
-    noRuns: "No hay ejecuciones ALMA activas o fallidas.",
-    productivity: "Productividad",
-    fitness: "Resumen fitness",
-    noFitness: "Todavia no hay metas o entradas fitness.",
-    recentActivity: "Actividad reciente",
-    noActivity: "Todavia no hay actividad reciente.",
-    conversations: "Conversaciones recientes",
-    noConversations: "Todavia no hay conversaciones recientes.",
-    tasks: "Tareas",
-    planner: "Planificador",
-    notes: "Notas",
-    documents: "Documentos",
+    shortcuts: "Atajos contextuales",
+    noShortcuts: "Aun no hay atajos de espacios activos.",
+    approvals: "Aprobaciones",
+    approvalsPending: "Aprobaciones pendientes",
+    noApprovals: "No hay aprobaciones esperando ahora.",
+    reviewApprovals: "Revisar aprobaciones",
+    activity: "Actividad reciente",
+    noActivity: "Aun no hay actividad reciente.",
+    alerts: "Alertas",
+    noAlerts: "No hay trabajo bloqueado ahora.",
+    today: "Hoy",
     openTasks: "Tareas abiertas",
     plannerToday: "Plan de hoy",
-    recentNotes: "Notas recientes",
-    recentDocuments: "Documentos recientes",
-    ask: "Preguntar a ALMA",
-    newTask: "Nueva tarea",
-    newNote: "Nueva nota",
-    plannerItem: "Elemento del plan",
-    document: "Subir documento",
-    image: "Generar imagen",
-    crm: "Abrir CRM",
-    invoice: "Crear factura",
-    food: "Agregar comida",
-    trader: "Abrir Trader",
-    failed: "Fallida",
-    running: "Activa",
-    queued: "En cola",
-    unread: "Sin leer",
-    completed: "Completada",
-    active: "Activa",
-    calories: "Calorias",
-    protein: "Proteina",
-    carbs: "Carbos",
-    fat: "Grasa",
-    targetWeight: "El peso objetivo se administra en Fitness.",
-    setupFitness: "Configurar Fitness",
+    failed: "Ejecucion fallida",
+    active: "Ejecucion activa",
+    unread: "Conversacion sin leer",
+    commandPlanDay: "Planifica mi dia con mis tareas abiertas y calendario.",
+    commandFollowUp: "Redacta seguimiento para un cliente usando mi CRM.",
+    commandAnalyzeDoc: "Analiza el documento o archivo mas reciente.",
+    commandEstimate:
+      "Prepara un resumen de proyecto de construccion y siguientes pasos.",
+    planDay: "Planificar dia",
+    followUp: "Seguimiento",
+    analyzeDoc: "Analizar archivos",
+    estimate: "Preparar estimado",
   },
 } as const;
-
-const STATUS_PRIORITY: Record<string, number> = {
-  failed: 0,
-  running: 1,
-  queued: 2,
-  unread: 3,
-  completed: 4,
-};
 
 export default function OperatingDashboard({
   conversations = [],
@@ -249,19 +193,40 @@ export default function OperatingDashboard({
   conversations?: Conversation[];
   conversationStatuses?: Record<string, ConversationStatus>;
   language: Language;
-  onAsk: () => void;
+  onAsk: (prompt?: string) => void;
   onConversationSelect?: (id: string) => void;
 }) {
-  const [data, setData] = useState<DashboardSummary | null>(null);
+  const [summary, setSummary] = useState<DashboardSummary | null>(null);
+  const [catalog, setCatalog] = useState<MarketplaceCatalogResponse | null>(
+    null,
+  );
+  const [approvals, setApprovals] = useState<UnifiedApproval[]>([]);
+  const [command, setCommand] = useState("");
   const [error, setError] = useState(false);
   const t = COPY[language];
 
   const load = useCallback(async () => {
     setError(false);
     try {
-      const response = await fetch("/api/dashboard/summary");
-      if (!response.ok) throw new Error("dashboard_unavailable");
-      setData((await response.json()) as DashboardSummary);
+      const [summaryResponse, catalogResponse, approvalsResponse] =
+        await Promise.all([
+          fetch("/api/dashboard/summary", { cache: "no-store" }),
+          fetch("/api/marketplace/catalog", { cache: "no-store" }),
+          fetch("/api/approvals?limit=20", { cache: "no-store" }),
+        ]);
+      if (!summaryResponse.ok) throw new Error("summary_unavailable");
+      setSummary((await summaryResponse.json()) as DashboardSummary);
+      if (catalogResponse.ok) {
+        setCatalog(
+          (await catalogResponse.json()) as MarketplaceCatalogResponse,
+        );
+      }
+      if (approvalsResponse.ok) {
+        const payload = (await approvalsResponse.json()) as {
+          approvals?: UnifiedApproval[];
+        };
+        setApprovals(payload.approvals ?? []);
+      }
     } catch {
       setError(true);
     }
@@ -275,214 +240,278 @@ export default function OperatingDashboard({
     return () => window.removeEventListener("focus", refresh);
   }, [load]);
 
-  const date = data?.today ? new Date(`${data.today}T12:00:00`) : new Date();
-  const dateLabel = new Intl.DateTimeFormat(language === "es" ? "es" : "en", {
-    weekday: "long",
-    month: "short",
-    day: "numeric",
-  }).format(date);
+  const pendingApprovals = approvals.filter((approval) =>
+    ["awaiting_approval", "approved", "executing"].includes(approval.status),
+  );
 
-  const runItems = useMemo(() => {
-    const summaryRuns: RunItem[] = (data?.runs ?? [])
-      .filter((run) => ["queued", "running", "failed"].includes(run.status))
-      .map((run) => ({
-        id: run.id,
-        status: run.status,
-        title: run.status,
-        timestamp: run.updated_at,
-        onClick: undefined,
-      }));
-    const conversationRuns = conversations
-      .map((conversation) => {
-        const status = conversationStatuses[conversation.id];
-        if (!status?.failed && !status?.active && !status?.unread) return null;
-        const label = status.failed
-          ? "failed"
-          : status.active
-            ? "running"
-            : "unread";
-        return {
-          id: conversation.id,
-          status: label,
-          title: conversation.title || "ALMA",
-          timestamp: conversation.updated_at ?? conversation.created_at,
-          onClick: () => onConversationSelect?.(conversation.id),
-        };
-      })
-      .filter(Boolean) as RunItem[];
-    return [...conversationRuns, ...summaryRuns].sort(
-      (a, b) =>
-        (STATUS_PRIORITY[a.status] ?? 9) - (STATUS_PRIORITY[b.status] ?? 9),
-    );
-  }, [conversationStatuses, conversations, data?.runs, onConversationSelect]);
+  const shortcuts = useMemo(
+    () => buildShortcuts(catalog, language),
+    [catalog, language],
+  );
 
-  const focusItems = useMemo<FocusItem[]>(() => {
-    const failedRuns = runItems
+  const alerts = useMemo<AlertItem[]>(() => {
+    const failedRuns = (summary?.runs ?? [])
       .filter((run) => run.status === "failed")
       .slice(0, 2)
       .map((run) => ({
         id: `run-${run.id}`,
-        title: run.title,
-        meta: t.failed,
-        icon: AlertCircle,
-        tone: "danger" as const,
-        onClick: run.onClick,
+        label: t.failed,
+        title: run.id,
+        href: DASHBOARD_ROUTE,
       }));
-    const activeRuns = runItems
-      .filter((run) => run.status === "running" || run.status === "queued")
+    const failedConversations = conversations
+      .filter((conversation) => conversationStatuses[conversation.id]?.failed)
       .slice(0, 2)
-      .map((run) => ({
-        id: `active-${run.id}`,
-        title: run.title,
-        meta: run.status === "queued" ? t.queued : t.running,
-        icon: Bot,
-        tone: "active" as const,
-        onClick: run.onClick,
+      .map((conversation) => ({
+        id: `conversation-${conversation.id}`,
+        label: t.failed,
+        title: conversation.title || "ALMA",
+        onClick: () => onConversationSelect?.(conversation.id),
       }));
-    const unread = runItems
-      .filter((run) => run.status === "unread")
-      .slice(0, 2)
-      .map((run) => ({
-        id: `unread-${run.id}`,
-        title: run.title,
-        meta: t.unread,
-        icon: MessageSquare,
-        onClick: run.onClick,
-      }));
-    const tasks = (data?.tasks ?? []).slice(0, 3).map((task) => ({
-      id: `task-${task.id}`,
-      title: task.title,
-      meta: task.due_at ? formatShortDate(task.due_at, language) : t.openTasks,
-      route: WORKSPACE_ROUTES.tasks,
-      icon: CheckCircle2,
-    }));
-    const planner = (data?.planner ?? []).slice(0, 2).map((item) => ({
-      id: `planner-${item.id}`,
-      title: item.title,
-      meta: item.task_time || t.plannerToday,
-      route: WORKSPACE_ROUTES.planner,
-      icon: Clock3,
-    }));
-    return [
-      ...failedRuns,
-      ...activeRuns,
-      ...unread,
-      ...tasks,
-      ...planner,
-    ].slice(0, 7);
-  }, [data?.planner, data?.tasks, language, runItems, t]);
+    return [...failedConversations, ...failedRuns];
+  }, [
+    conversationStatuses,
+    conversations,
+    onConversationSelect,
+    summary?.runs,
+    t.failed,
+  ]);
 
-  if (!data) {
+  const activeConversations = conversations
+    .filter((conversation) => {
+      const status = conversationStatuses[conversation.id];
+      return status?.active || status?.unread;
+    })
+    .slice(0, 3);
+
+  function submitCommand(prompt = command) {
+    const trimmed = prompt.trim();
+    if (!trimmed) return;
+    setCommand("");
+    onAsk(trimmed);
+  }
+
+  if (!summary && !error) {
     return (
       <div className="min-h-0 flex-1 overflow-y-auto bg-[#F7F7F8] p-4 md:p-6">
-        <div className="mx-auto max-w-7xl">
-          <section className="rounded-2xl border border-[#E5E7EB] bg-white p-4 shadow-sm">
-            {error ? (
-              <div className="flex flex-col gap-3 text-sm text-[#6B7280]">
-                <p>{t.unavailable}</p>
-                <button
-                  className="inline-flex h-10 w-fit items-center gap-2 rounded-xl border border-black px-3 font-medium text-black"
-                  onClick={load}
-                >
-                  <RefreshCw className="h-4 w-4" />
-                  {t.retry}
-                </button>
-              </div>
-            ) : (
-              <div className="flex items-center gap-3 text-sm text-[#6B7280]">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                {t.loading}
-              </div>
-            )}
-          </section>
+        <div className="mx-auto max-w-6xl rounded-2xl border border-[#E5E7EB] bg-white p-4 text-sm text-[#6B7280]">
+          <Loader2 className="mr-2 inline h-4 w-4 animate-spin" />
+          {t.loading}
+        </div>
+      </div>
+    );
+  }
+
+  if (error && !summary) {
+    return (
+      <div className="min-h-0 flex-1 overflow-y-auto bg-[#F7F7F8] p-4 md:p-6">
+        <div className="mx-auto max-w-6xl rounded-2xl border border-[#E5E7EB] bg-white p-4">
+          <p className="text-sm text-[#6B7280]">{t.unavailable}</p>
+          <button
+            type="button"
+            onClick={() => void load()}
+            className="mt-3 inline-flex h-10 items-center gap-2 rounded-xl border border-black px-3 text-sm font-medium"
+          >
+            <RefreshCw className="h-4 w-4" />
+            {t.retry}
+          </button>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden bg-[#F7F7F8] px-3 py-4 text-black md:px-6 md:py-6">
-      <div className="mx-auto flex max-w-7xl flex-col gap-4">
-        <header className="rounded-2xl border border-[#E5E7EB] bg-white p-4 shadow-sm md:p-5">
-          <p className="text-xs font-semibold uppercase text-[#6B7280]">
-            {dateLabel}
-          </p>
-          <h1 className="mt-2 text-2xl font-semibold tracking-normal md:text-3xl">
-            {t.greeting}.
+    <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden bg-[#F7F7F8] px-3 pb-24 pt-4 text-black md:px-6 md:pb-6 md:pt-6">
+      <div className="mx-auto flex max-w-6xl flex-col gap-4">
+        <section className="rounded-2xl border border-[#E5E7EB] bg-white p-4 shadow-sm md:p-6">
+          <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl border border-[#E5E7EB] bg-[#F7F7F8]">
+            <Sparkles className="h-5 w-5" />
+          </div>
+          <h1 className="max-w-2xl text-2xl font-semibold tracking-tight md:text-4xl">
+            {t.title}
           </h1>
-          <p className="mt-2 text-sm leading-6 text-[#6B7280]">{t.attention}</p>
-        </header>
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-[#6B7280]">
+            {t.subtitle}
+          </p>
+          <form
+            className="mt-6 flex min-w-0 flex-col gap-2 rounded-2xl border border-[#E5E7EB] bg-[#F7F7F8] p-2 sm:flex-row"
+            onSubmit={(event) => {
+              event.preventDefault();
+              submitCommand();
+            }}
+          >
+            <label className="sr-only" htmlFor="alma-command">
+              {t.placeholder}
+            </label>
+            <input
+              id="alma-command"
+              value={command}
+              onChange={(event) => setCommand(event.target.value)}
+              placeholder={t.placeholder}
+              className="min-h-11 min-w-0 flex-1 rounded-xl border border-transparent bg-white px-3 text-sm outline-none focus:border-black"
+            />
+            <button
+              type="submit"
+              className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-black px-4 text-sm font-medium text-white disabled:bg-[#9CA3AF]"
+              disabled={!command.trim()}
+            >
+              <Send className="h-4 w-4" />
+              {t.send}
+            </button>
+          </form>
+        </section>
 
-        <section className="grid gap-4 xl:grid-cols-[minmax(0,1.25fr)_minmax(320px,0.75fr)]">
+        <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
           <div className="min-w-0 space-y-4">
-            <Panel icon={Inbox} title={t.focus}>
-              {focusItems.length ? (
-                <div className="space-y-2">
-                  {focusItems.map((item) => (
-                    <FocusRow key={item.id} item={item} />
+            <Panel icon={AppWindow} title={t.shortcuts}>
+              {shortcuts.length ? (
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {shortcuts.slice(0, 4).map((shortcut) => (
+                    <ShortcutButton
+                      key={shortcut.id}
+                      shortcut={shortcut}
+                      onPrompt={submitCommand}
+                    />
                   ))}
                 </div>
               ) : (
-                <EmptyState text={t.noFocus} />
+                <EmptyState text={t.noShortcuts} />
               )}
             </Panel>
 
-            <Panel icon={Plus} title={t.quickActions}>
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
-                <QuickAction icon={Bot} label={t.ask} onClick={onAsk} />
-                <QuickAction
+            <Panel icon={ShieldCheck} title={t.approvals}>
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-2xl font-semibold">
+                    {pendingApprovals.length}
+                  </p>
+                  <p className="text-sm text-[#6B7280]">{t.approvalsPending}</p>
+                </div>
+                <a
+                  href={WORKSPACE_ROUTES.approvals}
+                  className="inline-flex h-10 items-center rounded-xl border border-black px-3 text-sm font-medium"
+                >
+                  {t.reviewApprovals}
+                </a>
+              </div>
+              {pendingApprovals.length ? (
+                <div className="space-y-2">
+                  {pendingApprovals.slice(0, 4).map((approval) => (
+                    <a
+                      key={`${approval.kind}-${approval.id}`}
+                      href={WORKSPACE_ROUTES.approvals}
+                      className="block min-w-0 rounded-xl bg-[#F7F7F8] p-3"
+                    >
+                      <p className="truncate text-sm font-medium">
+                        {safeTitle(approval.actionSummary)}
+                      </p>
+                      <p className="mt-1 text-xs text-[#6B7280]">
+                        {approval.actionKey || approval.kind}
+                      </p>
+                    </a>
+                  ))}
+                </div>
+              ) : (
+                <EmptyState text={t.noApprovals} />
+              )}
+            </Panel>
+
+            <Panel icon={Clock3} title={t.today}>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <MetricCard
                   icon={CheckCircle2}
-                  href="/tasks"
-                  label={t.newTask}
+                  label={t.openTasks}
+                  value={summary?.tasks.length ?? 0}
+                  href={WORKSPACE_ROUTES.tasks}
                 />
-                <QuickAction
-                  icon={NotebookText}
-                  href="/notes"
-                  label={t.newNote}
-                />
-                <QuickAction
+                <MetricCard
                   icon={Clock3}
-                  href="/planner"
-                  label={t.plannerItem}
-                />
-                <QuickAction
-                  icon={FileText}
-                  href="/documents"
-                  label={t.document}
-                />
-                <QuickAction icon={ImageIcon} href="/images" label={t.image} />
-                <QuickAction icon={Search} href="/crm" label={t.crm} />
-                <QuickAction
-                  icon={ReceiptText}
-                  href="/invoicing"
-                  label={t.invoice}
-                />
-                <QuickAction icon={Apple} href="/fitness" label={t.food} />
-                <QuickAction
-                  icon={TrendingUp}
-                  href="/trader"
-                  label={t.trader}
+                  label={t.plannerToday}
+                  value={summary?.planner.length ?? 0}
+                  href={WORKSPACE_ROUTES.planner}
                 />
               </div>
             </Panel>
-
-            <ProductivityPanel data={data} language={language} text={t} />
           </div>
 
           <div className="min-w-0 space-y-4">
-            <RunsPanel items={runItems} text={t} />
-            <FitnessPanel fitness={data.fitness} text={t} />
-            <ActivityPanel
-              activity={data.activity}
-              language={language}
-              text={t}
-            />
-            <ConversationsPanel
-              conversations={conversations}
-              statuses={conversationStatuses}
-              text={t}
-              onSelect={onConversationSelect}
-            />
+            <Panel icon={AlertCircle} title={t.alerts}>
+              {alerts.length ? (
+                <div className="space-y-2">
+                  {alerts.map((alert) =>
+                    alert.onClick ? (
+                      <button
+                        key={alert.id}
+                        type="button"
+                        onClick={alert.onClick}
+                        className="block w-full rounded-xl bg-red-50 p-3 text-left"
+                      >
+                        <RowText title={alert.title} meta={alert.label} />
+                      </button>
+                    ) : (
+                      <a
+                        key={alert.id}
+                        href={alert.href}
+                        className="block rounded-xl bg-red-50 p-3"
+                      >
+                        <RowText title={alert.title} meta={alert.label} />
+                      </a>
+                    ),
+                  )}
+                </div>
+              ) : (
+                <EmptyState text={t.noAlerts} />
+              )}
+            </Panel>
+
+            <Panel icon={MessageSquare} title="ALMA">
+              {activeConversations.length ? (
+                <div className="space-y-2">
+                  {activeConversations.map((conversation) => {
+                    const status = conversationStatuses[conversation.id];
+                    return (
+                      <button
+                        key={conversation.id}
+                        type="button"
+                        onClick={() => onConversationSelect?.(conversation.id)}
+                        className="block w-full rounded-xl bg-[#F7F7F8] p-3 text-left"
+                      >
+                        <RowText
+                          title={conversation.title || "ALMA"}
+                          meta={status?.active ? t.active : t.unread}
+                        />
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : (
+                <EmptyState text={t.noAlerts} />
+              )}
+            </Panel>
+
+            <Panel icon={Bot} title={t.activity}>
+              {summary?.activity.length ? (
+                <div className="space-y-2">
+                  {summary.activity.slice(0, 6).map((item) => (
+                    <div
+                      key={item.id}
+                      className="min-w-0 rounded-xl bg-[#F7F7F8] p-3"
+                    >
+                      <RowText
+                        title={item.summary || item.event_type || t.activity}
+                        meta={
+                          item.created_at
+                            ? formatShortDate(item.created_at, language)
+                            : item.event_type || "activity"
+                        }
+                      />
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <EmptyState text={t.noActivity} />
+              )}
+            </Panel>
           </div>
         </section>
       </div>
@@ -490,257 +519,56 @@ export default function OperatingDashboard({
   );
 }
 
-function ProductivityPanel({
-  data,
-  language,
-  text,
-}: {
-  data: DashboardSummary;
-  language: Language;
-  text: DashboardCopy;
-}) {
-  return (
-    <Panel icon={CheckCircle2} title={text.productivity}>
-      <div className="grid gap-3 md:grid-cols-2">
-        <ListBlock
-          empty={text.noFocus}
-          items={data.tasks}
-          title={text.openTasks}
-          render={(task) => ({
-            id: task.id,
-            title: task.title,
-            meta: task.due_at
-              ? formatShortDate(task.due_at, language)
-              : task.status || text.tasks,
-            href: WORKSPACE_ROUTES.tasks,
-          })}
-        />
-        <ListBlock
-          empty={text.noFocus}
-          items={data.planner}
-          title={text.plannerToday}
-          render={(item) => ({
-            id: item.id,
-            title: item.title,
-            meta: item.task_time || text.planner,
-            href: WORKSPACE_ROUTES.planner,
-          })}
-        />
-        <ListBlock
-          empty={text.noActivity}
-          items={data.notes}
-          title={text.recentNotes}
-          render={(note) => ({
-            id: note.id,
-            title: note.title,
-            meta: note.updated_at
-              ? formatShortDate(note.updated_at, language)
-              : text.notes,
-            href: WORKSPACE_ROUTES.notes,
-          })}
-        />
-        <ListBlock
-          empty={text.noActivity}
-          items={data.documents}
-          title={text.recentDocuments}
-          render={(document) => ({
-            id: document.id,
-            title: document.title,
-            meta: document.status || text.documents,
-            href: WORKSPACE_ROUTES.documents,
-          })}
-        />
-      </div>
-    </Panel>
+function buildShortcuts(
+  catalog: MarketplaceCatalogResponse | null,
+  language: Language,
+): Shortcut[] {
+  const t = COPY[language];
+  const enabled = new Set(
+    (catalog?.items ?? [])
+      .filter(
+        (item) =>
+          item.itemType === "internal_module" &&
+          item.accessStatus === "included" &&
+          item.releaseStatus !== "coming_soon",
+      )
+      .map((item) => item.key),
   );
-}
 
-function RunsPanel({
-  items,
-  text,
-}: {
-  items: {
-    id: string;
-    status: string;
-    title: string;
-    timestamp?: string | null;
-    onClick?: () => void;
-  }[];
-  text: DashboardCopy;
-}) {
-  return (
-    <Panel icon={Bot} title={text.runs}>
-      {items.length ? (
-        <div className="space-y-2">
-          {items.slice(0, 6).map((item) => (
-            <button
-              key={`${item.status}-${item.id}`}
-              className="flex w-full min-w-0 items-center gap-3 rounded-xl border border-[#E5E7EB] bg-white p-3 text-left"
-              onClick={item.onClick}
-              type="button"
-            >
-              <StatusDot status={item.status} />
-              <span className="min-w-0 flex-1">
-                <span className="block truncate text-sm font-medium">
-                  {safeTitle(item.title)}
-                </span>
-                <span className="block truncate text-xs text-[#6B7280]">
-                  {statusLabel(item.status, text)}
-                </span>
-              </span>
-            </button>
-          ))}
-        </div>
-      ) : (
-        <EmptyState text={text.noRuns} />
-      )}
-    </Panel>
-  );
-}
-
-function FitnessPanel({
-  fitness,
-  text,
-}: {
-  fitness: DashboardSummary["fitness"];
-  text: DashboardCopy;
-}) {
-  if (!fitness.goals) {
-    return (
-      <Panel icon={Dumbbell} title={text.fitness}>
-        <EmptyState text={text.noFitness} />
-        <a
-          className="mt-3 inline-flex h-10 items-center rounded-xl border border-black px-3 text-sm font-medium"
-          href="/fitness"
-        >
-          {text.setupFitness}
-        </a>
-      </Panel>
-    );
+  const shortcuts: Shortcut[] = [];
+  if (enabled.has("tasks") || enabled.has("planner")) {
+    shortcuts.push({
+      id: "plan-day",
+      label: t.planDay,
+      prompt: t.commandPlanDay,
+      icon: Clock3,
+    });
   }
-  return (
-    <Panel icon={Dumbbell} title={text.fitness}>
-      <div className="space-y-3">
-        <ProgressRow
-          label={text.calories}
-          value={fitness.totals.calories}
-          goal={fitness.goals.daily_calories}
-        />
-        <ProgressRow
-          label={text.protein}
-          value={fitness.totals.protein}
-          goal={fitness.goals.daily_protein}
-        />
-        <ProgressRow
-          label={text.carbs}
-          value={fitness.totals.carbs}
-          goal={fitness.goals.daily_carbs}
-        />
-        <ProgressRow
-          label={text.fat}
-          value={fitness.totals.fat}
-          goal={fitness.goals.daily_fat}
-        />
-      </div>
-      <p className="mt-3 text-xs text-[#6B7280]">{text.targetWeight}</p>
-    </Panel>
-  );
-}
-
-function ActivityPanel({
-  activity,
-  language,
-  text,
-}: {
-  activity: ActivityItem[];
-  language: Language;
-  text: DashboardCopy;
-}) {
-  return (
-    <Panel icon={Activity} title={text.recentActivity}>
-      {activity.length ? (
-        <div className="space-y-2">
-          {activity.slice(0, 6).map((item) => (
-            <a
-              key={item.id}
-              className="block rounded-xl border border-[#E5E7EB] bg-white p-3"
-              href="/dashboard"
-            >
-              <div className="flex min-w-0 items-center gap-2">
-                <Activity className="h-4 w-4 shrink-0" />
-                <p className="truncate text-sm font-medium">
-                  {safeTitle(
-                    item.summary || item.event_type || text.recentActivity,
-                  )}
-                </p>
-              </div>
-              <p className="mt-1 truncate text-xs text-[#6B7280]">
-                {item.event_type || "activity"} /{" "}
-                {item.created_at
-                  ? formatShortDate(item.created_at, language)
-                  : text.completed}
-              </p>
-            </a>
-          ))}
-        </div>
-      ) : (
-        <EmptyState text={text.noActivity} />
-      )}
-    </Panel>
-  );
-}
-
-function ConversationsPanel({
-  conversations,
-  statuses,
-  text,
-  onSelect,
-}: {
-  conversations: Conversation[];
-  statuses: Record<string, ConversationStatus>;
-  text: DashboardCopy;
-  onSelect?: (id: string) => void;
-}) {
-  const notable = conversations
-    .filter((conversation) => {
-      const status = statuses[conversation.id];
-      return status?.failed || status?.active || status?.unread;
-    })
-    .slice(0, 5);
-  return (
-    <Panel icon={MessageSquare} title={text.conversations}>
-      {notable.length ? (
-        <div className="space-y-2">
-          {notable.map((conversation) => {
-            const status = statuses[conversation.id] ?? {};
-            const label = status.failed
-              ? text.failed
-              : status.active
-                ? text.active
-                : text.unread;
-            return (
-              <button
-                key={conversation.id}
-                className="flex w-full min-w-0 items-center gap-3 rounded-xl border border-[#E5E7EB] bg-white p-3 text-left"
-                onClick={() => onSelect?.(conversation.id)}
-                type="button"
-              >
-                <MessageSquare className="h-4 w-4 shrink-0" />
-                <span className="min-w-0">
-                  <span className="block truncate text-sm font-medium">
-                    {safeTitle(conversation.title || "ALMA")}
-                  </span>
-                  <span className="block text-xs text-[#6B7280]">{label}</span>
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      ) : (
-        <EmptyState text={text.noConversations} />
-      )}
-    </Panel>
-  );
+  if (enabled.has("crm")) {
+    shortcuts.push({
+      id: "follow-up",
+      label: t.followUp,
+      prompt: t.commandFollowUp,
+      icon: MessageSquare,
+    });
+  }
+  if (enabled.has("documents") || enabled.has("images")) {
+    shortcuts.push({
+      id: "analyze-files",
+      label: t.analyzeDoc,
+      href: WORKSPACE_ROUTES.files,
+      icon: FileText,
+    });
+  }
+  if (enabled.has("construction") || enabled.has("invoicing")) {
+    shortcuts.push({
+      id: "estimate",
+      label: t.estimate,
+      prompt: t.commandEstimate,
+      icon: CheckCircle2,
+    });
+  }
+  return shortcuts;
 }
 
 function Panel({
@@ -748,7 +576,7 @@ function Panel({
   icon: Icon,
   title,
 }: {
-  children: ReactNode;
+  children: React.ReactNode;
   icon: LucideIcon;
   title: string;
 }) {
@@ -765,169 +593,80 @@ function Panel({
   );
 }
 
-function FocusRow({ item }: { item: FocusItem }) {
-  const Icon = item.icon;
-  const content = (
-    <div
-      className={`flex min-w-0 items-center gap-3 rounded-xl border p-3 ${
-        item.tone === "danger"
-          ? "border-red-200 bg-red-50"
-          : item.tone === "active"
-            ? "border-black bg-white"
-            : "border-[#E5E7EB] bg-white"
-      }`}
-    >
-      <Icon className="h-4 w-4 shrink-0" />
-      <span className="min-w-0 flex-1">
-        <span className="block truncate text-sm font-medium">
-          {safeTitle(item.title)}
-        </span>
-        <span className="block truncate text-xs text-[#6B7280]">
-          {item.meta}
-        </span>
-      </span>
-    </div>
-  );
-  if (item.onClick) {
-    return (
-      <button className="block w-full text-left" onClick={item.onClick}>
-        {content}
-      </button>
-    );
-  }
-  if (item.route) return <a href={item.route}>{content}</a>;
-  return content;
-}
-
-function QuickAction({
-  href,
-  icon: Icon,
-  label,
-  onClick,
+function ShortcutButton({
+  shortcut,
+  onPrompt,
 }: {
-  href?: string;
-  icon: LucideIcon;
-  label: string;
-  onClick?: () => void;
+  shortcut: Shortcut;
+  onPrompt: (prompt: string) => void;
 }) {
+  const Icon = shortcut.icon;
+  const className =
+    "flex min-h-12 min-w-0 items-center gap-3 rounded-xl border border-[#E5E7EB] bg-white px-3 text-left text-sm font-medium hover:border-black";
   const content = (
     <>
-      <Icon className="h-4 w-4" />
-      <span className="truncate">{label}</span>
+      <Icon className="h-4 w-4 shrink-0" />
+      <span className="truncate">{shortcut.label}</span>
     </>
   );
-  const className =
-    "flex h-11 min-w-0 items-center justify-center gap-2 rounded-xl border border-[#E5E7EB] bg-white px-3 text-sm font-medium hover:border-black";
-  if (href)
+  if (shortcut.href) {
     return (
-      <a className={className} href={href}>
+      <a href={shortcut.href} className={className}>
         {content}
       </a>
     );
+  }
   return (
-    <button className={className} onClick={onClick} type="button">
+    <button
+      type="button"
+      className={className}
+      onClick={() => shortcut.prompt && onPrompt(shortcut.prompt)}
+    >
       {content}
     </button>
   );
 }
 
-function ListBlock<T>({
-  empty,
-  items,
-  render,
-  title,
-}: {
-  empty: string;
-  items: T[];
-  render: (item: T) => {
-    id: string;
-    title: string;
-    meta: string;
-    href: string;
-  };
-  title: string;
-}) {
-  return (
-    <div className="min-w-0 rounded-xl bg-[#F7F7F8] p-3">
-      <p className="mb-2 text-xs font-semibold uppercase text-[#6B7280]">
-        {title}
-      </p>
-      {items.length ? (
-        <div className="space-y-2">
-          {items.slice(0, 4).map((item) => {
-            const row = render(item);
-            return (
-              <a
-                key={row.id}
-                className="block min-w-0 rounded-lg bg-white px-3 py-2"
-                href={row.href}
-              >
-                <p className="truncate text-sm font-medium">
-                  {safeTitle(row.title)}
-                </p>
-                <p className="truncate text-xs text-[#6B7280]">{row.meta}</p>
-              </a>
-            );
-          })}
-        </div>
-      ) : (
-        <p className="text-sm text-[#6B7280]">{empty}</p>
-      )}
-    </div>
-  );
-}
-
-function ProgressRow({
-  goal,
+function MetricCard({
+  href,
+  icon: Icon,
   label,
   value,
 }: {
-  goal?: number | null;
+  href: string;
+  icon: LucideIcon;
   label: string;
   value: number;
 }) {
-  const max = Number(goal || 0);
-  const percent = max > 0 ? Math.min(100, Math.round((value / max) * 100)) : 0;
   return (
-    <div>
-      <div className="flex items-center justify-between gap-3 text-sm">
-        <span className="font-medium">{label}</span>
-        <span className="text-[#6B7280]">
-          {Math.round(value)} {max ? `/ ${Math.round(max)}` : ""}
-        </span>
-      </div>
-      <div className="mt-2 h-2 overflow-hidden rounded-full bg-[#F0F2F4]">
-        <div
-          className="h-full rounded-full bg-black"
-          style={{ width: `${percent}%` }}
-        />
-      </div>
-    </div>
+    <a
+      href={href}
+      className="flex min-w-0 items-center gap-3 rounded-xl bg-[#F7F7F8] p-3"
+    >
+      <Icon className="h-4 w-4 shrink-0" />
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-sm text-[#6B7280]">{label}</span>
+        <span className="block text-2xl font-semibold">{value}</span>
+      </span>
+    </a>
   );
 }
 
-function StatusDot({ status }: { status: string }) {
-  const color =
-    status === "failed"
-      ? "bg-red-500"
-      : status === "running" || status === "queued"
-        ? "bg-black"
-        : "bg-[#9CA3AF]";
-  return <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${color}`} />;
+function RowText({ title, meta }: { title: string; meta: string }) {
+  return (
+    <span className="block min-w-0">
+      <span className="block truncate text-sm font-medium">
+        {safeTitle(title)}
+      </span>
+      <span className="mt-1 block truncate text-xs text-[#6B7280]">{meta}</span>
+    </span>
+  );
 }
 
 function EmptyState({ text }: { text: string }) {
   return (
     <p className="rounded-xl bg-[#F7F7F8] p-3 text-sm text-[#6B7280]">{text}</p>
   );
-}
-
-function statusLabel(status: string, text: DashboardCopy) {
-  if (status === "failed") return text.failed;
-  if (status === "running") return text.running;
-  if (status === "queued") return text.queued;
-  if (status === "unread") return text.unread;
-  return text.completed;
 }
 
 function safeTitle(value: string) {

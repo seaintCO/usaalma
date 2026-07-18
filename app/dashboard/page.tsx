@@ -1,14 +1,6 @@
 "use client";
 
-import {
-  ArrowUp,
-  Menu,
-  Paperclip,
-  PenSquare,
-  Search,
-  Camera,
-  Presentation,
-} from "lucide-react";
+import { Menu, PenSquare, Search } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import {
   WORKSPACE_ROUTES,
@@ -24,42 +16,41 @@ import ConversationNavigation, {
 } from "@/components/alma-shell/ConversationNavigation";
 import WorkspaceNavigation from "@/components/alma-shell/WorkspaceNavigation";
 import AlmaMobileDrawer from "@/components/alma-shell/AlmaMobileDrawer";
+import AlmaMobileBottomNav from "@/components/alma-shell/AlmaMobileBottomNav";
 import type { AlmaWorkspaceNavigationKey } from "@/components/alma-shell/types";
 
-function cleanAIText(text: string) {
-  return text
-    .replace(/^#{1,6}\s?/gm, "")
-    .replace(/\*\*/g, "")
-    .replace(/\*/g, "")
-    .replace(/---/g, "")
-    .trim();
-}
-
-function renderMessage(content: string) {
-  const imageMatch = content.match(/\[ALMA_IMAGE:(.*?)\]/);
-
-  if (imageMatch?.[1]) {
-    return (
-      <div className="space-y-3">
-        <img
-          src={`data:image/png;base64,${imageMatch[1]}`}
-          className="w-full max-h-[70vh] rounded-2xl border border-[#E5E7EB] object-contain shadow-sm"
-          alt="ALMA generated image"
-        />
-        <p className="text-[#6B7280]">
-          Imagen generada. Puedes pedirme cambios como: “hazlo más realista”,
-          “en 16:9”, “fondo negro”, o “estilo anuncio premium”.
-        </p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="whitespace-pre-wrap leading-7">{cleanAIText(content)}</div>
-  );
-}
-
 type AlmaLanguage = "en" | "es";
+
+type DashboardConversation = {
+  id: string;
+  title: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+};
+
+type ConversationStatusResponse = {
+  conversationId: string;
+  active?: boolean;
+  unread?: boolean;
+  failed?: boolean;
+};
+
+type PersistedChatMessage = ChatMessage & {
+  created_at?: string | null;
+};
+
+type ChatRunSummary = {
+  id?: string;
+  status: string;
+  runId?: string;
+  executionId: string;
+  updatedAt?: string | null;
+  assistantMessage?: {
+    id: string;
+    content?: string | null;
+    created_at?: string | null;
+  } | null;
+};
 
 const almaText = {
   en: {
@@ -71,9 +62,21 @@ const almaText = {
     business: "Business",
     ai: "AI",
     platform: "Platform",
+    primary: "Primary",
+    secondary: "Secondary",
     active: "Active",
     pro: "Pro",
+    beta: "Beta",
+    included: "Included",
+    upgradeRequired: "Upgrade",
+    comingSoon: "Soon",
+    unavailable: "Unavailable",
     home: "Home",
+    approvals: "Approvals",
+    files: "Files",
+    apps: "Apps",
+    connections: "Connections",
+    profile: "Profile",
     planner: "Planner",
     tasks: "Tasks",
     notes: "Notes",
@@ -111,9 +114,21 @@ const almaText = {
     business: "Negocio",
     ai: "IA",
     platform: "Plataforma",
+    primary: "Principal",
+    secondary: "Secundario",
     active: "Activo",
     pro: "Pro",
+    beta: "Beta",
+    included: "Incluido",
+    upgradeRequired: "Mejora",
+    comingSoon: "Pronto",
+    unavailable: "No disponible",
     home: "Inicio",
+    approvals: "Aprobaciones",
+    files: "Archivos",
+    apps: "Apps",
+    connections: "Conexiones",
+    profile: "Perfil",
     planner: "Planificador",
     tasks: "Tareas",
     notes: "Notas",
@@ -158,14 +173,11 @@ export default function DashboardPage() {
   const [streamEpoch, setStreamEpoch] = useState(0);
   const conversationCache = useRef(new Map<string, ChatMessage[]>());
   const conversationRequest = useRef<AbortController | null>(null);
-  const [history, setHistory] = useState<any[]>([]);
+  const [history, setHistory] = useState<DashboardConversation[]>([]);
   const [conversationStatuses, setConversationStatuses] = useState<
     Record<string, { active?: boolean; unread?: boolean; failed?: boolean }>
   >({});
-  const [installedCORE, setInstalledCORE] = useState<any[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editingTitle, setEditingTitle] = useState("");
   const [activeWorkspace, setActiveWorkspace] =
     useState<AlmaWorkspaceNavigationKey>(launchPrompt ? "chat" : "home");
   const [language, setLanguage] = useState<AlmaLanguage>("en");
@@ -183,16 +195,9 @@ export default function DashboardPage() {
     if (Array.isArray(data)) setHistory(data);
   }
 
-  async function loadInstalledCORE() {
-    const res = await fetch("/api/CORE/list");
-    const data = await res.json();
-    if (Array.isArray(data))
-      setInstalledCORE(data.filter((m: any) => m.installed));
-  }
-
   function mergeConversationState(
     persisted: ChatMessage[],
-    runs: any[],
+    runs: ChatRunSummary[],
   ): ChatMessage[] {
     const withoutLegacyDrafts = persisted.filter(
       (message) =>
@@ -220,9 +225,9 @@ export default function DashboardPage() {
               : run.status === "completed"
                 ? undefined
                 : "streaming",
-          runId: run.runId,
+          runId: run.runId ?? run.id,
           executionId: run.executionId,
-          createdAt: persistedAssistant.created_at,
+          createdAt: persistedAssistant.created_at ?? undefined,
         };
         const existing = byExecution.get(run.executionId);
         if (existing) byId.delete(existing.id);
@@ -236,9 +241,9 @@ export default function DashboardPage() {
             role: "assistant",
             content: "",
             status: "streaming",
-            runId: run.runId,
+            runId: run.runId ?? run.id,
             executionId: run.executionId,
-            createdAt: run.updatedAt,
+            createdAt: run.updatedAt ?? undefined,
           };
           byExecution.set(run.executionId, draft);
           byId.set(draft.id, draft);
@@ -252,9 +257,9 @@ export default function DashboardPage() {
               ? "ALMA no pudo completar la respuesta."
               : "ALMA could not complete the response.",
           status: "error",
-          runId: run.runId,
+          runId: run.runId ?? run.id,
           executionId: run.executionId,
-          createdAt: run.updatedAt,
+          createdAt: run.updatedAt ?? undefined,
         };
         byExecution.set(run.executionId, failed);
         byId.set(failed.id, failed);
@@ -303,8 +308,8 @@ export default function DashboardPage() {
         Array.isArray(data) &&
         Array.isArray(runs)
       ) {
-        const loaded = data.filter(
-          (message: any) => typeof message.id === "string",
+        const loaded = (data as PersistedChatMessage[]).filter(
+          (message) => typeof message.id === "string",
         );
         const merged = mergeConversationState(loaded, runs);
         conversationCache.current.set(id, merged);
@@ -319,7 +324,12 @@ export default function DashboardPage() {
     if (!res.ok) return;
     const data = await res.json();
     setConversationStatuses(
-      Object.fromEntries(data.map((item: any) => [item.conversationId, item])),
+      Object.fromEntries(
+        (data as ConversationStatusResponse[]).map((item) => [
+          item.conversationId,
+          item,
+        ]),
+      ),
     );
   }
 
@@ -345,18 +355,6 @@ export default function DashboardPage() {
   function openWorkspace(key: RoutedWorkspace) {
     setSidebarOpen(false);
     router.push(WORKSPACE_ROUTES[key]);
-  }
-
-  async function renameConversation(id: string) {
-    if (!editingTitle.trim()) return;
-    await fetch("/api/conversation/rename", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ conversationId: id, title: editingTitle }),
-    });
-    setEditingId(null);
-    setEditingTitle("");
-    loadHistory();
   }
 
   async function deleteConversation(id: string) {
@@ -426,7 +424,6 @@ export default function DashboardPage() {
 
       loadHistory();
       loadConversationStatuses();
-      loadInstalledCORE();
       const durableRes = await fetch("/api/chat/runs/config");
       if (durableRes.ok)
         setDurableChatEnabled(
@@ -437,6 +434,7 @@ export default function DashboardPage() {
 
     const savedLanguage = localStorage.getItem("alma_language");
     if (savedLanguage === "en" || savedLanguage === "es") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setLanguage(savedLanguage);
     }
 
@@ -457,6 +455,7 @@ export default function DashboardPage() {
     syncConversation();
     window.addEventListener("popstate", syncConversation);
     return () => window.removeEventListener("popstate", syncConversation);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   useEffect(() => {
     if (!Object.values(conversationStatuses).some((status) => status.active))
@@ -467,7 +466,7 @@ export default function DashboardPage() {
     return () => clearInterval(timer);
   }, [conversationStatuses]);
 
-  function Sidebar() {
+  function renderSidebar() {
     return (
       <aside className="flex h-full w-72 flex-col border-r border-[#E5E7EB] bg-[#F7F7F8] md:w-64">
         <div className="px-5 pb-4 pt-5">
@@ -560,9 +559,7 @@ export default function DashboardPage() {
 
   return (
     <main className="flex h-[100dvh] w-full overflow-hidden bg-white text-[#111111]">
-      <div className="hidden md:block">
-        <Sidebar />
-      </div>
+      <div className="hidden md:block">{renderSidebar()}</div>
 
       <AlmaMobileDrawer
         open={sidebarOpen}
@@ -615,7 +612,14 @@ export default function DashboardPage() {
             conversations={history}
             conversationStatuses={conversationStatuses}
             language={language}
-            onAsk={() => setActiveWorkspace("chat")}
+            onAsk={(prompt) => {
+              if (prompt?.trim()) {
+                const url = new URL(window.location.href);
+                url.searchParams.set("prompt", prompt.trim());
+                window.history.pushState({}, "", url);
+              }
+              setActiveWorkspace("chat");
+            }}
             onConversationSelect={selectConversation}
           />
         ) : (
@@ -638,6 +642,19 @@ export default function DashboardPage() {
             onAnalyzeFile={analyzeFile}
           />
         )}
+        <AlmaMobileBottomNav
+          activeWorkspace={activeWorkspace}
+          labels={t}
+          onHome={() => {
+            setActiveWorkspace("home");
+            setSidebarOpen(false);
+          }}
+          onAskAlma={() => {
+            setActiveWorkspace("chat");
+            setSidebarOpen(false);
+          }}
+          onWorkspaceNavigate={openWorkspace}
+        />
       </section>
     </main>
   );

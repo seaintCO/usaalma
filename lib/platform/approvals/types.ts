@@ -52,8 +52,8 @@ export const ACTION_APPROVAL_TRANSITIONS: Record<
   readonly ActionApprovalStatus[]
 > = {
   proposed: ["awaiting_approval", "approved", "rejected"],
-  awaiting_approval: ["approved", "rejected"],
-  approved: ["executing", "rejected"],
+  awaiting_approval: ["approved", "rejected", "failed"],
+  approved: ["executing", "rejected", "failed"],
   rejected: [],
   executing: ["completed", "failed"],
   completed: [],

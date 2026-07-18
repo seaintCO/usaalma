@@ -182,6 +182,7 @@ export class MarketplaceCatalogService {
           key: definition.key,
           name: definition.name,
           category: definition.category,
+          group: definition.group,
           itemType: "internal_module" as const,
           description: definition.description,
           releaseStatus: definition.releaseStatus,

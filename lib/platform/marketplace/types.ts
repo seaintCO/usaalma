@@ -28,6 +28,7 @@ export type MarketplaceItem = {
   key: string;
   name: string;
   category: MarketplaceCategory;
+  group?: string;
   itemType: MarketplaceItemType;
   description: string;
   releaseStatus: MarketplaceReleaseStatus;

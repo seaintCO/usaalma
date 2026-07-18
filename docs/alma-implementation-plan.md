@@ -104,6 +104,73 @@ Remaining blockers:
   migrations; the new migration is defensive and additive but must still be
   reviewed before application.
 
+## Milestone 2: Assistant-First Shell And Unified Approval Center
+
+Status: completed in this milestone.
+
+Goal: make ALMA assistant-first without removing existing product workspaces or
+changing durable chat, OAuth, subscription, CRM, invoicing, memory, or agent
+ownership boundaries.
+
+Completed work:
+
+- Reworked shared shell navigation around the target model:
+  - Desktop primary: Home, ALMA, Approvals, Files, Apps.
+  - Desktop secondary: Connections, Billing, Settings.
+  - Mobile bottom navigation: Home, ALMA, Approvals, Apps, Profile.
+- Added route constants for `/approvals`, `/files`, `/dashboard/apps`, and
+  `/connections`.
+- Replaced the module-first Home with an assistant-first operating surface:
+  command interface, entitlement-aware contextual shortcuts, real pending
+  approval counts, real recent activity, and real blocked/failed-run alerts.
+- Rebuilt Apps as a canonical module launcher backed by Marketplace and the
+  module registry groups: Free/Core, Office, Creator, Studio, Trader, Fitness.
+- Added Files as a unified entry point over the existing Documents repository.
+  No fake file records, public URLs, or storage architecture changes were added.
+- Added Connections as a shell surface over existing Marketplace connection
+  state and OAuth start/disconnect routes.
+- Added Unified Approval Center:
+  - reads platform `action_approvals`
+  - adapts existing `agent_approvals`
+  - supports approve/reject
+  - allows edited Gmail send payloads only through the allowlisted executor
+  - shows action audit history where available
+- Added safe execution resume through
+  `lib/platform/actions/actionExecutorRegistry.ts` and
+  `executeApprovedAction`.
+  External actions cannot execute unless they pass the shared approval boundary
+  and allowlisted payload validation.
+- Added focused static verification:
+  `scripts/check-assistant-shell-approval-center.mjs`.
+- Repaired user-visible mojibake encountered in touched shell/dashboard files.
+
+Compatibility notes:
+
+- Existing module routes remain available.
+- `app/dashboard/page.tsx` still owns dashboard chat state, durable run polling,
+  conversation selection, URL prompt handling, and mobile drawer state.
+- `AlmaShell` remains canonical for workspace pages.
+- Existing Marketplace, Billing, Settings, CRM, Invoicing, Trader, Fitness,
+  Documents, Images, and Agent Builder backends are preserved.
+- Existing `agent_approvals` are not migrated or rewritten; they are displayed
+  through an adapter in the unified approval service.
+- OAuth providers are not expanded.
+- No migration was added in this milestone.
+
+Remaining blockers:
+
+- The Approval Center can execute only explicitly allowlisted actions. Gmail
+  send is the first allowlisted executor; other protected external actions must
+  be added deliberately.
+- Browser verification requires a locally authenticated session to verify real
+  user data and approval execution end to end.
+- The existing lint baseline still contains broad warnings outside this
+  milestone; no blanket cleanup was performed.
+
+The older split milestones below are retained as planning history. Their shell,
+Home, Apps/Files, and Approval Center portions are superseded by this completed
+assistant-first milestone.
+
 ## Milestone 2: Foundational Stabilization
 
 Goal: make the current foundation safer before visual restructuring.

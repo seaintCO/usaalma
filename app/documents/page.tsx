@@ -47,6 +47,11 @@ type DocumentRecord = {
 
 type Section = "recent" | "all" | "upload" | "create" | "search";
 type RequestState = "idle" | "loading" | "success" | "error";
+type DocumentsListPayload = {
+  ok?: boolean;
+  documents?: DocumentRecord[];
+  error?: { code?: string };
+};
 
 function readStoredLanguage(): AlmaShellLanguage {
   if (typeof window === "undefined") return "en";
@@ -220,9 +225,9 @@ function formatDate(
   value: string | null | undefined,
   language: AlmaShellLanguage,
 ) {
-  if (!value) return "—";
+  if (!value) return "-";
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "—";
+  if (Number.isNaN(date.getTime())) return "-";
   return new Intl.DateTimeFormat(language === "es" ? "es-US" : "en-US", {
     month: "short",
     day: "numeric",
@@ -231,7 +236,7 @@ function formatDate(
 }
 
 function formatBytes(value: number | null | undefined) {
-  if (!value) return "—";
+  if (!value) return "-";
   if (value < 1024) return `${value} B`;
   if (value < 1024 * 1024) return `${Math.round(value / 1024)} KB`;
   return `${(value / (1024 * 1024)).toFixed(1)} MB`;
@@ -317,14 +322,18 @@ export default function DocumentsPage() {
     setListError("");
     try {
       const res = await fetch("/api/documents/list");
-      const data = await res.json();
-      if (!res.ok || !Array.isArray(data)) throw new Error(t.loadFailed);
-      setDocuments(data);
+      const data = (await res.json()) as
+        DocumentRecord[] | DocumentsListPayload;
+      const nextDocuments = Array.isArray(data) ? data : data.documents;
+      if (!res.ok || !Array.isArray(nextDocuments)) {
+        throw new Error(t.loadFailed);
+      }
+      setDocuments(nextDocuments);
       if (nextSelectedId !== undefined) {
         setSelectedId(nextSelectedId);
       } else if (
         selectedId &&
-        !data.some((doc: DocumentRecord) => doc.id === selectedId)
+        !nextDocuments.some((doc) => doc.id === selectedId)
       ) {
         setSelectedId(null);
       }
@@ -1115,7 +1124,7 @@ function DocumentDetail({
             value={formatDate(document.updated_at, language)}
           />
           <MetaLine label={text.size} value={formatBytes(document.file_size)} />
-          <MetaLine label={text.fileType} value={document.mime_type || "—"} />
+          <MetaLine label={text.fileType} value={document.mime_type || "-"} />
         </div>
 
         <div className="mt-6 grid gap-2">

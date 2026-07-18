@@ -18,7 +18,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 type Language = "en" | "es";
-type LoadState = "loading" | "ready" | "error";
+type LoadState = "loading" | "ready" | "auth" | "error";
 
 type BillingPayload = {
   ok: boolean;
@@ -62,8 +62,9 @@ const copy = {
     download: "Download PDF",
     retry: "Try again",
     unavailable: "Billing is temporarily unavailable. Please try again.",
-    processing: "Opening secure checkout…",
-    portal: "Opening secure billing portal…",
+    auth: "Sign in to view billing for your ALMA account.",
+    processing: "Opening secure checkout...",
+    portal: "Opening secure billing portal...",
     free: "Free",
     starter: "Starter",
     pro: "Pro",
@@ -80,21 +81,21 @@ const copy = {
   },
   es: {
     back: "Volver al panel",
-    eyebrow: "Facturación",
-    title: "Tu suscripción de ALMA",
+    eyebrow: "Facturacion",
+    title: "Tu suscripcion de ALMA",
     description:
-      "Consulta tu suscripción, administra tu plan y descarga las facturas de Stripe disponibles.",
+      "Consulta tu suscripcion, administra tu plan y descarga las facturas de Stripe disponibles.",
     currentPlan: "Plan actual",
     status: "Estado",
     renews: "Renueva",
     ends: "Finaliza",
-    noRenewal: "Aún no hay una fecha de renovación disponible.",
-    manage: "Administrar suscripción",
+    noRenewal: "Aun no hay una fecha de renovacion disponible.",
+    manage: "Administrar suscripcion",
     choose: "Elige un plan",
     checkout: "Continuar al pago",
-    configured: "Los productos de suscripción aún no están configurados.",
+    configured: "Los productos de suscripcion aun no estan configurados.",
     history: "Historial de pagos",
-    noHistory: "Aún no hay facturas de Stripe disponibles para esta cuenta.",
+    noHistory: "Aun no hay facturas de Stripe disponibles para esta cuenta.",
     invoice: "Factura",
     paid: "Pagado",
     due: "Pendiente",
@@ -102,9 +103,10 @@ const copy = {
     download: "Descargar PDF",
     retry: "Intentar de nuevo",
     unavailable:
-      "La facturación no está disponible temporalmente. Inténtalo de nuevo.",
-    processing: "Abriendo el pago seguro…",
-    portal: "Abriendo el portal de facturación seguro…",
+      "La facturacion no esta disponible temporalmente. Intentalo de nuevo.",
+    auth: "Inicia sesion para ver la facturacion de tu cuenta de ALMA.",
+    processing: "Abriendo el pago seguro...",
+    portal: "Abriendo el portal de facturacion seguro...",
     free: "Gratis",
     starter: "Inicial",
     pro: "Pro",
@@ -188,6 +190,15 @@ export default function BillingPage() {
         }),
       ]);
       const billingPayload: unknown = await billingResponse.json();
+      if (billingResponse.status === 401) {
+        if (controller.signal.aborted) return;
+        setSubscription(null);
+        setPlans([]);
+        setPlansConfigured(false);
+        setInvoices([]);
+        setState("auth");
+        return;
+      }
       if (
         !billingResponse.ok ||
         !isBillingPayload(billingPayload) ||
@@ -195,8 +206,12 @@ export default function BillingPage() {
       ) {
         throw new Error("billing_unavailable");
       }
-      const plansPayload = (await plansResponse.json()) as PlansPayload;
-      const historyPayload = (await historyResponse.json()) as HistoryPayload;
+      const plansPayload = plansResponse.ok
+        ? ((await plansResponse.json()) as PlansPayload)
+        : ({ ok: false, configured: false, plans: [] } satisfies PlansPayload);
+      const historyPayload = historyResponse.ok
+        ? ((await historyResponse.json()) as HistoryPayload)
+        : ({ ok: false, invoices: [] } satisfies HistoryPayload);
       if (controller.signal.aborted) return;
       setSubscription(billingPayload.subscription ?? null);
       setPlans(plansPayload.ok ? (plansPayload.plans ?? []) : []);
@@ -305,19 +320,23 @@ export default function BillingPage() {
 
             {state === "loading" ? (
               <p className="mt-8 text-sm text-gray-500" role="status">
-                …
+                ...
               </p>
             ) : null}
-            {state === "error" ? (
+            {state === "auth" || state === "error" ? (
               <div className="mt-8 rounded-2xl bg-[#F7F7F8] p-5">
-                <p className="text-sm text-gray-600">{text.unavailable}</p>
-                <button
-                  type="button"
-                  onClick={() => void load()}
-                  className="mt-4 rounded-xl bg-black px-4 py-2.5 text-sm font-medium text-white"
-                >
-                  {text.retry}
-                </button>
+                <p className="text-sm text-gray-600">
+                  {state === "auth" ? text.auth : text.unavailable}
+                </p>
+                {state === "error" ? (
+                  <button
+                    type="button"
+                    onClick={() => void load()}
+                    className="mt-4 rounded-xl bg-black px-4 py-2.5 text-sm font-medium text-white"
+                  >
+                    {text.retry}
+                  </button>
+                ) : null}
               </div>
             ) : null}
 
@@ -383,7 +402,7 @@ export default function BillingPage() {
                     <p className="mt-2 text-sm text-gray-600">
                       {plan.amount !== null && plan.currency
                         ? formatMoney(plan.amount, plan.currency, language)
-                        : "—"}
+                        : "-"}
                       {plan.interval ? ` / ${plan.interval}` : ""}
                     </p>
                     <button
@@ -420,8 +439,8 @@ export default function BillingPage() {
                           {text.invoice} {invoice.number ?? invoice.id}
                         </p>
                         <p className="mt-1 text-gray-500">
-                          {formatDate(invoice.createdAt, language) ?? "—"} ·{" "}
-                          {invoice.status ?? "—"}
+                          {formatDate(invoice.createdAt, language) ?? "-"} /{" "}
+                          {invoice.status ?? "-"}
                         </p>
                       </div>
                       <div className="flex items-center gap-3">

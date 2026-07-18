@@ -24,6 +24,7 @@ import {
 
 type Language = "en" | "es";
 type RunStatus = "queued" | "running" | "failed" | "completed" | string;
+type LoadState = "loading" | "ready" | "auth" | "error";
 
 type SummaryTask = {
   id: string;
@@ -119,6 +120,7 @@ const COPY = {
     send: "Send",
     loading: "Loading Home...",
     unavailable: "Home is temporarily unavailable.",
+    auth: "Sign in to view your ALMA Home.",
     retry: "Retry",
     shortcuts: "Contextual Shortcuts",
     noShortcuts: "No enabled workspace shortcuts yet.",
@@ -154,6 +156,7 @@ const COPY = {
     send: "Enviar",
     loading: "Cargando Inicio...",
     unavailable: "Inicio no esta disponible temporalmente.",
+    auth: "Inicia sesion para ver Inicio de ALMA.",
     retry: "Reintentar",
     shortcuts: "Atajos contextuales",
     noShortcuts: "Aun no hay atajos de espacios activos.",
@@ -202,33 +205,46 @@ export default function OperatingDashboard({
   );
   const [approvals, setApprovals] = useState<UnifiedApproval[]>([]);
   const [command, setCommand] = useState("");
-  const [error, setError] = useState(false);
+  const [state, setState] = useState<LoadState>("loading");
   const t = COPY[language];
 
   const load = useCallback(async () => {
-    setError(false);
+    setState("loading");
     try {
-      const [summaryResponse, catalogResponse, approvalsResponse] =
-        await Promise.all([
-          fetch("/api/dashboard/summary", { cache: "no-store" }),
-          fetch("/api/marketplace/catalog", { cache: "no-store" }),
-          fetch("/api/approvals?limit=20", { cache: "no-store" }),
-        ]);
+      const summaryResponse = await fetch("/api/dashboard/summary", {
+        cache: "no-store",
+      });
+      if (summaryResponse.status === 401) {
+        setSummary(null);
+        setCatalog(null);
+        setApprovals([]);
+        setState("auth");
+        return;
+      }
       if (!summaryResponse.ok) throw new Error("summary_unavailable");
       setSummary((await summaryResponse.json()) as DashboardSummary);
-      if (catalogResponse.ok) {
+      const [catalogResult, approvalsResult] = await Promise.allSettled([
+        fetch("/api/marketplace/catalog", { cache: "no-store" }),
+        fetch("/api/approvals?limit=20", { cache: "no-store" }),
+      ]);
+      if (catalogResult.status === "fulfilled" && catalogResult.value.ok) {
         setCatalog(
-          (await catalogResponse.json()) as MarketplaceCatalogResponse,
+          (await catalogResult.value.json()) as MarketplaceCatalogResponse,
         );
+      } else {
+        setCatalog(null);
       }
-      if (approvalsResponse.ok) {
-        const payload = (await approvalsResponse.json()) as {
+      if (approvalsResult.status === "fulfilled" && approvalsResult.value.ok) {
+        const payload = (await approvalsResult.value.json()) as {
           approvals?: UnifiedApproval[];
         };
         setApprovals(payload.approvals ?? []);
+      } else {
+        setApprovals([]);
       }
+      setState("ready");
     } catch {
-      setError(true);
+      setState("error");
     }
   }, []);
 
@@ -291,7 +307,7 @@ export default function OperatingDashboard({
     onAsk(trimmed);
   }
 
-  if (!summary && !error) {
+  if (state === "loading") {
     return (
       <div className="min-h-0 flex-1 overflow-y-auto bg-[#F7F7F8] p-4 md:p-6">
         <div className="mx-auto max-w-6xl rounded-2xl border border-[#E5E7EB] bg-white p-4 text-sm text-[#6B7280]">
@@ -302,19 +318,23 @@ export default function OperatingDashboard({
     );
   }
 
-  if (error && !summary) {
+  if (state === "auth" || state === "error") {
     return (
       <div className="min-h-0 flex-1 overflow-y-auto bg-[#F7F7F8] p-4 md:p-6">
         <div className="mx-auto max-w-6xl rounded-2xl border border-[#E5E7EB] bg-white p-4">
-          <p className="text-sm text-[#6B7280]">{t.unavailable}</p>
-          <button
-            type="button"
-            onClick={() => void load()}
-            className="mt-3 inline-flex h-10 items-center gap-2 rounded-xl border border-black px-3 text-sm font-medium"
-          >
-            <RefreshCw className="h-4 w-4" />
-            {t.retry}
-          </button>
+          <p className="text-sm text-[#6B7280]">
+            {state === "auth" ? t.auth : t.unavailable}
+          </p>
+          {state === "error" ? (
+            <button
+              type="button"
+              onClick={() => void load()}
+              className="mt-3 inline-flex h-10 items-center gap-2 rounded-xl border border-black px-3 text-sm font-medium"
+            >
+              <RefreshCw className="h-4 w-4" />
+              {t.retry}
+            </button>
+          ) : null}
         </div>
       </div>
     );

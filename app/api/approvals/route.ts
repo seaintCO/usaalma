@@ -6,7 +6,16 @@ import { resolveTenantWorkspace } from "@/lib/platform/workspace/tenantResolver"
 export async function GET(request: Request) {
   const user = await getCurrentUser();
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json(
+      {
+        ok: false,
+        error: {
+          code: "unauthorized",
+          message: "Authentication is required.",
+        },
+      },
+      { status: 401 },
+    );
   }
 
   const url = new URL(request.url);
@@ -23,11 +32,13 @@ export async function GET(request: Request) {
     return NextResponse.json(
       {
         ok: false,
-        error:
-          "Approvals are temporarily unavailable. Confirm the platform foundation migration is applied.",
+        error: {
+          code: "approvals_schema_unavailable",
+          message:
+            "Approvals are temporarily unavailable. Confirm the platform foundation migration is applied.",
+        },
       },
       { status: 503 },
     );
   }
 }
-

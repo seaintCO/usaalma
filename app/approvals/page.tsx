@@ -42,6 +42,7 @@ type UnifiedApproval = {
 };
 
 type ApprovalFilter = "pending" | "completed" | "rejected" | "failed" | "all";
+type LoadState = "loading" | "ready" | "auth" | "migration" | "error";
 
 const COPY = {
   en: {
@@ -49,6 +50,9 @@ const COPY = {
     subtitle: "Review external actions before ALMA executes them.",
     loading: "Loading approvals...",
     unavailable: "Approvals are temporarily unavailable.",
+    auth: "Sign in to review approvals.",
+    migration:
+      "Approval storage is not available in this environment. Apply the platform foundation migration before using approvals.",
     retry: "Retry",
     empty: "No approvals in this view.",
     pending: "Pending",
@@ -71,6 +75,9 @@ const COPY = {
     subtitle: "Revisa acciones externas antes de que ALMA las ejecute.",
     loading: "Cargando aprobaciones...",
     unavailable: "Aprobaciones no esta disponible temporalmente.",
+    auth: "Inicia sesion para revisar aprobaciones.",
+    migration:
+      "El almacenamiento de aprobaciones no esta disponible en este entorno. Aplica la migracion de plataforma antes de usar aprobaciones.",
     retry: "Reintentar",
     empty: "No hay aprobaciones en esta vista.",
     pending: "Pendientes",
@@ -121,35 +128,47 @@ export default function ApprovalsPage() {
   const [approvals, setApprovals] = useState<UnifiedApproval[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [filter, setFilter] = useState<ApprovalFilter>("pending");
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
+  const [state, setState] = useState<LoadState>("loading");
   const [mutatingId, setMutatingId] = useState<string | null>(null);
   const [draftPayload, setDraftPayload] = useState<Record<string, unknown>>({});
   const copy = COPY[language];
 
   const load = useCallback(async () => {
-    setError(false);
-    setLoading(true);
+    setState("loading");
     try {
       const [approvalResponse, languageResponse] = await Promise.all([
         fetch("/api/approvals", { cache: "no-store" }),
         fetch("/api/settings/language", { cache: "no-store" }),
       ]);
-      if (!approvalResponse.ok) throw new Error("approvals_unavailable");
       const payload = (await approvalResponse.json()) as {
+        ok?: boolean;
         approvals?: UnifiedApproval[];
+        error?: { code?: string };
       };
-      const nextApprovals = payload.approvals ?? [];
-      setApprovals(nextApprovals);
-      setSelectedId((current) => current ?? nextApprovals[0]?.id ?? null);
+      if (approvalResponse.status === 401) {
+        setApprovals([]);
+        setSelectedId(null);
+        setState("auth");
+      } else if (!approvalResponse.ok || payload.ok === false) {
+        setApprovals([]);
+        setSelectedId(null);
+        setState(
+          payload.error?.code === "approvals_schema_unavailable"
+            ? "migration"
+            : "error",
+        );
+      } else {
+        const nextApprovals = payload.approvals ?? [];
+        setApprovals(nextApprovals);
+        setSelectedId((current) => current ?? nextApprovals[0]?.id ?? null);
+        setState("ready");
+      }
       if (languageResponse.ok) {
         const languagePayload = await languageResponse.json();
         setLanguage(languagePayload.language === "es" ? "es" : "en");
       }
     } catch {
-      setError(true);
-    } finally {
-      setLoading(false);
+      setState("error");
     }
   }, []);
 
@@ -197,7 +216,7 @@ export default function ApprovalsPage() {
       if (!response.ok) throw new Error("approval_update_failed");
       await load();
     } catch {
-      setError(true);
+      setState("error");
     } finally {
       setMutatingId(null);
     }
@@ -244,25 +263,33 @@ export default function ApprovalsPage() {
             ))}
           </div>
 
-          {loading ? (
+          {state === "loading" ? (
             <StateCard icon={Loader2} text={copy.loading} spinning />
           ) : null}
 
-          {error && !loading ? (
+          {state === "auth" || state === "migration" || state === "error" ? (
             <div className="rounded-2xl border border-[#E5E7EB] bg-white p-4">
-              <p className="text-sm text-[#6B7280]">{copy.unavailable}</p>
-              <button
-                type="button"
-                onClick={() => void load()}
-                className="mt-3 inline-flex h-10 items-center gap-2 rounded-xl border border-black px-3 text-sm font-medium"
-              >
-                <RefreshCw className="h-4 w-4" />
-                {copy.retry}
-              </button>
+              <p className="text-sm text-[#6B7280]">
+                {state === "auth"
+                  ? copy.auth
+                  : state === "migration"
+                    ? copy.migration
+                    : copy.unavailable}
+              </p>
+              {state === "error" ? (
+                <button
+                  type="button"
+                  onClick={() => void load()}
+                  className="mt-3 inline-flex h-10 items-center gap-2 rounded-xl border border-black px-3 text-sm font-medium"
+                >
+                  <RefreshCw className="h-4 w-4" />
+                  {copy.retry}
+                </button>
+              ) : null}
             </div>
           ) : null}
 
-          {!loading && !error ? (
+          {state === "ready" ? (
             <section className="grid gap-4 lg:grid-cols-[minmax(0,360px)_minmax(0,1fr)]">
               <div className="min-w-0 space-y-2">
                 {filtered.length ? (

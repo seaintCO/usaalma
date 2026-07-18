@@ -24,6 +24,8 @@ type ProviderDefinition = {
   connectionKind: "oauth" | "custom" | "unavailable";
 };
 
+type CatalogWarnings = NonNullable<MarketplaceCatalogResponse["warnings"]>;
+
 const PROVIDERS: readonly ProviderDefinition[] = [
   {
     key: "google",
@@ -125,8 +127,14 @@ function connectionStatusFor(
   definition: ProviderDefinition,
   records: readonly MarketplaceConnectionRecord[],
   voiceProviders: ReadonlySet<string>,
+  connectionsUnavailable: boolean,
+  voiceConnectionsUnavailable: boolean,
 ): MarketplaceConnectionStatus {
   if (definition.connectionKind === "unavailable") return "coming_soon";
+  if (definition.connectionKind === "oauth" && connectionsUnavailable)
+    return "configuration_unavailable";
+  if (definition.connectionKind === "custom" && voiceConnectionsUnavailable)
+    return "configuration_unavailable";
   const record = records.find(
     (item) => item.provider === definition.providerKey && !item.isMock,
   );
@@ -160,13 +168,31 @@ function connectionStatusFor(
 
 export class MarketplaceCatalogService {
   static async getForUser(userId: string): Promise<MarketplaceCatalogResponse> {
-    const [entitlements, installedModuleKeys, connections, voiceProviders] =
-      await Promise.all([
-        EntitlementService.getForUser(userId),
+    const warnings: CatalogWarnings = {};
+    const entitlements = await EntitlementService.getForUser(userId);
+    const [installedResult, connectionsResult, voiceProvidersResult] =
+      await Promise.allSettled([
         ModuleRepository.listInstalledKeys(userId),
         OAuthRepository.listConnectionStates(userId),
         IntegrationRepository.listConfiguredVoiceProviders(userId),
       ]);
+    const installedModuleKeys =
+      installedResult.status === "fulfilled" ? installedResult.value : [];
+    const connections =
+      connectionsResult.status === "fulfilled" ? connectionsResult.value : [];
+    const voiceProviders =
+      voiceProvidersResult.status === "fulfilled"
+        ? voiceProvidersResult.value
+        : [];
+    if (installedResult.status === "rejected") {
+      warnings.installedModulesUnavailable = true;
+    }
+    if (connectionsResult.status === "rejected") {
+      warnings.connectionsUnavailable = true;
+    }
+    if (voiceProvidersResult.status === "rejected") {
+      warnings.voiceConnectionsUnavailable = true;
+    }
     const installed = new Set(installedModuleKeys);
     const accessByModuleKey = new Map(
       entitlements.modules.map((entitlement) => [
@@ -222,6 +248,8 @@ export class MarketplaceCatalogService {
             definition,
             connections,
             new Set(voiceProviders),
+            Boolean(warnings.connectionsUnavailable),
+            Boolean(warnings.voiceConnectionsUnavailable),
           ),
           ...(definition.providerKey
             ? { providerKey: definition.providerKey }
@@ -244,6 +272,11 @@ export class MarketplaceCatalogService {
         };
       }),
     ];
-    return { ok: true, items, currentPlan: entitlements.currentPlan };
+    return {
+      ok: true,
+      items,
+      currentPlan: entitlements.currentPlan,
+      ...(Object.keys(warnings).length ? { warnings } : {}),
+    };
   }
 }

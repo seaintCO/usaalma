@@ -27,6 +27,7 @@ const COPY = {
     retry: "Retry",
     empty: "No marketplace items match these filters.",
     unavailable: "The marketplace is temporarily unavailable.",
+    auth: "Sign in to view your marketplace.",
     open: "Open",
     install: "Install",
     installing: "Installing...",
@@ -38,6 +39,7 @@ const COPY = {
     disconnect: "Disconnect",
     reconnect: "Reconnect",
     requiresSetup: "Requires Setup",
+    configurationUnavailable: "Configuration unavailable",
     details: "Details",
     close: "Close",
     limitations: "Limitations",
@@ -71,6 +73,7 @@ const COPY = {
     retry: "Reintentar",
     empty: "Ningun elemento coincide con estos filtros.",
     unavailable: "Marketplace no esta disponible temporalmente.",
+    auth: "Inicia sesion para ver tu Marketplace.",
     open: "Abrir",
     install: "Instalar",
     installing: "Instalando...",
@@ -82,6 +85,7 @@ const COPY = {
     disconnect: "Desconectar",
     reconnect: "Reconectar",
     requiresSetup: "Requiere configuracion",
+    configurationUnavailable: "Configuracion no disponible",
     details: "Detalles",
     close: "Cerrar",
     limitations: "Limitaciones",
@@ -151,6 +155,8 @@ export function connectionLabel(
       return copy.upgrade;
     case "coming_soon":
       return copy.comingSoon;
+    case "configuration_unavailable":
+      return copy.configurationUnavailable;
     default:
       return copy.connect;
   }

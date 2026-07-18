@@ -19,12 +19,16 @@ type DocumentItem = {
   updated_at?: string | null;
 };
 
+type LoadState = "loading" | "ready" | "auth" | "storage" | "error";
+
 const COPY = {
   en: {
     title: "Files",
     subtitle: "Your saved ALMA documents and file workspace.",
     loading: "Loading files...",
     unavailable: "Files are temporarily unavailable.",
+    auth: "Sign in to view your ALMA files.",
+    storage: "File storage is not available in this environment.",
     retry: "Retry",
     empty: "No documents saved yet.",
     openDocuments: "Open Documents",
@@ -37,6 +41,9 @@ const COPY = {
     subtitle: "Tus documentos y archivos guardados en ALMA.",
     loading: "Cargando archivos...",
     unavailable: "Archivos no esta disponible temporalmente.",
+    auth: "Inicia sesion para ver tus archivos de ALMA.",
+    storage:
+      "El almacenamiento de archivos no esta disponible en este entorno.",
     retry: "Reintentar",
     empty: "Aun no hay documentos guardados.",
     openDocuments: "Abrir Documentos",
@@ -49,29 +56,39 @@ const COPY = {
 export default function FilesPage() {
   const [language, setLanguage] = useState<AlmaShellLanguage>("en");
   const [documents, setDocuments] = useState<DocumentItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
+  const [state, setState] = useState<LoadState>("loading");
   const copy = COPY[language];
 
   const load = useCallback(async () => {
-    setLoading(true);
-    setError(false);
+    setState("loading");
     try {
       const [documentsResponse, languageResponse] = await Promise.all([
         fetch("/api/documents/list", { cache: "no-store" }),
         fetch("/api/settings/language", { cache: "no-store" }),
       ]);
-      if (!documentsResponse.ok) throw new Error("documents_unavailable");
-      const payload = (await documentsResponse.json()) as DocumentItem[];
-      setDocuments(Array.isArray(payload) ? payload : []);
+      const payload = (await documentsResponse.json()) as {
+        ok?: boolean;
+        documents?: DocumentItem[];
+        error?: { code?: string };
+      };
+      if (documentsResponse.status === 401) {
+        setDocuments([]);
+        setState("auth");
+      } else if (!documentsResponse.ok || payload.ok === false) {
+        setDocuments([]);
+        setState(
+          payload.error?.code === "storage_unavailable" ? "storage" : "error",
+        );
+      } else {
+        setDocuments(payload.documents ?? []);
+        setState("ready");
+      }
       if (languageResponse.ok) {
         const languagePayload = await languageResponse.json();
         setLanguage(languagePayload.language === "es" ? "es" : "en");
       }
     } catch {
-      setError(true);
-    } finally {
-      setLoading(false);
+      setState("error");
     }
   }, []);
 
@@ -111,28 +128,36 @@ export default function FilesPage() {
             </a>
           </header>
 
-          {loading ? (
+          {state === "loading" ? (
             <div className="flex items-center gap-2 rounded-2xl border border-[#E5E7EB] bg-white p-4 text-sm text-[#6B7280]">
               <Loader2 className="h-4 w-4 animate-spin" />
               {copy.loading}
             </div>
           ) : null}
 
-          {error && !loading ? (
+          {state === "auth" || state === "storage" || state === "error" ? (
             <div className="rounded-2xl border border-[#E5E7EB] bg-white p-4">
-              <p className="text-sm text-[#6B7280]">{copy.unavailable}</p>
-              <button
-                type="button"
-                onClick={() => void load()}
-                className="mt-3 inline-flex h-10 items-center gap-2 rounded-xl border border-black px-3 text-sm font-medium"
-              >
-                <RefreshCw className="h-4 w-4" />
-                {copy.retry}
-              </button>
+              <p className="text-sm text-[#6B7280]">
+                {state === "auth"
+                  ? copy.auth
+                  : state === "storage"
+                    ? copy.storage
+                    : copy.unavailable}
+              </p>
+              {state === "error" ? (
+                <button
+                  type="button"
+                  onClick={() => void load()}
+                  className="mt-3 inline-flex h-10 items-center gap-2 rounded-xl border border-black px-3 text-sm font-medium"
+                >
+                  <RefreshCw className="h-4 w-4" />
+                  {copy.retry}
+                </button>
+              ) : null}
             </div>
           ) : null}
 
-          {!loading && !error ? (
+          {state === "ready" ? (
             <section className="rounded-2xl border border-[#E5E7EB] bg-white p-4">
               <div className="mb-4 flex items-center gap-2">
                 <FileText className="h-4 w-4" />

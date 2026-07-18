@@ -37,7 +37,16 @@ export async function PATCH(
 ) {
   const user = await getCurrentUser();
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json(
+      {
+        ok: false,
+        error: {
+          code: "unauthorized",
+          message: "Authentication is required.",
+        },
+      },
+      { status: 401 },
+    );
   }
 
   const { approvalId } = await context.params;
@@ -102,4 +111,3 @@ export async function PATCH(
     );
   }
 }
-

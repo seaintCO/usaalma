@@ -2,19 +2,20 @@ import { createClient } from "@/lib/supabase/server";
 import { createEmbedding } from "@/lib/ai/embeddings/createEmbedding";
 
 export class DocumentRepository {
-  static async list(userId:string) {
+  static async list(userId: string) {
     const supabase = await createClient();
 
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("documents")
       .select("*")
       .eq("user_id", userId)
-      .order("created_at", { ascending:false });
+      .order("created_at", { ascending: false });
 
+    if (error) throw error;
     return data ?? [];
   }
 
-  static async create(userId:string, title:string, content:string) {
+  static async create(userId: string, title: string, content: string) {
     const supabase = await createClient();
 
     const embedding = await createEmbedding(`${title}\n${content}`);
@@ -22,10 +23,10 @@ export class DocumentRepository {
     const { data, error } = await supabase
       .from("documents")
       .insert({
-        user_id:userId,
+        user_id: userId,
         title,
         content,
-        source_type:"manual",
+        source_type: "manual",
         embedding,
       })
       .select()
@@ -36,4 +37,3 @@ export class DocumentRepository {
     return data;
   }
 }
-

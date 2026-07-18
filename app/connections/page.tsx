@@ -16,12 +16,15 @@ import type {
   MarketplaceItem,
 } from "@/lib/platform/marketplace/types";
 
+type LoadState = "loading" | "ready" | "auth" | "error";
+
 const COPY = {
   en: {
     title: "Connections",
     subtitle: "External providers connected to ALMA.",
     loading: "Loading connections...",
     unavailable: "Connections are temporarily unavailable.",
+    auth: "Sign in to view your ALMA connections.",
     retry: "Retry",
     empty: "No connections are available yet.",
     connect: "Connect",
@@ -31,6 +34,7 @@ const COPY = {
     setup: "Setup",
     upgrade: "Upgrade required",
     comingSoon: "Coming soon",
+    configurationUnavailable: "Configuration unavailable",
     unavailableState: "Unavailable",
   },
   es: {
@@ -38,6 +42,7 @@ const COPY = {
     subtitle: "Proveedores externos conectados a ALMA.",
     loading: "Cargando conexiones...",
     unavailable: "Conexiones no esta disponible temporalmente.",
+    auth: "Inicia sesion para ver tus conexiones de ALMA.",
     retry: "Reintentar",
     empty: "Aun no hay conexiones disponibles.",
     connect: "Conectar",
@@ -47,6 +52,7 @@ const COPY = {
     setup: "Configurar",
     upgrade: "Requiere mejora",
     comingSoon: "Proximamente",
+    configurationUnavailable: "Configuracion no disponible",
     unavailableState: "No disponible",
   },
 } as const;
@@ -76,6 +82,8 @@ function statusLabel(item: MarketplaceItem, copy: ConnectionsCopy) {
       return copy.upgrade;
     case "coming_soon":
       return copy.comingSoon;
+    case "configuration_unavailable":
+      return copy.configurationUnavailable;
     case "connect":
       return copy.connect;
     default:
@@ -88,29 +96,35 @@ export default function ConnectionsPage() {
   const [catalog, setCatalog] = useState<MarketplaceCatalogResponse | null>(
     null,
   );
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
+  const [state, setState] = useState<LoadState>("loading");
   const [mutatingKey, setMutatingKey] = useState<string | null>(null);
   const copy = COPY[language];
 
   const load = useCallback(async () => {
-    setLoading(true);
-    setError(false);
+    setState("loading");
     try {
       const [catalogResponse, languageResponse] = await Promise.all([
         fetch("/api/marketplace/catalog", { cache: "no-store" }),
         fetch("/api/settings/language", { cache: "no-store" }),
       ]);
-      if (!catalogResponse.ok) throw new Error("catalog_unavailable");
-      setCatalog((await catalogResponse.json()) as MarketplaceCatalogResponse);
+      const payload = (await catalogResponse.json()) as
+        MarketplaceCatalogResponse | { ok: false; error?: { code?: string } };
+      if (catalogResponse.status === 401) {
+        setCatalog(null);
+        setState("auth");
+      } else if (!catalogResponse.ok || payload.ok === false) {
+        setCatalog(null);
+        setState("error");
+      } else {
+        setCatalog(payload);
+        setState("ready");
+      }
       if (languageResponse.ok) {
         const languagePayload = await languageResponse.json();
         setLanguage(languagePayload.language === "es" ? "es" : "en");
       }
     } catch {
-      setError(true);
-    } finally {
-      setLoading(false);
+      setState("error");
     }
   }, []);
 
@@ -140,7 +154,7 @@ export default function ConnectionsPage() {
       if (!response.ok) throw new Error("disconnect_failed");
       await load();
     } catch {
-      setError(true);
+      setState("error");
     } finally {
       setMutatingKey(null);
     }
@@ -170,28 +184,32 @@ export default function ConnectionsPage() {
             </p>
           </header>
 
-          {loading ? (
+          {state === "loading" ? (
             <div className="flex items-center gap-2 rounded-2xl border border-[#E5E7EB] bg-white p-4 text-sm text-[#6B7280]">
               <Loader2 className="h-4 w-4 animate-spin" />
               {copy.loading}
             </div>
           ) : null}
 
-          {error && !loading ? (
+          {state === "auth" || state === "error" ? (
             <div className="rounded-2xl border border-[#E5E7EB] bg-white p-4">
-              <p className="text-sm text-[#6B7280]">{copy.unavailable}</p>
-              <button
-                type="button"
-                onClick={() => void load()}
-                className="mt-3 inline-flex h-10 items-center gap-2 rounded-xl border border-black px-3 text-sm font-medium"
-              >
-                <RefreshCw className="h-4 w-4" />
-                {copy.retry}
-              </button>
+              <p className="text-sm text-[#6B7280]">
+                {state === "auth" ? copy.auth : copy.unavailable}
+              </p>
+              {state === "error" ? (
+                <button
+                  type="button"
+                  onClick={() => void load()}
+                  className="mt-3 inline-flex h-10 items-center gap-2 rounded-xl border border-black px-3 text-sm font-medium"
+                >
+                  <RefreshCw className="h-4 w-4" />
+                  {copy.retry}
+                </button>
+              ) : null}
             </div>
           ) : null}
 
-          {!loading && !error ? (
+          {state === "ready" ? (
             <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
               {connections.length ? (
                 connections.map((item) => {

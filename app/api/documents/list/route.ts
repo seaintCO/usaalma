@@ -5,9 +5,21 @@ import { DocumentRepository } from "@/lib/db/repositories/documents/document.rep
 export async function GET() {
   const user = await getCurrentUser();
 
-  if (!user) return NextResponse.json({ error:"Unauthorized" }, { status:401 });
+  if (!user) {
+    return NextResponse.json(
+      { ok: false, error: { code: "unauthorized" } },
+      { status: 401 },
+    );
+  }
 
-  const documents = await DocumentRepository.list(user.id);
+  try {
+    const documents = await DocumentRepository.list(user.id);
 
-  return NextResponse.json(documents);
+    return NextResponse.json({ ok: true, documents });
+  } catch {
+    return NextResponse.json(
+      { ok: false, error: { code: "storage_unavailable" } },
+      { status: 503 },
+    );
+  }
 }

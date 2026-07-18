@@ -408,6 +408,10 @@ export default function DashboardPage() {
     async function checkOnboarding() {
       const res = await fetch("/api/onboarding/status");
       const data = await res.json();
+      if (res.status === 401) {
+        window.location.href = "/login?next=/dashboard";
+        return;
+      }
 
       if (data && data.completed === false) {
         window.location.href = "/onboarding";
@@ -416,8 +420,12 @@ export default function DashboardPage() {
 
       const billingRes = await fetch("/api/billing/required");
       const billing = await billingRes.json();
+      if (billingRes.status === 401) {
+        window.location.href = "/login?next=/dashboard";
+        return;
+      }
 
-      if (billing.required) {
+      if (billingRes.ok && billing.required) {
         window.location.href = "/billing";
         return;
       }

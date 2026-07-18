@@ -167,6 +167,76 @@ Remaining blockers:
 - The existing lint baseline still contains broad warnings outside this
   milestone; no blanket cleanup was performed.
 
+## Milestone 2.2: Runtime Integration Repair
+
+Status: completed in this milestone.
+
+Goal: repair the assistant-first shell runtime data layer so empty states,
+authentication failures, unavailable storage/schema, optional provider
+configuration, and real network/server failures are not collapsed into generic
+Retry states.
+
+Completed work:
+
+- Split assistant-shell surfaces into explicit runtime states:
+  - Apps and Marketplace distinguish unauthenticated users from catalog
+    failures.
+  - Connections distinguishes unauthenticated users, not connected providers,
+    connected providers, reconnect-required providers, coming soon providers,
+    setup-required providers, and configuration-unavailable provider storage.
+  - Files distinguishes unauthenticated users, empty document lists, unavailable
+    storage/document reads, and real retryable failures.
+  - Approvals distinguishes unauthenticated users, empty approval views,
+    missing/unavailable approval schema, and retryable failures.
+  - Billing distinguishes unauthenticated users, no subscription/Free plan,
+    active subscription, optional plan/history read gaps, and failed billing
+    status reads.
+- Made Home require only the dashboard summary read. Marketplace shortcuts and
+  approval counts now degrade to empty sections if their optional reads fail.
+- Fixed the dashboard auth gate so unauthorized onboarding or billing-required
+  checks redirect to Login instead of incorrectly redirecting to Billing.
+- Preserved canonical module registry and entitlement reads. Marketplace catalog
+  now tolerates optional module-install, OAuth connection, and voice-provider
+  read failures while reporting configuration warnings.
+- Changed the documents list API to return structured success/error payloads and
+  updated Documents to accept both the structured payload and the legacy array
+  shape.
+- Repaired user-visible mojibake encountered in touched Billing and Documents
+  source.
+
+Migration findings:
+
+- `supabase/migrations/20260718001000_alma_shared_platform_foundation.sql` is
+  still required for platform `action_approvals`, `action_audit_logs`, and
+  persisted workspace membership flows.
+- The migration is additive/defensive overall: it creates missing workspace,
+  membership, invite, action approval, and audit tables; adds missing workspace
+  columns; creates indexes; enables RLS; and recreates scoped policies/triggers.
+- The migration depends on existing `public.agents`,
+  `public.agent_executions`, and `public.alma_set_updated_at()`. If any are
+  missing in a target database, SQL Editor execution will fail before those
+  dependencies are added.
+- The locally configured Supabase URL is a placeholder, so the actual project
+  ref and development/production classification could not be verified from this
+  checkout.
+
+Compatibility notes:
+
+- No remote migration was applied.
+- No OAuth provider architecture, durable chat transport, subscription schema,
+  Marketplace registry, storage bucket, or frontend shell redesign was changed.
+- Empty results are now rendered as empty states. Retry buttons remain only on
+  retryable failures and repeat the same load request.
+
+Remaining blockers:
+
+- Authenticated browser verification requires a real local Supabase URL/key and
+  a signed-in development account.
+- Approval Center persistence cannot fully work until the shared platform
+  foundation migration is applied to the target database.
+- Real provider connection states depend on existing OAuth/voice configuration
+  tables and provider credentials.
+
 The older split milestones below are retained as planning history. Their shell,
 Home, Apps/Files, and Approval Center portions are superseded by this completed
 assistant-first milestone.

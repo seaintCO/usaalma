@@ -22,7 +22,7 @@ import type {
 import { Search, Store } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-type LoadState = "loading" | "ready" | "error";
+type LoadState = "loading" | "ready" | "auth" | "error";
 type ReleaseFilter = "all" | MarketplaceItem["releaseStatus"];
 type StatusFilter =
   | "all"
@@ -41,6 +41,7 @@ const STATUS_FILTERS: StatusFilter[] = [
   "connected",
   "reconnect_required",
   "setup_required",
+  "configuration_unavailable",
   "coming_soon",
 ];
 
@@ -70,6 +71,7 @@ function labelForStatus(
     connected: copy.connected,
     reconnect_required: copy.reconnect,
     setup_required: copy.requiresSetup,
+    configuration_unavailable: copy.configurationUnavailable,
     coming_soon: copy.comingSoon,
   };
   return labels[value];
@@ -165,6 +167,14 @@ export default function MarketplacePage() {
         }),
       ]);
       const payload: unknown = await catalogResponse.json();
+      if (catalogResponse.status === 401) {
+        if (!controller.signal.aborted) {
+          setCatalog(null);
+          setState("auth");
+          setError(null);
+        }
+        return;
+      }
       if (!catalogResponse.ok || !isCatalogResponse(payload)) {
         const responseError = payload as MarketplaceCatalogErrorResponse;
         throw new Error(responseError.error?.message ?? "catalog_unavailable");
@@ -393,18 +403,20 @@ export default function MarketplacePage() {
               {copy.loading}
             </p>
           ) : null}
-          {state === "error" ? (
+          {state === "auth" || state === "error" ? (
             <section className="mt-12 rounded-[1.5rem] border border-[#E5E7EB] bg-white p-6">
               <p className="text-sm text-[#6B7280]">
-                {error || copy.unavailable}
+                {state === "auth" ? copy.auth : error || copy.unavailable}
               </p>
-              <button
-                type="button"
-                onClick={() => void loadCatalog()}
-                className="mt-4 rounded-2xl bg-black px-4 py-3 text-sm font-medium text-white"
-              >
-                {copy.retry}
-              </button>
+              {state === "error" ? (
+                <button
+                  type="button"
+                  onClick={() => void loadCatalog()}
+                  className="mt-4 rounded-2xl bg-black px-4 py-3 text-sm font-medium text-white"
+                >
+                  {copy.retry}
+                </button>
+              ) : null}
             </section>
           ) : null}
           {state === "ready" ? (

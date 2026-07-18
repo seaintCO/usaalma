@@ -21,6 +21,7 @@ export type MarketplaceConnectionStatus =
   | "connected"
   | "reconnect_required"
   | "setup_required"
+  | "configuration_unavailable"
   | "coming_soon"
   | "upgrade_required";
 
@@ -50,6 +51,11 @@ export type MarketplaceCatalogResponse = {
   ok: true;
   items: MarketplaceItem[];
   currentPlan: string | null;
+  warnings?: {
+    installedModulesUnavailable?: boolean;
+    connectionsUnavailable?: boolean;
+    voiceConnectionsUnavailable?: boolean;
+  };
 };
 
 export type MarketplaceCatalogErrorResponse = {

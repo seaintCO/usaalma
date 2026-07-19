@@ -72,3 +72,31 @@ Engine 1 remaining risks:
   maintenance job.
 - GitHub webhook signature handling is documented/configured but webhook event
   processing is not implemented in Engine 1.
+
+## Engine 1.1 Hard Stop
+
+Engine 1.1 found a security-critical runtime ambiguity: the current Codex SDK
+working directory cannot be proven to be the same remote E2B filesystem used for
+validation and preview. The worker must not run live generated builds until
+that boundary is repaired.
+
+Fail-closed requirements added in this stage:
+
+- Worker package scripts exit with `BUILDER_RUNTIME_WIRING_BLOCKED` instead of
+  starting an unsafe live worker.
+- The Codex provider returns `BUILDER_CODING_PROVIDER_NOT_CONFIGURED` until a
+  remote E2B filesystem bridge exists.
+- Failed coding or validation attempts call sandbox cleanup when an E2B sandbox
+  was provisioned.
+- The ALMA-owned E2B template is documented and smoke-testable without cloud
+  execution.
+
+Remaining mandatory controls before live builds:
+
+- Starter transfer into E2B.
+- Same-workspace proof for all generated source reads and writes.
+- A generated source artifact handoff with manifest and SHA-256 checksums.
+- Path traversal, symlink escape, and unsafe filename rejection.
+- Secret scans over logs and artifacts before persistence.
+- Cleanup-state persistence for successful cleanup, failed cleanup, and stale
+  sandbox recovery.

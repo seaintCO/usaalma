@@ -115,3 +115,65 @@ Apply `supabase/migrations/20260718009000_alma_builder_engine_1.sql` after the
 foundation migration to add worker leases, Engine 1 statuses, preview/source
 metadata, the service-role job claim RPC, and the `github_app` connector
 provider value.
+
+## Engine 1.1 Runtime Wiring Audit
+
+Engine 1.1 verified the checked-in runtime path from durable Builder job to
+isolated workspace, coding pass, validation, and preview. The original Engine 1
+wiring is not genuinely runnable end to end yet.
+
+What exists:
+
+- Durable jobs are created by the control plane and claimed by the trusted
+  worker through the service-role repository.
+- E2B workspace provisioning exists and returns sandbox identifiers.
+- Validation and preview commands execute inside the E2B sandbox at
+  `/home/user/app`.
+- Preview URLs are allowlisted and health-checked before persistence.
+- GitHub save remains approval-gated and blocked until generated artifacts
+  exist.
+
+What was missing:
+
+- Package scripts for a repeatable worker and E2B template lifecycle.
+- An ALMA-owned E2B template definition.
+- Starter file transfer into the E2B sandbox before coding starts.
+- A generated source artifact handoff with manifest, exclusions, checksums, and
+  persisted checkpoint metadata.
+- Cleanup-state persistence for cancelled, timed-out, or failed sandboxes.
+- Proof that the Codex SDK edits the same remote E2B filesystem that validation
+  and preview commands use.
+
+Hard boundary:
+
+- The current Codex SDK integration starts a thread with
+  `workingDirectory: "/home/user/app"` from the local worker process.
+- E2B validation and preview commands run in the remote sandbox at the same
+  string path.
+- Matching path strings are not proof of shared storage. As implemented, the
+  Codex SDK edits a local worker filesystem, while E2B validates a remote
+  filesystem.
+
+Engine 1.1 therefore keeps the worker fail-closed with
+`BUILDER_RUNTIME_WIRING_BLOCKED` and
+`BUILDER_CODING_PROVIDER_NOT_CONFIGURED` until a remote filesystem bridge is
+implemented.
+
+Remote filesystem bridge requirements:
+
+- Starter templates must be copied into the E2B sandbox before the coding pass.
+- Every coding-provider file read, write, list, patch, and delete must target
+  E2B file APIs or a provider that natively operates inside the E2B workspace.
+- Generated commands must run only through the E2B workspace command allowlist.
+- ALMA controller secrets must not be visible to generated commands or generated
+  source.
+- Artifact export must reject absolute paths, `..`, symlink escapes, `.env*`,
+  `.git`, `node_modules`, build outputs, caches, and oversized files.
+- Artifact export must persist a manifest with relative paths, sizes, and
+  SHA-256 checksums before source push or checkpoint restore can execute.
+
+Template location:
+
+- `infra/e2b/alma-builder/`
+- Local smoke: `npm run builder:e2b:template:smoke`
+- Cloud build: `npm run builder:e2b:template:build`

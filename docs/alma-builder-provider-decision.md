@@ -109,3 +109,30 @@ Minimum intended GitHub App permissions:
 
 Repository creation/push remains approval-gated and blocked until the worker
 artifact handoff is complete.
+
+## Engine 1.1 Decision Update
+
+The server-side Codex SDK path from Engine 1 is not accepted as a live production provider until it can prove that every generated source read and
+write targets the remote E2B filesystem. A local worker path such as
+`/home/user/app` is not sufficient because E2B validation uses the same string
+inside a separate sandbox.
+
+The current decision is fail-closed:
+
+- Keep E2B as the intended isolated command and preview workspace.
+- Keep the ALMA-owned E2B template under `infra/e2b/alma-builder/`.
+- Keep GitHub source push approval-gated and blocked until generated artifacts
+  are persisted.
+- Do not enable live Codex coding sessions from the controller process until a
+  remote E2B filesystem bridge is implemented.
+
+Recommended implementation path:
+
+- Add a coding provider adapter whose file operations call E2B file APIs for
+  list/read/write/patch/delete.
+- Seed starter files into E2B before the coding turn.
+- Run all install, validation, build, and preview commands only through the E2B
+  workspace provider.
+- Archive generated source from E2B with exclusions, path checks, symlink escape
+  checks, size limits, checksums, and safe manifests.
+- Persist checkpoints only after validation succeeds.

@@ -16,6 +16,38 @@ function starterFromJob(job: BuilderJob) {
     : "landing_page";
 }
 
+async function destroyWorkspaceAfterFailure(input: {
+  sandboxId?: string;
+  projectId: string;
+  sessionId: string | null;
+  userId: string;
+  workspaceId: string | null;
+  reason: string;
+}) {
+  if (!input.sandboxId) return;
+  const providers = getBuilderProviders();
+  const destroyed = await providers.workspace.destroyWorkspace?.({
+    sandboxId: input.sandboxId,
+  });
+  await BuilderEngineRepository.appendEvent({
+    userId: input.userId,
+    workspaceId: input.workspaceId,
+    projectId: input.projectId,
+    sessionId: input.sessionId,
+    eventType:
+      destroyed?.status === "success" ? "command_completed" : "build_failed",
+    lifecycleStatus: destroyed?.status === "success" ? "failed" : "blocked",
+    summary:
+      destroyed?.status === "success"
+        ? "Cleaned up the Builder sandbox after a failed build."
+        : "Builder sandbox cleanup could not be verified.",
+    metadata: {
+      reason: input.reason,
+      cleanupStatus: destroyed?.status ?? "unavailable",
+    },
+  });
+}
+
 export async function runBuilderJobOnce(workerId = WORKER_ID) {
   const job = await BuilderEngineRepository.claimNextJob(workerId);
   if (!job) return { claimed: false as const };
@@ -96,6 +128,14 @@ export async function runBuilderJobOnce(workerId = WORKER_ID) {
     starter: starterKey,
   });
   if (coding.status !== "success") {
+    await destroyWorkspaceAfterFailure({
+      sandboxId: workspace.data.sandboxId,
+      projectId: started.project_id,
+      sessionId: started.session_id,
+      userId: started.user_id,
+      workspaceId: started.workspace_id,
+      reason: coding.code,
+    });
     await BuilderEngineRepository.updateJob({
       jobId: job.id,
       status:
@@ -140,6 +180,14 @@ export async function runBuilderJobOnce(workerId = WORKER_ID) {
     });
     validation.push({ command, ok: result?.status === "success" });
     if (result?.status !== "success") {
+      await destroyWorkspaceAfterFailure({
+        sandboxId: workspace.data.sandboxId,
+        projectId: started.project_id,
+        sessionId: started.session_id,
+        userId: started.user_id,
+        workspaceId: started.workspace_id,
+        reason: result?.code ?? "validation_failed",
+      });
       await BuilderEngineRepository.updateJob({
         jobId: job.id,
         status: "retryable_failed",

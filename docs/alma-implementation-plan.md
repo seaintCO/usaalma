@@ -976,6 +976,61 @@ Remaining blockers:
 - Run live E2B/Codex/GitHub verification only with explicit approval because it
   may use paid providers or create external resources.
 
+## Completed: ALMA Builder Engine 1.1 Runtime Wiring Verification
+
+Commit target: `fix(alma): complete builder runtime wiring`
+
+Date: 2026-07-19
+
+Implemented:
+
+- Added repeatable Builder runtime commands:
+  - `npm run builder:worker`
+  - `npm run builder:worker:once`
+  - `npm run builder:e2b:template:build`
+  - `npm run builder:e2b:template:smoke`
+- Added a fail-closed worker guard at
+  `scripts/builder-worker-runtime-blocked.mjs`.
+  The scripts report `BUILDER_RUNTIME_WIRING_BLOCKED` until the remote
+  filesystem bridge is implemented.
+- Added ALMA-owned E2B template source under `infra/e2b/alma-builder/`.
+  The template defines a Node 22 non-root workspace at `/home/user/app`, copies
+  no ALMA app source, embeds no controller secrets, and includes a local smoke
+  test.
+- Hardened the Codex provider so it returns
+  `BUILDER_CODING_PROVIDER_NOT_CONFIGURED` unless same-workspace remote E2B file
+  access exists.
+- Added sandbox cleanup after coding or validation failures when an E2B sandbox
+  has already been provisioned.
+- Added deterministic verification in
+  `scripts/check-alma-builder-runtime-wiring.mjs`.
+
+Runtime conclusion:
+
+- The original Engine 1 control-plane and worker queue architecture is sound as
+  a foundation, but it is not yet a truthful live build path.
+- E2B command execution and preview validation operate in the remote sandbox.
+- The current Codex SDK integration cannot prove that source edits target that
+  same remote sandbox. It would edit a local worker filesystem path, so the live
+  coding path remains blocked.
+
+Compatibility notes:
+
+- No database migration was added or applied.
+- No ALMA shell, Apps, Marketplace, Office, Trader, Translator, durable chat, or
+  connector behavior was intentionally changed.
+- No external E2B, Codex, GitHub, Supabase, or deployment call is made by the
+  new verification scripts.
+
+Remaining blockers:
+
+- Implement starter transfer into E2B.
+- Implement a remote E2B filesystem bridge or replace the coding provider with
+  one that natively edits inside E2B.
+- Add artifact manifest/checksum persistence before GitHub source push or
+  checkpoint restore can succeed.
+- Persist cleanup states for stale or failed sandboxes.
+
 ## Operating Rules For Every Milestone
 
 - Inspect current implementation first.

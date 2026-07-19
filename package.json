@@ -7,7 +7,11 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "check:encoding": "node scripts/check-mojibake.mjs"
+    "check:encoding": "node scripts/check-mojibake.mjs",
+    "builder:worker": "node scripts/builder-worker-runtime-blocked.mjs --loop",
+    "builder:worker:once": "node scripts/builder-worker-runtime-blocked.mjs --once",
+    "builder:e2b:template:build": "node infra/e2b/alma-builder/build-template.mjs",
+    "builder:e2b:template:smoke": "node infra/e2b/alma-builder/smoke.mjs"
   },
   "dependencies": {
     "@openai/codex-sdk": "^0.144.6",

@@ -24,6 +24,19 @@ function notIsolated(): BuilderProviderResult<never> {
   };
 }
 
+function remoteFilesystemBridgeUnavailable(): BuilderProviderResult<never> {
+  return {
+    status: "blocked",
+    code: "BUILDER_CODING_PROVIDER_NOT_CONFIGURED",
+    summary:
+      "Builder coding is blocked because the Codex SDK cannot yet be proven to edit the same remote E2B filesystem used for validation and preview.",
+  };
+}
+
+function hasRemoteE2BFilesystemBridge() {
+  return false;
+}
+
 export function createBuilderEngineeringPrompt(input: {
   projectId: string;
   prompt: string;
@@ -60,6 +73,9 @@ export class CodexCodingProvider implements CodingAgentProvider {
   }): Promise<BuilderProviderResult<BuilderProviderSessionRef>> {
     if (process.env.ALMA_BUILDER_CODEX_WORKER_ISOLATED !== "true") {
       return notIsolated();
+    }
+    if (!hasRemoteE2BFilesystemBridge()) {
+      return remoteFilesystemBridgeUnavailable();
     }
     if (!process.env.OPENAI_API_KEY && !process.env.CODEX_API_KEY) {
       return notConfigured();

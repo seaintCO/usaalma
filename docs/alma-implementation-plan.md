@@ -1031,6 +1031,54 @@ Remaining blockers:
   checkpoint restore can succeed.
 - Persist cleanup states for stale or failed sandboxes.
 
+## Completed: ALMA Builder Engine 1.2 Secure Sandbox Coding Runtime
+
+Commit target: `feat(alma): add secure sandbox coding runtime`
+
+Date: 2026-07-19
+
+Implemented:
+
+- Replaced controller-side Codex SDK execution with `codex exec --json` inside
+  the E2B sandbox at `/workspace/project`.
+- Added ALMA-owned starter templates under `builder-starters/` and a secure
+  starter transfer service with path, symlink, exclusion, count, byte, and
+  checksum controls.
+- Added Builder Gateway token issuance and verification with signed,
+  short-lived, scoped, revocable tokens persisted only by hash.
+- Added trusted Gateway worker at `workers/builder/gateway/`.
+  It exposes only `POST /v1/responses`, verifies Builder tokens, enforces the
+  configured model and quota, and forwards to OpenAI without exposing permanent
+  OpenAI credentials to E2B.
+- Added private artifact handoff from E2B to the trusted worker using sanitized
+  manifests, ZIP archives, SHA-256 checksums, private storage, and Builder
+  checkpoint/artifact records.
+- Updated the E2B template to use `/workspace/project` and install pinned
+  `@openai/codex@0.144.6`.
+- Added additive migration
+  `20260718010000_alma_builder_secure_runtime.sql` for gateway token records,
+  project runtime metadata, and the private `alma-builder-artifacts` bucket.
+- Added `scripts/check-alma-builder-secure-runtime.mjs`.
+
+Compatibility notes:
+
+- No frontend shell redesign was performed.
+- No external OAuth, repository creation, deployment, or migration application
+  was performed.
+- Existing Builder project/session/job/event/checkpoint/artifact tables are
+  reused.
+- Existing GitHub approval executor now verifies checkpoint ownership before
+  remaining safely blocked.
+
+Remaining blockers:
+
+- Apply the secure runtime migration before live Builder 1.2 use.
+- Configure Builder Gateway URL, signing key, audience, model, E2B template, and
+  OpenAI key in trusted environments.
+- Perform an explicitly approved live development smoke test for Codex custom
+  provider compatibility and E2B network controls.
+- Add scheduled cleanup for expired previews and stale sandboxes.
+
 ## Operating Rules For Every Milestone
 
 - Inspect current implementation first.

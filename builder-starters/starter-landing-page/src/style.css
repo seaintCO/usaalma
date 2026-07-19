@@ -1,0 +1,53 @@
+body {
+  margin: 0;
+  font-family: Inter, system-ui, sans-serif;
+  background: #f6f7f9;
+  color: #0b0b0c;
+}
+.page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 32px;
+}
+.hero {
+  max-width: 880px;
+  border: 1px solid #dde1e7;
+  border-radius: 24px;
+  background: white;
+  padding: 56px;
+  box-shadow: 0 24px 80px #11182714;
+}
+.badge {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  border: 1px solid #dde1e7;
+  border-radius: 999px;
+  padding: 8px 12px;
+  color: #4b5563;
+}
+h1 {
+  font-size: clamp(42px, 8vw, 88px);
+  line-height: 0.92;
+  margin: 28px 0 20px;
+  letter-spacing: 0;
+}
+p {
+  font-size: clamp(18px, 3vw, 24px);
+  line-height: 1.45;
+  color: #667085;
+  max-width: 680px;
+}
+button {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  border: 0;
+  border-radius: 999px;
+  background: #050505;
+  color: white;
+  padding: 16px 22px;
+  font-size: 16px;
+  font-weight: 700;
+}

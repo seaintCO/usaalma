@@ -1,6 +1,17 @@
 import { BuilderEngineRepository } from "@/lib/builder/engineRepository";
-import { getBuilderProviders } from "@/lib/builder/providers";
+import {
+  issueBuilderGatewayToken,
+  type IssuedBuilderGatewayToken,
+} from "@/lib/builder/gatewayTokens";
+import {
+  getBuilderProviders,
+  type BuilderProviders,
+} from "@/lib/builder/providers";
 import { validateBuilderPreviewUrl } from "@/lib/builder/preview";
+import {
+  BUILDER_RUNTIME_LIMITS,
+  BUILDER_SANDBOX_PROJECT_DIR,
+} from "@/lib/builder/runtime";
 import { BUILDER_STARTERS } from "@/lib/builder/starterTemplates";
 import type { BuilderJob } from "@/lib/builder/types";
 
@@ -48,6 +59,51 @@ async function destroyWorkspaceAfterFailure(input: {
   });
 }
 
+async function revokeGatewayToken(token: IssuedBuilderGatewayToken | null) {
+  if (!token) return;
+  await BuilderEngineRepository.revokeGatewayToken({
+    tokenId: token.tokenId,
+    reason: "builder_worker_finished",
+  });
+}
+
+async function validateProject(input: {
+  providers: BuilderProviders;
+  sandboxId: string;
+}) {
+  const commands = ["install", "typecheck", "lint", "build"] as const;
+  const validation = [];
+  for (const command of commands) {
+    const result = await input.providers.workspace.runAllowedCommand?.({
+      sandboxId: input.sandboxId,
+      command,
+      cwd: BUILDER_SANDBOX_PROJECT_DIR,
+    });
+    validation.push({ command, ok: result?.status === "success" });
+    if (result?.status !== "success") {
+      return { ok: false as const, validation, result, command };
+    }
+  }
+  return { ok: true as const, validation };
+}
+
+async function failJob(input: {
+  jobId: string;
+  status: "retryable_failed" | "permanently_failed";
+  errorCode: string;
+  summary: string;
+  metadata?: Record<string, unknown>;
+}) {
+  await BuilderEngineRepository.updateJob({
+    jobId: input.jobId,
+    status: input.status,
+    errorCode: input.errorCode,
+    summary: input.summary,
+    metadata: input.metadata,
+  });
+  return { claimed: true as const, status: input.errorCode };
+}
+
 export async function runBuilderJobOnce(workerId = WORKER_ID) {
   const job = await BuilderEngineRepository.claimNextJob(workerId);
   if (!job) return { claimed: false as const };
@@ -58,6 +114,7 @@ export async function runBuilderJobOnce(workerId = WORKER_ID) {
     jobId: job.id,
     status: "running",
   });
+
   await BuilderEngineRepository.appendEvent({
     userId: started.user_id,
     workspaceId: started.workspace_id,
@@ -75,15 +132,6 @@ export async function runBuilderJobOnce(workerId = WORKER_ID) {
     sessionId: started.session_id,
   });
   if (workspace.status !== "success") {
-    await BuilderEngineRepository.updateJob({
-      jobId: job.id,
-      status:
-        workspace.status === "blocked"
-          ? "permanently_failed"
-          : "retryable_failed",
-      errorCode: workspace.code,
-      summary: workspace.summary,
-    });
     await BuilderEngineRepository.appendEvent({
       userId: started.user_id,
       workspaceId: started.workspace_id,
@@ -93,6 +141,15 @@ export async function runBuilderJobOnce(workerId = WORKER_ID) {
       lifecycleStatus: "blocked",
       summary: workspace.summary,
       metadata: { code: workspace.code },
+    });
+    await BuilderEngineRepository.updateJob({
+      jobId: job.id,
+      status:
+        workspace.status === "blocked"
+          ? "permanently_failed"
+          : "retryable_failed",
+      errorCode: workspace.code,
+      summary: workspace.summary,
     });
     return { claimed: true as const, status: workspace.status };
   }
@@ -107,53 +164,140 @@ export async function runBuilderJobOnce(workerId = WORKER_ID) {
       starter_key: starterKey,
     },
   });
-  await BuilderEngineRepository.appendEvent({
-    userId: started.user_id,
-    workspaceId: started.workspace_id,
-    projectId: started.project_id,
-    sessionId: started.session_id,
-    eventType: "build_started",
-    lifecycleStatus: "building",
-    summary: "ALMA is building your application.",
-  });
 
-  const coding = await providers.codingAgent.startSession({
-    projectId: started.project_id,
-    prompt:
-      typeof started.metadata?.revisionPrompt === "string"
-        ? started.metadata.revisionPrompt
-        : "Build the requested ALMA Builder project from the saved project brief.",
-    language: "en",
-    workingDirectory: "/home/user/app",
-    starter: starterKey,
+  const transfer = await providers.workspace.transferStarter?.({
+    sandboxId: workspace.data.sandboxId ?? "",
+    starterKey,
   });
-  if (coding.status !== "success") {
+  if (transfer?.status !== "success") {
     await destroyWorkspaceAfterFailure({
       sandboxId: workspace.data.sandboxId,
       projectId: started.project_id,
       sessionId: started.session_id,
       userId: started.user_id,
       workspaceId: started.workspace_id,
-      reason: coding.code,
+      reason: transfer?.code ?? "starter_transfer_failed",
     });
-    await BuilderEngineRepository.updateJob({
+    return failJob({
       jobId: job.id,
-      status:
-        coding.status === "blocked" ? "permanently_failed" : "retryable_failed",
-      errorCode: coding.code,
-      summary: coding.summary,
+      status: "permanently_failed",
+      errorCode: transfer?.code ?? "BUILDER_PROVIDER_FAILED",
+      summary: transfer?.summary ?? "Builder starter transfer failed.",
+    });
+  }
+
+  await BuilderEngineRepository.updateProjectRuntime({
+    userId: started.user_id,
+    projectId: started.project_id,
+    lifecycleStatus: "building",
+    patch: {
+      builder_project_dir: BUILDER_SANDBOX_PROJECT_DIR,
+      starter_manifest_sha256: transfer.data.manifest.checksumSha256,
+    },
+  });
+
+  await BuilderEngineRepository.appendEvent({
+    userId: started.user_id,
+    workspaceId: started.workspace_id,
+    projectId: started.project_id,
+    sessionId: started.session_id,
+    eventType: "command_completed",
+    lifecycleStatus: "building",
+    summary: "Transferred the selected starter into the Builder sandbox.",
+    metadata: {
+      sandboxId: workspace.data.sandboxId,
+      projectDir: BUILDER_SANDBOX_PROJECT_DIR,
+      starterKey,
+      checksum: transfer.data.manifest.checksumSha256,
+    },
+  });
+
+  const model = process.env.ALMA_BUILDER_CODEX_MODEL;
+  const gatewayUrl = process.env.ALMA_BUILDER_GATEWAY_URL;
+  if (!model || !gatewayUrl) {
+    await destroyWorkspaceAfterFailure({
+      sandboxId: workspace.data.sandboxId,
+      projectId: started.project_id,
+      sessionId: started.session_id,
+      userId: started.user_id,
+      workspaceId: started.workspace_id,
+      reason: "builder_gateway_not_configured",
+    });
+    return failJob({
+      jobId: job.id,
+      status: "permanently_failed",
+      errorCode: "BUILDER_CODING_PROVIDER_NOT_CONFIGURED",
+      summary: "Builder Gateway URL and Codex model are required.",
+    });
+  }
+
+  let gatewayToken: IssuedBuilderGatewayToken | null = null;
+  try {
+    gatewayToken = await issueBuilderGatewayToken({
+      job: started,
+      sandboxId: workspace.data.sandboxId ?? "",
+      model,
+      ttlSeconds: BUILDER_RUNTIME_LIMITS.gatewayTokenTtlSeconds,
     });
     await BuilderEngineRepository.appendEvent({
       userId: started.user_id,
       workspaceId: started.workspace_id,
       projectId: started.project_id,
       sessionId: started.session_id,
-      eventType: "build_failed",
-      lifecycleStatus: "failed",
-      summary: coding.summary,
-      metadata: { code: coding.code },
+      eventType: "build_started",
+      lifecycleStatus: "building",
+      summary: "ALMA is building your application inside the sandbox.",
+      metadata: {
+        sandboxId: workspace.data.sandboxId,
+        projectDir: BUILDER_SANDBOX_PROJECT_DIR,
+        tokenId: gatewayToken.tokenId,
+      },
     });
-    return { claimed: true as const, status: coding.status };
+    const coding = await providers.codingAgent.startSession({
+      projectId: started.project_id,
+      prompt:
+        typeof started.metadata?.revisionPrompt === "string"
+          ? started.metadata.revisionPrompt
+          : "Build the requested ALMA Builder project from the saved project brief.",
+      language: "en",
+      workingDirectory: BUILDER_SANDBOX_PROJECT_DIR,
+      starter: starterKey,
+      sandboxId: workspace.data.sandboxId,
+      gatewayToken: gatewayToken.token,
+      gatewayUrl,
+      model,
+    });
+    if (coding.status !== "success") {
+      await destroyWorkspaceAfterFailure({
+        sandboxId: workspace.data.sandboxId,
+        projectId: started.project_id,
+        sessionId: started.session_id,
+        userId: started.user_id,
+        workspaceId: started.workspace_id,
+        reason: coding.code,
+      });
+      await BuilderEngineRepository.appendEvent({
+        userId: started.user_id,
+        workspaceId: started.workspace_id,
+        projectId: started.project_id,
+        sessionId: started.session_id,
+        eventType: "build_failed",
+        lifecycleStatus: "failed",
+        summary: coding.summary,
+        metadata: { code: coding.code },
+      });
+      return failJob({
+        jobId: job.id,
+        status:
+          coding.status === "blocked"
+            ? "permanently_failed"
+            : "retryable_failed",
+        errorCode: coding.code,
+        summary: coding.summary,
+      });
+    }
+  } finally {
+    await revokeGatewayToken(gatewayToken);
   }
 
   await BuilderEngineRepository.updateJob({
@@ -170,54 +314,140 @@ export async function runBuilderJobOnce(workerId = WORKER_ID) {
     summary: "Checking your application.",
   });
 
-  const commands = ["typecheck", "lint", "build"] as const;
-  const validation = [];
-  for (const command of commands) {
-    const result = await providers.workspace.runAllowedCommand?.({
+  let validationResult = await validateProject({
+    providers,
+    sandboxId: workspace.data.sandboxId ?? "",
+  });
+  if (!validationResult.ok) {
+    const repairToken = await issueBuilderGatewayToken({
+      job: started,
       sandboxId: workspace.data.sandboxId ?? "",
-      command,
-      cwd: "/home/user/app",
+      model,
+      ttlSeconds: BUILDER_RUNTIME_LIMITS.gatewayTokenTtlSeconds,
     });
-    validation.push({ command, ok: result?.status === "success" });
-    if (result?.status !== "success") {
-      await destroyWorkspaceAfterFailure({
+    try {
+      const repair = await providers.codingAgent.startSession({
+        projectId: started.project_id,
+        prompt: "Repair the generated ALMA Builder project.",
+        language: "en",
+        workingDirectory: BUILDER_SANDBOX_PROJECT_DIR,
+        starter: starterKey,
         sandboxId: workspace.data.sandboxId,
-        projectId: started.project_id,
-        sessionId: started.session_id,
-        userId: started.user_id,
-        workspaceId: started.workspace_id,
-        reason: result?.code ?? "validation_failed",
+        gatewayToken: repairToken.token,
+        gatewayUrl,
+        model,
+        repairInstructions: `Validation failed on ${validationResult.command}. Fix only ${BUILDER_SANDBOX_PROJECT_DIR}.`,
       });
-      await BuilderEngineRepository.updateJob({
-        jobId: job.id,
-        status: "retryable_failed",
-        errorCode: result?.code ?? "BUILDER_PROVIDER_RETRYABLE",
-        summary: result?.summary ?? "Builder validation failed.",
-        metadata: { validation },
-      });
-      await BuilderEngineRepository.appendEvent({
-        userId: started.user_id,
-        workspaceId: started.workspace_id,
-        projectId: started.project_id,
-        sessionId: started.session_id,
-        eventType: "build_failed",
-        lifecycleStatus: "failed",
-        summary: "Builder validation failed.",
-        metadata: { validation },
-      });
-      return { claimed: true as const, status: "validation_failed" as const };
+      if (repair.status === "success") {
+        validationResult = await validateProject({
+          providers,
+          sandboxId: workspace.data.sandboxId ?? "",
+        });
+      }
+    } finally {
+      await revokeGatewayToken(repairToken);
     }
   }
+
+  const validation = validationResult.validation;
+  if (!validationResult.ok) {
+    await destroyWorkspaceAfterFailure({
+      sandboxId: workspace.data.sandboxId,
+      projectId: started.project_id,
+      sessionId: started.session_id,
+      userId: started.user_id,
+      workspaceId: started.workspace_id,
+      reason: validationResult.result?.code ?? "validation_failed",
+    });
+    await BuilderEngineRepository.appendEvent({
+      userId: started.user_id,
+      workspaceId: started.workspace_id,
+      projectId: started.project_id,
+      sessionId: started.session_id,
+      eventType: "build_failed",
+      lifecycleStatus: "failed",
+      summary: "Builder validation failed.",
+      metadata: { validation },
+    });
+    return failJob({
+      jobId: job.id,
+      status: "retryable_failed",
+      errorCode: validationResult.result?.code ?? "BUILDER_PROVIDER_RETRYABLE",
+      summary: validationResult.result?.summary ?? "Builder validation failed.",
+      metadata: { validation },
+    });
+  }
+
+  const artifact = await providers.workspace.extractArtifact?.({
+    sandboxId: workspace.data.sandboxId ?? "",
+    userId: started.user_id,
+    workspaceId: started.workspace_id,
+    projectId: started.project_id,
+    sessionId: started.session_id,
+    jobId: started.id,
+  });
+  if (artifact?.status !== "success") {
+    await destroyWorkspaceAfterFailure({
+      sandboxId: workspace.data.sandboxId,
+      projectId: started.project_id,
+      sessionId: started.session_id,
+      userId: started.user_id,
+      workspaceId: started.workspace_id,
+      reason: artifact?.code ?? "artifact_handoff_failed",
+    });
+    return failJob({
+      jobId: job.id,
+      status: "retryable_failed",
+      errorCode: artifact?.code ?? "BUILDER_PROVIDER_RETRYABLE",
+      summary: artifact?.summary ?? "Builder artifact handoff failed.",
+      metadata: { validation },
+    });
+  }
+
+  const checkpoint = await BuilderEngineRepository.createCheckpointWithArtifact(
+    {
+      userId: started.user_id,
+      workspaceId: started.workspace_id,
+      projectId: started.project_id,
+      sessionId: started.session_id,
+      title: "Validated Builder source",
+      description: "Source archive generated after successful validation.",
+      sourceReference: artifact.data.checksumSha256,
+      storageBucket: artifact.data.storageBucket,
+      storagePath: artifact.data.storagePath,
+      sizeBytes: artifact.data.sizeBytes,
+      checksumSha256: artifact.data.checksumSha256,
+      metadata: {
+        sandboxId: workspace.data.sandboxId,
+        jobId: started.id,
+        manifest: artifact.data.manifest,
+      },
+    },
+  );
+  await BuilderEngineRepository.appendEvent({
+    userId: started.user_id,
+    workspaceId: started.workspace_id,
+    projectId: started.project_id,
+    sessionId: started.session_id,
+    eventType: "checkpoint_created",
+    lifecycleStatus: "validating",
+    summary: "Created a validated Builder source checkpoint.",
+    metadata: {
+      checkpointId: checkpoint.checkpoint.id,
+      artifactId: checkpoint.artifact.id,
+      checksum: artifact.data.checksumSha256,
+    },
+  });
 
   await providers.workspace.runAllowedCommand?.({
     sandboxId: workspace.data.sandboxId ?? "",
     command: "start_preview",
-    cwd: "/home/user/app",
+    cwd: BUILDER_SANDBOX_PROJECT_DIR,
   });
   await BuilderEngineRepository.updateJob({
     jobId: job.id,
     status: "preview_starting",
-    metadata: { validation },
+    metadata: { validation, checkpointId: checkpoint.checkpoint.id },
   });
   const preview = await providers.preview.publishPreview({
     projectId: started.project_id,
@@ -257,7 +487,11 @@ export async function runBuilderJobOnce(workerId = WORKER_ID) {
   await BuilderEngineRepository.updateJob({
     jobId: job.id,
     status: "preview_ready",
-    metadata: { validation, previewHost: preview.data.previewHost },
+    metadata: {
+      validation,
+      previewHost: preview.data.previewHost,
+      checkpointId: checkpoint.checkpoint.id,
+    },
   });
   await BuilderEngineRepository.appendEvent({
     userId: started.user_id,

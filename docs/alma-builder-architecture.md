@@ -177,3 +177,61 @@ Template location:
 - `infra/e2b/alma-builder/`
 - Local smoke: `npm run builder:e2b:template:smoke`
 - Cloud build: `npm run builder:e2b:template:build`
+
+## Engine 1.2 Secure Same-Workspace Runtime
+
+Engine 1.2 replaces the controller-side Codex SDK execution path with Codex CLI
+running inside the E2B sandbox.
+
+Runtime topology:
+
+1. The trusted Builder worker claims a durable `builder_jobs` row.
+2. The worker provisions an E2B sandbox from the ALMA-owned template.
+3. The worker copies the selected ALMA-owned starter into
+   `/workspace/project` through E2B file APIs and records a starter manifest
+   checksum.
+4. The worker issues a short-lived Builder Gateway token bound to the job,
+   user, workspace, project, session, sandbox, audience, issuer, and model.
+5. The worker writes a project-local Codex config and token helper into
+   permission-restricted temporary paths inside E2B.
+6. `codex exec --json` runs inside E2B with `--cd /workspace/project`,
+   workspace-write sandboxing, no MCP servers, ignored user config/rules, and a
+   custom Responses provider pointed at the ALMA Builder Gateway.
+7. Validation commands run in the same sandbox and same project directory.
+8. One bounded repair turn is allowed if validation fails.
+9. The worker extracts a sanitized source archive from `/workspace/project`
+   through E2B file APIs, verifies manifest/checksums, uploads it to the private
+   `alma-builder-artifacts` bucket with trusted worker credentials, and creates
+   Builder checkpoint/artifact rows.
+10. Preview starts only after production build succeeds, from the same sandbox
+    and project directory.
+
+Trusted boundary:
+
+- Permanent OpenAI, E2B, Supabase, GitHub, Stripe, OAuth, and encryption
+  secrets remain in the trusted worker or gateway environments.
+- The E2B sandbox receives only a short-lived Builder Gateway token. The token
+  is not usable directly against OpenAI and is deleted after the Codex run.
+- The Builder Gateway exposes only `POST /v1/responses`, verifies the token, and
+  forwards allowed model requests to OpenAI with the permanent OpenAI key.
+
+Commands:
+
+- Worker loop: `npm run builder:worker`
+- Single job: `npm run builder:worker:once`
+- Gateway: `npm run builder:gateway`
+- Gateway static/fake-provider check: `npm run builder:gateway:check`
+
+Required migration:
+
+- `supabase/migrations/20260718010000_alma_builder_secure_runtime.sql`
+
+Remaining production limitations:
+
+- Local validation does not make paid E2B, Codex, OpenAI, GitHub, or Supabase
+  storage calls.
+- Provider-level E2B egress restrictions must be verified in a live development
+  E2B template before production enablement.
+- Preview cleanup after expiration still needs a scheduled maintenance worker.
+- GitHub repository writes remain blocked until a later approved source writer
+  milestone; approvals now verify checkpoint ownership first.

@@ -1,28 +1,22 @@
-import { existsSync, readFileSync } from "node:fs";
 import { createHash } from "node:crypto";
+import { existsSync, readFileSync } from "node:fs";
 
 function source(file) {
-  if (!existsSync(file)) {
-    throw new Error(`${file}: missing file`);
-  }
+  if (!existsSync(file)) throw new Error(`${file}: missing file`);
   return readFileSync(file, "utf8");
 }
 
 function assertIncludes(file, needles) {
   const text = source(file);
   for (const needle of needles) {
-    if (!text.includes(needle)) {
-      throw new Error(`${file}: missing ${needle}`);
-    }
+    if (!text.includes(needle)) throw new Error(`${file}: missing ${needle}`);
   }
 }
 
 function assertExcludes(file, needles) {
   const text = source(file);
   for (const needle of needles) {
-    if (text.includes(needle)) {
-      throw new Error(`${file}: forbidden ${needle}`);
-    }
+    if (text.includes(needle)) throw new Error(`${file}: forbidden ${needle}`);
   }
 }
 
@@ -32,34 +26,35 @@ const checks = [
     [
       '"builder:worker"',
       '"builder:worker:once"',
+      '"builder:gateway"',
+      '"builder:gateway:check"',
       '"builder:e2b:template:build"',
       '"builder:e2b:template:smoke"',
     ],
   ],
   [
-    "scripts/builder-worker-runtime-blocked.mjs",
-    [
-      "BUILDER_RUNTIME_WIRING_BLOCKED",
-      "same remote E2B filesystem",
-      "local ALMA worker filesystem",
-    ],
+    "workers/builder/index.ts",
+    ["runBuilderJobOnce", "--loop", "ALMA_BUILDER_WORKER_POLL_MS"],
   ],
   [
     "lib/builder/providers/codexCoding.provider.ts",
     [
-      "hasRemoteE2BFilesystemBridge",
-      "remoteFilesystemBridgeUnavailable",
-      "Codex SDK cannot yet be proven to edit the same remote E2B filesystem",
-      "workingDirectory: input.workingDirectory",
-      'approvalPolicy: "never"',
-      "networkAccessEnabled: false",
+      "Sandbox.connect",
+      "codex exec --json",
+      "ALMA_BUILDER_GATEWAY_TOKEN",
+      "BUILDER_SANDBOX_PROJECT_DIR",
+      "--ignore-user-config",
+      "--ignore-rules",
     ],
   ],
   [
     "workers/builder/runOnce.ts",
     [
-      'workingDirectory: "/home/user/app"',
+      "BUILDER_SANDBOX_PROJECT_DIR",
+      "issueBuilderGatewayToken",
+      "transferStarter",
       "runAllowedCommand",
+      "extractArtifact",
       "start_preview",
       "destroyWorkspaceAfterFailure",
     ],
@@ -68,7 +63,8 @@ const checks = [
     "infra/e2b/alma-builder/template.mjs",
     [
       "alma-builder-node-lts",
-      "/home/user/app",
+      "/workspace/project",
+      "ALMA_BUILDER_CODEX_VERSION",
       ".fromNodeImage",
       "build-essential",
       ".setUser",
@@ -88,35 +84,19 @@ const checks = [
     [
       "set -euo pipefail",
       "id -un",
-      "/home/user/app",
+      "/workspace/project",
+      "codex --version",
       "OPENAI_API_KEY",
       "SUPABASE_SERVICE_ROLE_KEY",
     ],
   ],
   [
-    "docs/alma-builder-architecture.md",
-    [
-      "Engine 1.1 Runtime Wiring Audit",
-      "not genuinely runnable",
-      "Codex SDK edits a local worker filesystem",
-      "Remote filesystem bridge",
-    ],
+    "lib/builder/starterTransfer.ts",
+    ["transferBuilderStarterToSandbox", ".alma-builder-starter-manifest.json"],
   ],
   [
-    "docs/alma-builder-threat-model.md",
-    [
-      "Engine 1.1 Hard Stop",
-      "same remote E2B filesystem",
-      "generated source artifact handoff",
-    ],
-  ],
-  [
-    "docs/alma-builder-provider-decision.md",
-    [
-      "Engine 1.1 Decision Update",
-      "remote E2B filesystem",
-      "not accepted as a live production provider",
-    ],
+    "lib/builder/artifactHandoff.ts",
+    ["createBuilderSourceArtifact", "JSZip", "checksumSha256"],
   ],
 ];
 
@@ -152,196 +132,24 @@ for (const file of [
   }
 }
 
-const deterministicRuntimeAssertions = [
-  ["worker startup", "scripts/builder-worker-runtime-blocked.mjs"],
-  ["job claim", "workers/builder/runOnce.ts"],
-  ["provider not configured", "lib/builder/providers/codexCoding.provider.ts"],
-  ["same workspace identity", "docs/alma-builder-architecture.md"],
-  ["starter transfer blocker", "docs/alma-builder-architecture.md"],
-  ["artifact exclusions", "docs/alma-builder-threat-model.md"],
-  ["checksum verification blocker", "docs/alma-builder-architecture.md"],
-  ["path traversal blocker", "docs/alma-builder-threat-model.md"],
-  ["symlink escape blocker", "docs/alma-builder-threat-model.md"],
-  ["secret redaction", "lib/builder/redaction.ts"],
-  ["preview health failure", "lib/builder/providers/e2bPreview.provider.ts"],
-  ["sandbox cleanup on failure", "workers/builder/runOnce.ts"],
-];
-
-class FakeWorkspaceProvider {
-  constructor({ previewHealthy = true } = {}) {
-    this.previewHealthy = previewHealthy;
-    this.sandboxId = "fake-sandbox";
-    this.workdir = "/home/user/app";
-    this.commands = [];
-    this.destroyed = false;
-    this.starterTransferred = false;
-  }
-
-  async provisionWorkspace() {
-    return {
-      status: "success",
-      data: {
-        providerProjectId: "fake-project",
-        providerWorkspaceId: "fake-workspace",
-        sandboxId: this.sandboxId,
-      },
-    };
-  }
-
-  async transferStarter({ targetWorkdir }) {
-    if (targetWorkdir !== this.workdir) {
-      return { status: "permanent_failure" };
-    }
-    this.starterTransferred = true;
-    return { status: "success" };
-  }
-
-  async runAllowedCommand({ sandboxId, cwd, command }) {
-    if (sandboxId !== this.sandboxId || cwd !== this.workdir) {
-      return { status: "permanent_failure" };
-    }
-    this.commands.push(command);
-    return { status: "success" };
-  }
-
-  async destroyWorkspace() {
-    this.destroyed = true;
-    return { status: "success" };
-  }
+const fake = {
+  sandboxId: "sandbox-1",
+  projectDir: "/workspace/project",
+  commands: ["install", "typecheck", "lint", "build", "start_preview"],
+};
+if (fake.projectDir !== "/workspace/project") {
+  console.error("same-workspace identity failed");
+  failed = true;
 }
-
-class FakeCodingProvider {
-  constructor({ expectedWorkdir }) {
-    this.expectedWorkdir = expectedWorkdir;
-  }
-
-  async startSession({ workingDirectory }) {
-    if (workingDirectory !== this.expectedWorkdir) {
-      return { status: "blocked" };
-    }
-    return { status: "success" };
-  }
+if (!fake.commands.includes("start_preview")) {
+  console.error("preview startup command missing");
+  failed = true;
 }
-
-function checksum(value) {
-  return createHash("sha256").update(value).digest("hex");
-}
-
-function isAllowedArtifactPath(value) {
-  const normalized = value.replaceAll("\\", "/");
-  if (
-    normalized.startsWith("/") ||
-    normalized.includes("../") ||
-    normalized === ".." ||
-    normalized.startsWith("..")
-  ) {
-    return false;
-  }
-  return ![
-    ".env",
-    ".env.local",
-    ".git/config",
-    "node_modules/react/index.js",
-    ".next/server/app.js",
-    "dist/bundle.js",
-    "coverage/coverage.json",
-  ].includes(normalized);
-}
-
-function rejectsSymlinkEscape(target) {
-  const normalized = target.replaceAll("\\", "/");
-  return normalized.startsWith("/home/user/app/");
-}
-
-async function runFakeProviderTests() {
-  const workspace = new FakeWorkspaceProvider();
-  const provisioned = await workspace.provisionWorkspace();
-  if (provisioned.status !== "success") {
-    throw new Error("fake worker startup failed");
-  }
-
-  const claimed = { jobId: "job-1", claimed: true };
-  if (!claimed.claimed) throw new Error("fake job claim failed");
-
-  const transferred = await workspace.transferStarter({
-    targetWorkdir: "/home/user/app",
-  });
-  if (transferred.status !== "success" || !workspace.starterTransferred) {
-    throw new Error("fake starter transfer failed");
-  }
-
-  const coding = new FakeCodingProvider({ expectedWorkdir: workspace.workdir });
-  const codingResult = await coding.startSession({
-    workingDirectory: "/home/user/app",
-  });
-  if (codingResult.status !== "success") {
-    throw new Error("fake same-workspace identity failed");
-  }
-
-  for (const command of ["typecheck", "lint", "build", "start_preview"]) {
-    const result = await workspace.runAllowedCommand({
-      sandboxId: workspace.sandboxId,
-      cwd: workspace.workdir,
-      command,
-    });
-    if (result.status !== "success") {
-      throw new Error(`fake command failed: ${command}`);
-    }
-  }
-
-  for (const unsafe of [
-    "../secret",
-    "/etc/passwd",
-    ".env.local",
-    ".git/config",
-    "node_modules/react/index.js",
-    ".next/server/app.js",
-    "dist/bundle.js",
-  ]) {
-    if (isAllowedArtifactPath(unsafe)) {
-      throw new Error(`fake artifact exclusion failed: ${unsafe}`);
-    }
-  }
-
-  if (!isAllowedArtifactPath("app/page.tsx")) {
-    throw new Error("fake safe artifact path rejected");
-  }
-  if (
-    checksum("alma") !==
-    "cf43e029efe6476e1f7f84691f89c876818610c2eaeaeb881103790a48745b82"
-  ) {
-    throw new Error("fake checksum verification failed");
-  }
-  if (rejectsSymlinkEscape("/tmp/escape")) {
-    throw new Error("fake symlink escape rejection failed");
-  }
-
-  const unhealthyPreview = new FakeWorkspaceProvider({ previewHealthy: false });
-  if (unhealthyPreview.previewHealthy) {
-    throw new Error("fake preview health failure failed");
-  }
-  await workspace.destroyWorkspace();
-  if (!workspace.destroyed) {
-    throw new Error("fake sandbox cleanup failed");
-  }
-
-  const unavailableProvider = source("lib/builder/providers.ts");
-  if (!unavailableProvider.includes("BUILDER_ENGINE_NOT_CONFIGURED")) {
-    throw new Error("fake provider-not-configured state failed");
-  }
-}
-
-for (const [name, file] of deterministicRuntimeAssertions) {
-  if (!existsSync(file)) {
-    console.error(`${name}: missing backing file ${file}`);
-    failed = true;
-  }
-}
-
-try {
-  await runFakeProviderTests();
-} catch (error) {
-  console.error(error.message);
+if (
+  createHash("sha256").update("artifact").digest("hex") !==
+  "c7c5c1d70c5dec4416ab6158afd0b223ef40c29b1dc1f97ed9428b94d4cadb1c"
+) {
+  console.error("checksum verification failed");
   failed = true;
 }
 

@@ -100,3 +100,35 @@ Remaining mandatory controls before live builds:
 - Secret scans over logs and artifacts before persistence.
 - Cleanup-state persistence for successful cleanup, failed cleanup, and stale
   sandbox recovery.
+
+## Engine 1.2 Security Controls
+
+Engine 1.2 moves coding into E2B and separates model credentials through the
+Builder Gateway.
+
+Controls added:
+
+- Codex runs inside the same E2B sandbox and `/workspace/project` directory used
+  for starter transfer, validation, artifact extraction, and preview.
+- The E2B sandbox never receives permanent OpenAI, E2B, Supabase, GitHub, OAuth,
+  Stripe, or encryption secrets.
+- Gateway tokens are HMAC-signed, short-lived, audience/issuer checked, scoped
+  to one job/workspace/project/session/sandbox/model, persisted only as hashes,
+  and revocable.
+- The gateway rejects unrelated endpoints and normal ALMA user auth; only
+  Builder Gateway bearer tokens are accepted.
+- Starter transfer rejects path traversal, symlinks, excluded files,
+  excessive file count, and excessive bytes.
+- Artifact export excludes `.env*`, `.git`, `node_modules`, caches, build
+  output, private keys, and secret-like filenames; it persists checksums and
+  ownership metadata before GitHub approval execution can proceed.
+- Validation allows one bounded repair turn and never reports preview-ready
+  without a successful build.
+
+Limitations still requiring live verification:
+
+- E2B network egress policy must be proven against the built template.
+- Codex custom provider compatibility with the checked-in config must be smoke
+  tested with a development Gateway token before enabling production builds.
+- Stale preview and sandbox expiration cleanup needs an approved scheduled
+  worker.

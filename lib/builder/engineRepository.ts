@@ -10,6 +10,28 @@ import type {
   BuilderProject,
 } from "./types";
 
+export type BuilderGatewayTokenRecord = {
+  id: string;
+  token_id: string;
+  token_hash: string;
+  user_id: string;
+  workspace_id: string | null;
+  project_id: string;
+  session_id: string | null;
+  job_id: string;
+  sandbox_id: string;
+  model: string;
+  audience: string;
+  issuer: string;
+  request_count: number;
+  token_count: number;
+  expires_at: string;
+  revoked_at: string | null;
+  safe_failure_reason: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
 export class BuilderEngineRepositoryError extends Error {
   constructor(
     message: string,
@@ -197,6 +219,166 @@ export class BuilderEngineRepository {
     const mapped = schemaError(error);
     if (mapped) throw mapped;
     return data as BuilderJob;
+  }
+
+  static async getActiveLeasedJob(jobId: string) {
+    const { data, error } = await admin()
+      .from("builder_jobs")
+      .select("*")
+      .eq("id", jobId)
+      .in("status", ["leased", "running", "validating", "preview_starting"])
+      .gt("lease_expires_at", new Date().toISOString())
+      .maybeSingle();
+    const mapped = schemaError(error);
+    if (mapped) throw mapped;
+    return (data as BuilderJob | null) ?? null;
+  }
+
+  static async createGatewayToken(input: {
+    tokenId: string;
+    tokenHash: string;
+    job: BuilderJob;
+    sandboxId: string;
+    model: string;
+    audience: string;
+    issuer: string;
+    expiresAt: string;
+  }) {
+    const { data, error } = await admin()
+      .from("builder_gateway_tokens")
+      .insert({
+        token_id: input.tokenId,
+        token_hash: input.tokenHash,
+        user_id: input.job.user_id,
+        workspace_id: input.job.workspace_id,
+        project_id: input.job.project_id,
+        session_id: input.job.session_id,
+        job_id: input.job.id,
+        sandbox_id: input.sandboxId,
+        model: input.model,
+        audience: input.audience,
+        issuer: input.issuer,
+        expires_at: input.expiresAt,
+      })
+      .select()
+      .single();
+    const mapped = schemaError(error);
+    if (mapped) throw mapped;
+    return data as BuilderGatewayTokenRecord;
+  }
+
+  static async getGatewayToken(input: { tokenId: string; tokenHash: string }) {
+    const { data, error } = await admin()
+      .from("builder_gateway_tokens")
+      .select("*")
+      .eq("token_id", input.tokenId)
+      .eq("token_hash", input.tokenHash)
+      .maybeSingle();
+    const mapped = schemaError(error);
+    if (mapped) throw mapped;
+    return (data as BuilderGatewayTokenRecord | null) ?? null;
+  }
+
+  static async incrementGatewayTokenUsage(input: {
+    tokenId: string;
+    tokenCount?: number;
+  }) {
+    const { data: existing, error: existingError } = await admin()
+      .from("builder_gateway_tokens")
+      .select("request_count,token_count")
+      .eq("token_id", input.tokenId)
+      .maybeSingle();
+    const mappedExisting = schemaError(existingError);
+    if (mappedExisting) throw mappedExisting;
+    const { error } = await admin()
+      .from("builder_gateway_tokens")
+      .update({
+        request_count: Number(existing?.request_count ?? 0) + 1,
+        token_count:
+          Number(existing?.token_count ?? 0) + (input.tokenCount ?? 0),
+      })
+      .eq("token_id", input.tokenId);
+    const mapped = schemaError(error);
+    if (mapped) throw mapped;
+  }
+
+  static async revokeGatewayToken(input: {
+    tokenId: string;
+    reason?: string | null;
+  }) {
+    const { error } = await admin()
+      .from("builder_gateway_tokens")
+      .update({
+        revoked_at: new Date().toISOString(),
+        safe_failure_reason: input.reason
+          ? redactBuilderSecrets(input.reason, 500)
+          : null,
+      })
+      .eq("token_id", input.tokenId)
+      .is("revoked_at", null);
+    const mapped = schemaError(error);
+    if (mapped) throw mapped;
+  }
+
+  static async createCheckpointWithArtifact(input: {
+    userId: string;
+    workspaceId: string | null;
+    projectId: string;
+    sessionId: string | null;
+    title: string;
+    description: string;
+    sourceReference: string;
+    storageBucket: string;
+    storagePath: string;
+    sizeBytes: number;
+    checksumSha256: string;
+    metadata?: Record<string, unknown>;
+  }) {
+    const client = admin();
+    const { data: checkpoint, error: checkpointError } = await client
+      .from("builder_checkpoints")
+      .insert({
+        user_id: input.userId,
+        workspace_id: input.workspaceId,
+        project_id: input.projectId,
+        session_id: input.sessionId,
+        checkpoint_label: input.title,
+        description: input.description,
+        source_reference: input.sourceReference,
+        status: "created",
+        metadata: redactBuilderMetadata(input.metadata),
+      })
+      .select()
+      .single();
+    const mappedCheckpoint = schemaError(checkpointError);
+    if (mappedCheckpoint) throw mappedCheckpoint;
+    const { data: artifact, error: artifactError } = await client
+      .from("builder_artifacts")
+      .insert({
+        user_id: input.userId,
+        workspace_id: input.workspaceId,
+        project_id: input.projectId,
+        session_id: input.sessionId,
+        checkpoint_id: checkpoint.id,
+        artifact_type: "source_archive",
+        title: input.title,
+        storage_bucket: input.storageBucket,
+        storage_path: input.storagePath,
+        mime_type: "application/zip",
+        size_bytes: input.sizeBytes,
+        checksum_sha256: input.checksumSha256,
+        metadata: redactBuilderMetadata(input.metadata),
+      })
+      .select()
+      .single();
+    const mappedArtifact = schemaError(artifactError);
+    if (mappedArtifact) throw mappedArtifact;
+    await client
+      .from("builder_projects")
+      .update({ latest_checkpoint_id: checkpoint.id })
+      .eq("id", input.projectId)
+      .eq("user_id", input.userId);
+    return { checkpoint, artifact };
   }
 
   static async cancelJob(input: { userId: string; projectId: string }) {

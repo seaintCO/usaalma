@@ -1,12 +1,19 @@
 import { Sandbox, type CommandResult } from "e2b";
+import { createBuilderSourceArtifact } from "@/lib/builder/artifactHandoff";
 import { BUILDER_ENGINE_LIMITS } from "@/lib/builder/limits";
 import { redactBuilderSecrets } from "@/lib/builder/redaction";
+import { transferBuilderStarterToSandbox } from "@/lib/builder/starterTransfer";
 import type {
   BuilderCommandName,
   BuilderProviderResult,
   BuilderProviderProjectRef,
   WorkspaceProvider,
 } from "@/lib/builder/providers";
+import {
+  BUILDER_RUNTIME_LIMITS,
+  BUILDER_SANDBOX_PROJECT_DIR,
+} from "@/lib/builder/runtime";
+import { isBuilderStarterKey } from "@/lib/builder/starterTemplates";
 
 const COMMANDS: Record<BuilderCommandName, string> = {
   install: "npm install --ignore-scripts",
@@ -98,7 +105,7 @@ export class E2BWorkspaceProvider implements WorkspaceProvider {
       });
       const command = COMMANDS[input.command];
       const result = await sandbox.commands.run(command, {
-        cwd: input.cwd ?? "/home/user/app",
+        cwd: input.cwd ?? BUILDER_SANDBOX_PROJECT_DIR,
         timeoutMs:
           input.command === "start_preview"
             ? 15_000
@@ -134,6 +141,73 @@ export class E2BWorkspaceProvider implements WorkspaceProvider {
         status: "retryable_failure" as const,
         code: "BUILDER_PROVIDER_RETRYABLE" as const,
         summary: "Builder workspace cleanup could not be confirmed.",
+      };
+    }
+  }
+
+  async transferStarter(input: { sandboxId: string; starterKey: string }) {
+    if (!process.env.E2B_API_KEY) return missingWorkspace();
+    if (!isBuilderStarterKey(input.starterKey)) {
+      return {
+        status: "permanent_failure" as const,
+        code: "BUILDER_PROVIDER_FAILED" as const,
+        summary: "Builder starter template is invalid.",
+      };
+    }
+    try {
+      const sandbox = await Sandbox.connect(input.sandboxId, {
+        apiKey: process.env.E2B_API_KEY,
+      });
+      const manifest = await transferBuilderStarterToSandbox({
+        sandbox,
+        starterKey: input.starterKey,
+      });
+      return { status: "success" as const, data: { manifest } };
+    } catch {
+      return {
+        status: "permanent_failure" as const,
+        code: "BUILDER_PROVIDER_FAILED" as const,
+        summary: "Builder starter could not be transferred safely.",
+      };
+    }
+  }
+
+  async extractArtifact(input: {
+    sandboxId: string;
+    userId: string;
+    workspaceId: string | null;
+    projectId: string;
+    sessionId: string | null;
+    jobId: string;
+  }) {
+    if (!process.env.E2B_API_KEY) return missingWorkspace();
+    try {
+      const sandbox = await Sandbox.connect(input.sandboxId, {
+        apiKey: process.env.E2B_API_KEY,
+      });
+      const artifact = await createBuilderSourceArtifact({
+        sandbox,
+        userId: input.userId,
+        workspaceId: input.workspaceId,
+        projectId: input.projectId,
+        sessionId: input.sessionId,
+        jobId: input.jobId,
+      });
+      if (
+        artifact.manifest.files.length > BUILDER_RUNTIME_LIMITS.maxArtifactFiles
+      ) {
+        return {
+          status: "permanent_failure" as const,
+          code: "BUILDER_PROVIDER_FAILED" as const,
+          summary: "Builder artifact file count exceeded.",
+        };
+      }
+      return { status: "success" as const, data: artifact };
+    } catch {
+      return {
+        status: "retryable_failure" as const,
+        code: "BUILDER_PROVIDER_RETRYABLE" as const,
+        summary: "Builder artifact could not be extracted safely.",
       };
     }
   }

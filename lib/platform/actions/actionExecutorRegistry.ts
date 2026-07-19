@@ -148,12 +148,29 @@ const EXECUTORS: Record<string, Executor> = {
             "No generated source checkpoint is available yet. Build a preview before saving to GitHub.",
         };
       }
+      const checkpoints = await BuilderRepository.listCheckpoints({
+        userId,
+        workspaceId,
+        projectId: project.id,
+      });
+      const matchingCheckpoint = checkpoints.find(
+        (checkpoint) => checkpoint.source_reference === payload.sourceReference,
+      );
+      if (!matchingCheckpoint) {
+        return {
+          success: false,
+          message:
+            "The requested Builder source checkpoint could not be verified. No repository was created.",
+        };
+      }
       return {
         success: false,
         message:
-          "GitHub source push requires the Builder worker artifact handoff. No repository was created.",
+          "Builder source checkpoint ownership was verified, but GitHub source push remains approval-gated until the repository writer is implemented. No repository was created.",
         result: {
           projectId: project.id,
+          checkpointId: matchingCheckpoint.id,
+          sourceReference: payload.sourceReference,
           repositoryName: payload.repositoryName,
           visibility: "private",
         },

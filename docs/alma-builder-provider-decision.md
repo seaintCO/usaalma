@@ -136,3 +136,27 @@ Recommended implementation path:
 - Archive generated source from E2B with exclusions, path checks, symlink escape
   checks, size limits, checksums, and safe manifests.
 - Persist checkpoints only after validation succeeds.
+
+## Engine 1.2 Decision
+
+The accepted runtime path is Codex CLI inside E2B with a custom ALMA Builder
+Gateway model provider.
+
+Chosen path:
+
+- E2B remains the isolated workspace, validation, artifact, and preview
+  boundary.
+- Codex SDK controller execution is retired for live Builder jobs.
+- `codex exec --json` runs from `/workspace/project`.
+- The Builder Gateway is a separate trusted worker service, not a browser-facing
+  generic OpenAI proxy.
+- Permanent OpenAI credentials live only in the Gateway environment.
+- E2B receives only a scoped short-lived Gateway token.
+
+Deferred:
+
+- Codex App Server remains out of scope.
+- GitHub writes remain approval-gated and blocked after checkpoint ownership
+  verification until a repository writer is approved.
+- Provider-level network deny/allow controls must be proven in live E2B before
+  production use.

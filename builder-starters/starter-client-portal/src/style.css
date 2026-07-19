@@ -1,0 +1,42 @@
+body {
+  margin: 0;
+  font-family: Inter, system-ui, sans-serif;
+  background: #f6f7f9;
+  color: #0b0b0c;
+}
+main {
+  padding: 40px;
+  max-width: 1100px;
+  margin: auto;
+}
+h1 {
+  font-size: 64px;
+  letter-spacing: 0;
+}
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+}
+article {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 18px;
+  padding: 28px;
+  min-height: 180px;
+}
+p {
+  color: #667085;
+  line-height: 1.5;
+}
+@media (max-width: 760px) {
+  main {
+    padding: 24px;
+  }
+  h1 {
+    font-size: 44px;
+  }
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}

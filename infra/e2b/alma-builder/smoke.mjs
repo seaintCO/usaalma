@@ -22,6 +22,7 @@ const required = [
   ALMA_BUILDER_WORKDIR,
   "fromNodeImage",
   "build-essential",
+  "@openai/codex@0.144.6",
   "alma-builder-smoke",
   "setUser",
   "user",

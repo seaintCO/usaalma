@@ -1,6 +1,7 @@
 import { CodexCodingProvider } from "./providers/codexCoding.provider";
 import { E2BPreviewProvider } from "./providers/e2bPreview.provider";
 import { E2BWorkspaceProvider } from "./providers/e2bWorkspace.provider";
+import type { BuilderManifest } from "./fileManifest";
 
 export type BuilderProviderFailureCode =
   | "BUILDER_ENGINE_NOT_CONFIGURED"
@@ -42,6 +43,15 @@ export type BuilderProviderProjectRef = {
 export type BuilderProviderSessionRef = {
   providerSessionId: string;
   providerJobId?: string;
+  summary?: string;
+};
+
+export type BuilderArtifactRef = {
+  storageBucket: string;
+  storagePath: string;
+  sizeBytes: number;
+  checksumSha256: string;
+  manifest: BuilderManifest;
 };
 
 export type BuilderProviderPreviewRef = {
@@ -77,6 +87,18 @@ export interface WorkspaceProvider {
   destroyWorkspace?(input: {
     sandboxId: string;
   }): Promise<BuilderProviderResult<{ destroyed: true }>>;
+  transferStarter?(input: {
+    sandboxId: string;
+    starterKey: string;
+  }): Promise<BuilderProviderResult<{ manifest: BuilderManifest }>>;
+  extractArtifact?(input: {
+    sandboxId: string;
+    userId: string;
+    workspaceId: string | null;
+    projectId: string;
+    sessionId: string | null;
+    jobId: string;
+  }): Promise<BuilderProviderResult<BuilderArtifactRef>>;
 }
 
 export interface CodingAgentProvider {
@@ -86,6 +108,11 @@ export interface CodingAgentProvider {
     language: "en" | "es";
     workingDirectory?: string;
     starter?: string;
+    sandboxId?: string;
+    gatewayToken?: string;
+    gatewayUrl?: string;
+    model?: string;
+    repairInstructions?: string;
   }): Promise<BuilderProviderResult<BuilderProviderSessionRef>>;
 }
 

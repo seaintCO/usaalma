@@ -887,6 +887,44 @@ Commit:
 - QuickBooks/Microsoft/WhatsApp production integration claims.
 - General autonomous scheduled work beyond durable chat/job foundation.
 
+## Completed: ALMA Builder Foundation
+
+Commit target: `feat(alma): establish builder foundation`
+
+Date: 2026-07-19
+
+Implemented:
+
+- Registered canonical `builder` module in Apps/Marketplace at `/builder` with business-plan entitlement, beta release status, protected risk, and truthful limitations.
+- Added entitlement-aware Home shortcut through the existing Marketplace catalog path.
+- Added additive migration `20260718008000_alma_builder_foundation.sql` for:
+  - `builder_projects`
+  - `builder_sessions`
+  - `builder_events`
+  - `builder_checkpoints`
+  - `builder_artifacts`
+  - `builder_jobs`
+- Added RLS, indexes, timestamp triggers, idempotency keys, and ownership validation for Builder records.
+- Added typed lifecycle states and transition checks.
+- Added provider interfaces for workspace, coding agent, source control, preview, deployment, and jobs.
+- Added unavailable provider adapter returning `BUILDER_ENGINE_NOT_CONFIGURED` without running code or fabricating progress.
+- Added protected Builder action definitions for repository creation, workspace provisioning, source pushes, checkpoint restore, preview publishing, and deployment creation.
+- Added authenticated Builder APIs for project list/create/read/update, session start, events, checkpoints, and archive.
+- Added `/builder`, `/builder/new`, and `/builder/projects/[projectId]` surfaces with real loading, empty, blocked, error, and retry states.
+- Added Builder architecture, threat model, and provider decision docs.
+
+Compatibility notes:
+
+- No existing CRM, invoicing, Office, approvals, connectors, chat, voice, translation, Agent Builder, Trader, Images, or durable chat behavior was intentionally changed.
+- Builder reuses `resolveTenantWorkspace`, `EntitlementService`, `WORKSPACE_ROUTES`, Marketplace catalog generation, `AlmaShell`, and the existing Approval Center read path.
+- No Builder executor is registered yet, so the execution boundary fails closed for protected Builder actions.
+
+Remaining blockers:
+
+- Remote Supabase environments must apply the additive Builder migration before runtime Builder project creation works.
+- Real builds require an isolated Builder Engine worker, signed callbacks, source-control provider, preview provider, deployment provider, quota limits, log redaction, cleanup jobs, and executable approval adapters.
+- Codex App Server remains experimental and is not a production dependency.
+
 ## Operating Rules For Every Milestone
 
 - Inspect current implementation first.

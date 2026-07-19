@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { ActionApprovalRepository } from "./repository";
 import type { ActionApprovalRecord, ActionApprovalStatus } from "./types";
 import { getActionExecutor } from "@/lib/platform/actions/actionExecutorRegistry";
+import { getProtectedActionDefinition } from "@/lib/platform/actions/protectedActions";
 
 export type UnifiedApprovalKind = "action" | "agent";
 
@@ -52,13 +53,15 @@ function mapActionApproval(
   audit: Array<Record<string, unknown>>,
 ): UnifiedApprovalRecord {
   const executor = getActionExecutor(approval.action_key);
+  const actionDefinition = getProtectedActionDefinition(approval.action_key);
   return {
     id: approval.id,
     kind: "action",
     status: approval.status,
     sourceStatus: approval.status,
     actionKey: approval.action_key,
-    actionSummary: approval.action_summary,
+    actionSummary:
+      approval.action_summary || actionDefinition?.name || "Action",
     requestedBy: approval.agent_id ? "ALMA Agent" : "ALMA",
     workspaceId: approval.workspace_id,
     agentId: approval.agent_id,

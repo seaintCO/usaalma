@@ -21,6 +21,7 @@ export const WORKSPACE_ROUTES = {
   launch: "/launch-studio",
   trader: "/trader",
   agents: "/agents",
+  builder: "/builder",
   marketplace: "/marketplace",
   billing: "/billing",
   settings: "/settings",

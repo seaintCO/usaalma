@@ -7,6 +7,7 @@ import {
   Calculator,
   CheckCircle2,
   Clock3,
+  Code2,
   FileText,
   Loader2,
   MessageSquare,
@@ -148,6 +149,8 @@ const COPY = {
       "Create an estimate using my saved Alma Office price book.",
     commandAddCustomer: "Add a customer draft in Alma Office.",
     commandUnpaidInvoices: "Check my unpaid invoices.",
+    commandBuilder:
+      "Start a Builder project draft for a website or business app.",
     planDay: "Plan my day",
     followUp: "Follow up",
     analyzeDoc: "Analyze files",
@@ -155,6 +158,7 @@ const COPY = {
     createEstimate: "Create estimate",
     addCustomer: "Add customer",
     unpaidInvoices: "Check unpaid invoices",
+    buildSomething: "Build something",
   },
   es: {
     title: "Que debe manejar ALMA ahora?",
@@ -192,6 +196,8 @@ const COPY = {
       "Crea un estimado usando mis precios guardados de Alma Office.",
     commandAddCustomer: "Agrega un borrador de cliente en Alma Office.",
     commandUnpaidInvoices: "Revisa mis facturas pendientes.",
+    commandBuilder:
+      "Inicia un borrador en Builder para un sitio o app de negocio.",
     planDay: "Planificar dia",
     followUp: "Seguimiento",
     analyzeDoc: "Analizar archivos",
@@ -199,6 +205,7 @@ const COPY = {
     createEstimate: "Crear estimado",
     addCustomer: "Agregar cliente",
     unpaidInvoices: "Facturas pendientes",
+    buildSomething: "Crear algo",
   },
 } as const;
 
@@ -599,6 +606,14 @@ function buildShortcuts(
         icon: FileText,
       },
     );
+  }
+  if (enabled.has("builder")) {
+    shortcuts.push({
+      id: "builder",
+      label: t.buildSomething,
+      href: WORKSPACE_ROUTES.builder,
+      icon: Code2,
+    });
   }
   if (enabled.has("tasks") || enabled.has("planner")) {
     shortcuts.push({

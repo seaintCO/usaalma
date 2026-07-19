@@ -361,6 +361,33 @@ export const ALMA_MODULE_REGISTRY = [
     ],
   },
   {
+    key: "builder",
+    name: "ALMA Builder",
+    group: "studio",
+    category: "Developer",
+    description:
+      "Describe a website, portal, internal tool, or lightweight app in English or Spanish and prepare it for an isolated Builder Engine.",
+    route: WORKSPACE_ROUTES.builder,
+    releaseStatus: "beta",
+    requiredPlan: "business",
+    entitlementKey: "builder",
+    installKey: "builder",
+    capabilities: [
+      "builder.projects",
+      "builder.sessions",
+      "builder.events",
+      "builder.approvals",
+    ],
+    defaultRisk: "protected",
+    approvalPolicy: "always_protected",
+    limitations: [
+      "The isolated Builder Engine is not configured in this milestone.",
+      "Blocked response code: BUILDER_ENGINE_NOT_CONFIGURED.",
+      "No repositories, previews, deployments, or customer code execution are created yet.",
+      "External Builder actions require approval before execution.",
+    ],
+  },
+  {
     key: "automations",
     name: "Automations",
     group: "studio",

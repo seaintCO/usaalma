@@ -7,6 +7,10 @@ import { useMemo, useState } from "react";
 import AlmaShell from "@/components/alma-shell/AlmaShell";
 import type { AlmaShellLanguage } from "@/components/alma-shell/types";
 import { WORKSPACE_ROUTES } from "@/lib/platform/workspaceRoutes";
+import {
+  BUILDER_STARTERS,
+  type BuilderStarter,
+} from "@/lib/builder/starterTemplates";
 import type { BuilderProjectType } from "@/lib/builder/types";
 
 const PROJECT_TYPES: Array<{
@@ -40,6 +44,7 @@ const COPY = {
     language: "Language",
     description: "Detailed description",
     context: "Optional company context",
+    starter: "Starter",
     create: "Create draft",
     creating: "Creating...",
     error: "Project draft could not be created.",
@@ -55,6 +60,7 @@ const COPY = {
     language: "Idioma",
     description: "Descripcion detallada",
     context: "Contexto opcional de la empresa",
+    starter: "Plantilla inicial",
     create: "Crear borrador",
     creating: "Creando...",
     error: "No se pudo crear el borrador.",
@@ -66,6 +72,8 @@ export default function NewBuilderProjectPage() {
   const router = useRouter();
   const [language, setLanguage] = useState<AlmaShellLanguage>("en");
   const [projectType, setProjectType] = useState<BuilderProjectType>("website");
+  const [starterKey, setStarterKey] =
+    useState<BuilderStarter["key"]>("landing_page");
   const [preferredLanguage, setPreferredLanguage] =
     useState<AlmaShellLanguage>("en");
   const [title, setTitle] = useState("");
@@ -93,6 +101,7 @@ export default function NewBuilderProjectPage() {
           companyContext,
           preferredLanguage,
           projectType,
+          starterKey,
           idempotencyKey,
         }),
       });
@@ -181,6 +190,32 @@ export default function NewBuilderProjectPage() {
                   <option value="es">Espanol</option>
                 </select>
               </label>
+              <div className="grid gap-2 text-sm font-medium">
+                {copy.starter}
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {Object.values(BUILDER_STARTERS).map((starter) => (
+                    <button
+                      key={starter.key}
+                      type="button"
+                      onClick={() => setStarterKey(starter.key)}
+                      className={`rounded-xl border px-3 py-3 text-left ${
+                        starterKey === starter.key
+                          ? "border-black bg-black text-white"
+                          : "border-[#D1D5DB] bg-[#F9FAFB] text-black"
+                      }`}
+                    >
+                      <span className="block text-sm font-semibold">
+                        {language === "es" ? starter.labelEs : starter.labelEn}
+                      </span>
+                      <span className="mt-1 block text-xs leading-5 opacity-70">
+                        {language === "es"
+                          ? starter.descriptionEs
+                          : starter.descriptionEn}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
               <label className="grid gap-2 text-sm font-medium">
                 {copy.description}
                 <textarea

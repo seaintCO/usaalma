@@ -1,10 +1,16 @@
 import { EntitlementService } from "@/lib/platform/entitlements/service";
+import { prepareAuditedAction } from "@/lib/platform/actions/executionBoundary";
 import {
   resolveTenantWorkspace,
   type AlmaTenantContext,
 } from "@/lib/platform/workspace/tenantResolver";
 import { BuilderRepository, BuilderRepositoryError } from "./repository";
-import { getBuilderProviders } from "./providers";
+import {
+  BuilderEngineRepository,
+  BuilderEngineRepositoryError,
+} from "./engineRepository";
+import { BUILDER_ENGINE_LIMITS } from "./limits";
+import { isBuilderStarterKey } from "./starterTemplates";
 import type {
   BuilderProjectDraftInput,
   BuilderProjectDraftPatch,
@@ -19,7 +25,9 @@ export class BuilderServiceError extends Error {
       | "builder_schema_unavailable"
       | "builder_project_not_found"
       | "builder_invalid_input"
-      | "builder_invalid_transition",
+      | "builder_invalid_transition"
+      | "builder_quota_exceeded"
+      | "builder_duplicate_active_job",
     public readonly httpStatus = 400,
   ) {
     super(message);
@@ -55,6 +63,21 @@ function mapRepositoryError(error: unknown): never {
           ? 404
           : 400;
     throw new BuilderServiceError(error.message, error.code, status);
+  }
+  if (error instanceof BuilderEngineRepositoryError) {
+    const status =
+      error.code === "builder_schema_unavailable"
+        ? 503
+        : error.code === "builder_job_not_found"
+          ? 404
+          : 429;
+    throw new BuilderServiceError(
+      error.message,
+      error.code === "builder_job_not_found"
+        ? "builder_project_not_found"
+        : error.code,
+      status,
+    );
   }
   throw new BuilderServiceError(
     "Builder is temporarily unavailable.",
@@ -142,6 +165,8 @@ export class BuilderService {
     userId: string;
     projectId: string;
     workspaceId?: string | null;
+    starterKey?: string | null;
+    revisionPrompt?: string | null;
   }) {
     const tenant = await builderContext(input);
     try {
@@ -156,6 +181,43 @@ export class BuilderService {
           "builder_project_not_found",
         );
       }
+      const starterKey = isBuilderStarterKey(input.starterKey)
+        ? input.starterKey
+        : isBuilderStarterKey(project.starter_key)
+          ? project.starter_key
+          : isBuilderStarterKey(project.metadata?.starterKey)
+            ? project.metadata.starterKey
+            : "landing_page";
+      if (
+        project.original_prompt.length > BUILDER_ENGINE_LIMITS.maxPromptLength
+      ) {
+        throw new BuilderServiceError(
+          "Builder prompt is too long for Engine 1.",
+          "builder_quota_exceeded",
+          429,
+        );
+      }
+      const projectCount = await BuilderEngineRepository.countProjectsForUser(
+        input.userId,
+      );
+      if (projectCount > BUILDER_ENGINE_LIMITS.maxProjectsPerUser) {
+        throw new BuilderServiceError(
+          "Builder project limit reached for this account.",
+          "builder_quota_exceeded",
+          429,
+        );
+      }
+      const recentBuilds = await BuilderEngineRepository.countRecentBuilds({
+        userId: input.userId,
+        workspaceId: project.workspace_id,
+      });
+      if (recentBuilds >= BUILDER_ENGINE_LIMITS.maxBuildsPerBillingPeriod) {
+        throw new BuilderServiceError(
+          "Builder monthly build limit reached for this account.",
+          "builder_quota_exceeded",
+          429,
+        );
+      }
       await BuilderRepository.appendEvent({
         userId: input.userId,
         workspaceId: project.workspace_id,
@@ -164,45 +226,133 @@ export class BuilderService {
         lifecycleStatus: project.lifecycle_status,
         summary: "Builder session requested.",
       });
-      const result = await getBuilderProviders().codingAgent.startSession({
-        projectId: project.id,
-        prompt: project.original_prompt,
-        language: project.preferred_language,
+      const session = await BuilderRepository.createSession({
+        userId: input.userId,
+        project,
+        status: "requested",
       });
-      if (result.status === "blocked") {
-        const session = await BuilderRepository.createSession({
-          userId: input.userId,
-          project,
-          status: "blocked",
-          lastErrorCode: result.code,
-          safeErrorSummary: result.summary,
-        });
-        const blockedProject = await BuilderRepository.setActiveSession({
-          userId: input.userId,
-          project,
-          sessionId: session.id,
-          status: "blocked",
-          errorCode: result.code,
-          safeErrorSummary: result.summary,
-        });
-        await BuilderRepository.appendEvent({
-          userId: input.userId,
-          workspaceId: project.workspace_id,
-          projectId: project.id,
-          sessionId: session.id,
-          eventType: "provider_blocked",
-          lifecycleStatus: "blocked",
-          summary:
-            "The isolated Builder Engine is not configured yet. No code execution was started.",
-          metadata: { code: result.code },
-        });
-        return { project: blockedProject, session, result };
-      }
-
-      return { project, session: null, result };
+      const job = await BuilderEngineRepository.createBuildJob({
+        userId: input.userId,
+        project,
+        sessionId: session.id,
+        starterKey,
+        revisionPrompt: input.revisionPrompt ?? undefined,
+      });
+      const queuedProject = await BuilderRepository.setActiveSession({
+        userId: input.userId,
+        project,
+        sessionId: session.id,
+        status: "building",
+      });
+      return {
+        project: queuedProject,
+        session,
+        job,
+        result: {
+          status: "success" as const,
+          data: { providerSessionId: session.id, providerJobId: job.id },
+        },
+      };
     } catch (error) {
+      if (error instanceof BuilderServiceError) throw error;
       mapRepositoryError(error);
     }
+  }
+
+  static async cancelBuild(input: {
+    userId: string;
+    projectId: string;
+    workspaceId?: string | null;
+  }) {
+    const tenant = await builderContext(input);
+    const project = await BuilderRepository.getProject({
+      userId: input.userId,
+      workspaceId: tenant.workspaceId,
+      projectId: input.projectId,
+    });
+    if (!project) {
+      throw new BuilderServiceError(
+        "Builder project not found.",
+        "builder_project_not_found",
+        404,
+      );
+    }
+    const jobs = await BuilderEngineRepository.cancelJob({
+      userId: input.userId,
+      projectId: input.projectId,
+    });
+    await BuilderEngineRepository.appendEvent({
+      userId: input.userId,
+      workspaceId: project.workspace_id,
+      projectId: project.id,
+      sessionId: project.active_session_id,
+      eventType: "build_failed",
+      lifecycleStatus: "blocked",
+      summary: "Builder run was cancelled.",
+    });
+    return { project, jobs };
+  }
+
+  static async prepareGithubSave(input: {
+    userId: string;
+    projectId: string;
+    workspaceId?: string | null;
+    repositoryName?: string | null;
+  }) {
+    const tenant = await builderContext(input);
+    const project = await BuilderRepository.getProject({
+      userId: input.userId,
+      workspaceId: tenant.workspaceId,
+      projectId: input.projectId,
+    });
+    if (!project) {
+      throw new BuilderServiceError(
+        "Builder project not found.",
+        "builder_project_not_found",
+        404,
+      );
+    }
+    const repositoryName =
+      typeof input.repositoryName === "string" && input.repositoryName.trim()
+        ? input.repositoryName.trim().slice(0, 80)
+        : project.slug;
+    const approval = await prepareAuditedAction({
+      userId: input.userId,
+      workspaceId: project.workspace_id,
+      domain: "builder",
+      actionKey: "builder.source.push",
+      actionSummary: `Save Builder project "${project.title}" to a private GitHub repository.`,
+      riskLevel: "protected",
+      approvalPolicy: "always_protected",
+      requestedPayload: {
+        projectId: project.id,
+        projectTitle: project.title,
+        repositoryName,
+        visibility: "private",
+        sourceReference: project.latest_checkpoint_id,
+        previewUrl: project.preview_url,
+      },
+    });
+    await BuilderEngineRepository.appendEvent({
+      userId: input.userId,
+      workspaceId: project.workspace_id,
+      projectId: project.id,
+      sessionId: project.active_session_id,
+      eventType: "approval_requested",
+      lifecycleStatus: "awaiting_approval",
+      summary: "Approval required to save this to GitHub.",
+      metadata: {
+        actionKey: "builder.source.push",
+        approvalId: approval.approval?.id ?? null,
+      },
+    });
+    const updated = await BuilderEngineRepository.updateProjectRuntime({
+      userId: input.userId,
+      projectId: project.id,
+      lifecycleStatus: "awaiting_approval",
+      patch: { source_control_status: "pending_approval" },
+    });
+    return { project: updated, approval };
   }
 
   static async listEvents(input: {

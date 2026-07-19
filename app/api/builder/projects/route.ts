@@ -43,6 +43,8 @@ export async function POST(request: Request) {
           typeof body.companyContext === "string" ? body.companyContext : "",
         idempotencyKey:
           typeof body.idempotencyKey === "string" ? body.idempotencyKey : null,
+        starterKey:
+          typeof body.starterKey === "string" ? body.starterKey : null,
       },
     });
     return NextResponse.json({ ok: true, project }, { status: 201 });

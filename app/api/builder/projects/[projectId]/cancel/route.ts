@@ -15,14 +15,10 @@ export async function POST(
   const { projectId } = await context.params;
 
   try {
-    const body = await request.json().catch(() => ({}));
-    const result = await BuilderService.startSession({
+    const result = await BuilderService.cancelBuild({
       userId: auth.user.id,
       workspaceId: workspaceIdFromRequest(request),
       projectId,
-      starterKey: typeof body.starterKey === "string" ? body.starterKey : null,
-      revisionPrompt:
-        typeof body.revisionPrompt === "string" ? body.revisionPrompt : null,
     });
     return NextResponse.json({ ok: true, ...result });
   } catch (error) {

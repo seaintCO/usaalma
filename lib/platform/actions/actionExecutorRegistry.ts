@@ -7,6 +7,7 @@ import {
   createWhatsAppDeliveryRecord,
   updateWhatsAppDelivery,
 } from "@/lib/communications/inboxRepository";
+import { BuilderRepository } from "@/lib/builder/repository";
 
 export type ActionExecutionResult = {
   success: boolean;
@@ -38,6 +39,127 @@ function readRequiredString(
 }
 
 const EXECUTORS: Record<string, Executor> = {
+  "builder.repository.create": {
+    key: "builder.repository.create",
+    editable: true,
+    validate(payload) {
+      return {
+        projectId: readRequiredString(payload, "projectId", 80),
+        repositoryName: readRequiredString(payload, "repositoryName", 80),
+        visibility: "private",
+      };
+    },
+    async execute(userId, payload, approval) {
+      const workspaceId =
+        typeof approval.workspace_id === "string" && approval.workspace_id
+          ? approval.workspace_id
+          : await ConnectorRepository.resolveDefaultWorkspaceId(userId);
+      if (!workspaceId) {
+        return {
+          success: false,
+          message: "Create or select a workspace before saving to GitHub.",
+        };
+      }
+      const connection =
+        await ConnectorRepository.getConnectedGitHubAppConnection({
+          userId,
+          workspaceId,
+        });
+      if (!connection) {
+        return {
+          success: false,
+          message: "Connect the GitHub App before saving Builder source.",
+        };
+      }
+      return {
+        success: false,
+        message:
+          "GitHub repository creation is approval-gated, but no generated source checkpoint is available to push yet.",
+        result: {
+          projectId: payload.projectId,
+          repositoryName: payload.repositoryName,
+          visibility: "private",
+        },
+      };
+    },
+  },
+  "builder.source.push": {
+    key: "builder.source.push",
+    editable: true,
+    validate(payload) {
+      return {
+        projectId: readRequiredString(payload, "projectId", 80),
+        repositoryName: readRequiredString(payload, "repositoryName", 80),
+        visibility: "private",
+        sourceReference:
+          typeof payload.sourceReference === "string"
+            ? payload.sourceReference
+            : "",
+      };
+    },
+    async execute(userId, payload, approval) {
+      const workspaceId =
+        typeof approval.workspace_id === "string" && approval.workspace_id
+          ? approval.workspace_id
+          : await ConnectorRepository.resolveDefaultWorkspaceId(userId);
+      if (!workspaceId) {
+        return {
+          success: false,
+          message: "Create or select a workspace before saving to GitHub.",
+        };
+      }
+      const project = await BuilderRepository.getProject({
+        userId,
+        workspaceId,
+        projectId: readRequiredString(payload, "projectId", 80),
+      });
+      if (!project) {
+        return {
+          success: false,
+          message: "Builder project was not found. No source was pushed.",
+        };
+      }
+      if (project.github_commit_sha) {
+        return {
+          success: true,
+          message: "Builder source was already saved to GitHub.",
+          result: {
+            owner: project.github_owner,
+            repository: project.github_repository,
+            commitSha: project.github_commit_sha,
+          },
+        };
+      }
+      const connection =
+        await ConnectorRepository.getConnectedGitHubAppConnection({
+          userId,
+          workspaceId,
+        });
+      if (!connection) {
+        return {
+          success: false,
+          message: "Connect the GitHub App before saving Builder source.",
+        };
+      }
+      if (!payload.sourceReference) {
+        return {
+          success: false,
+          message:
+            "No generated source checkpoint is available yet. Build a preview before saving to GitHub.",
+        };
+      }
+      return {
+        success: false,
+        message:
+          "GitHub source push requires the Builder worker artifact handoff. No repository was created.",
+        result: {
+          projectId: project.id,
+          repositoryName: payload.repositoryName,
+          visibility: "private",
+        },
+      };
+    },
+  },
   "gmail.send": {
     key: "gmail.send",
     editable: true,

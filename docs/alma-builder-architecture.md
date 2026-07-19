@@ -82,3 +82,36 @@ Builder only renders real preview URLs that pass protocol and host validation. H
 ## Migration
 
 Apply `supabase/migrations/20260718008000_alma_builder_foundation.sql` before using Builder in a remote environment. It is additive and creates Builder tables, indexes, ownership triggers, and RLS policies.
+
+## Engine 1 Addendum
+
+Engine 1 adds a trusted worker entrypoint under `workers/builder/`. The Next.js
+control plane creates durable jobs, returns job/session identifiers, streams
+persisted events, creates Approval Center requests, and renders allowlisted
+previews. It does not run Codex, npm, generated applications, or arbitrary shell
+commands in request handlers.
+
+The worker claims one job at a time through the service-role-only
+`alma_claim_builder_job` function, leases it, provisions an E2B sandbox, runs the
+allowlisted build workflow, validates the generated app, starts the preview
+server, verifies the preview URL, and records redacted events.
+
+Engine providers are disabled unless `ALMA_BUILDER_ENGINE_ENABLED=true`. The
+Codex provider also requires `ALMA_BUILDER_CODEX_WORKER_ISOLATED=true` so it
+cannot accidentally operate against the ALMA repository instead of an isolated
+workspace.
+
+GitHub source control uses a GitHub App connector. The connection start route
+creates signed state and sends the user to the GitHub App installation flow. The
+callback stores safe installation metadata in `provider_connections`; private
+keys and client secrets remain server environment values.
+
+Saving Builder source to GitHub creates an Approval Center request for
+`builder.source.push`. The executor validates private-repository payloads,
+requires a connected GitHub App, checks for duplicate completed pushes, and
+fails closed until the worker artifact handoff is available.
+
+Apply `supabase/migrations/20260718009000_alma_builder_engine_1.sql` after the
+foundation migration to add worker leases, Engine 1 statuses, preview/source
+metadata, the service-role job claim RPC, and the `github_app` connector
+provider value.

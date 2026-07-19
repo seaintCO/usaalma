@@ -67,12 +67,53 @@ export type BuilderSessionStatus =
 
 export type BuilderJobStatus =
   | "queued"
-  | "blocked"
+  | "leased"
   | "running"
-  | "succeeded"
+  | "validating"
+  | "preview_starting"
+  | "preview_ready"
+  | "awaiting_approval"
+  | "completed"
   | "retryable_failed"
-  | "permanent_failed"
-  | "cancelled";
+  | "permanently_failed"
+  | "cancelled"
+  | "expired";
+
+export type BuilderStarterKey =
+  "landing_page" | "booking_website" | "client_portal" | "internal_dashboard";
+
+export type BuilderValidationResult = {
+  command: string;
+  ok: boolean;
+  summary: string;
+  exitCode?: number | null;
+};
+
+export type BuilderJob = {
+  id: string;
+  user_id: string;
+  workspace_id: string | null;
+  project_id: string;
+  session_id: string | null;
+  idempotency_key: string;
+  job_type: string;
+  status: BuilderJobStatus;
+  provider_job_id: string | null;
+  attempt_count: number;
+  max_attempts: number;
+  lease_owner: string | null;
+  lease_expires_at: string | null;
+  cancel_requested_at: string | null;
+  last_heartbeat_at: string | null;
+  last_error_code: string | null;
+  safe_error_summary: string | null;
+  scheduled_at: string;
+  started_at: string | null;
+  completed_at: string | null;
+  metadata: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+};
 
 export type BuilderProject = {
   id: string;
@@ -92,8 +133,14 @@ export type BuilderProject = {
   preview_status: BuilderPreviewStatus;
   preview_url: string | null;
   preview_host: string | null;
+  preview_expires_at?: string | null;
   source_control_status: BuilderSourceControlStatus;
   deployment_status: BuilderDeploymentStatus;
+  starter_key?: BuilderStarterKey | null;
+  github_owner?: string | null;
+  github_repository?: string | null;
+  github_commit_sha?: string | null;
+  build_requested_at?: string | null;
   last_error_code: string | null;
   safe_error_summary: string | null;
   metadata: Record<string, unknown>;

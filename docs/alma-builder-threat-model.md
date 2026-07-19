@@ -44,3 +44,31 @@ Date: 2026-07-19
 - Cleanup jobs for stale sessions, workspaces, artifacts, and previews.
 
 Until those are complete, Builder remains a product foundation and project planning surface only.
+
+## Engine 1 Mitigations
+
+- Engine 1 job leasing uses a service-role-only claim function, row locks, lease
+  expiration, attempt counts, and one active job per project.
+- Workspace provisioning uses a separate E2B sandbox per Builder session and
+  returns only provider identifiers to the control plane.
+- The worker can choose only install, validation, build, preview, and read-only
+  git status/diff command categories.
+- The Codex provider stays blocked unless the worker explicitly declares it is
+  running inside an isolated Builder workspace.
+- Source control uses a GitHub App installation flow with signed state and safe
+  metadata persistence, not personal access tokens.
+- GitHub save intent creates `builder.source.push` approval and the executor
+  fails closed without a connected app and generated source checkpoint.
+
+Engine 1 remaining risks:
+
+- E2B/Codex live execution must be verified only in a non-production provider
+  workspace with no ALMA secrets available to generated code.
+- GitHub push currently requires the worker artifact handoff before it can
+  safely write generated source files.
+- Network egress policy and dependency install hardening still depend on the
+  ALMA-owned E2B template configuration.
+- Cleanup of stale previews and orphaned sandboxes should become a scheduled
+  maintenance job.
+- GitHub webhook signature handling is documented/configured but webhook event
+  processing is not implemented in Engine 1.

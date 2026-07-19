@@ -28,6 +28,7 @@ type ProviderConnectionRow = {
   last_successful_action_at: string | null;
   last_error_code: string | null;
   last_error_message: string | null;
+  provider_metadata?: Record<string, unknown> | null;
 };
 
 type ProviderSecretRow = {
@@ -92,6 +93,7 @@ function summaryFor(
       ? {
           scopes: row.granted_scopes ?? [],
           expiresAt: row.access_token_expires_at ?? null,
+          ...(row.provider_metadata ?? {}),
         }
       : null,
     lastSuccessfulUse: row?.last_successful_action_at ?? null,
@@ -154,7 +156,7 @@ export class ConnectorRepository {
     const { data, error } = await supabase
       .from("provider_connections")
       .select(
-        "id,user_id,workspace_id,provider,provider_account_id,provider_account_email,provider_account_name,connection_status,granted_scopes,access_token_expires_at,has_refresh_token,last_successful_refresh_at,last_successful_action_at,last_error_code,last_error_message",
+        "id,user_id,workspace_id,provider,provider_account_id,provider_account_email,provider_account_name,connection_status,granted_scopes,access_token_expires_at,has_refresh_token,last_successful_refresh_at,last_successful_action_at,last_error_code,last_error_message,provider_metadata",
       )
       .eq("user_id", userId)
       .eq("workspace_id", workspaceId);
@@ -326,6 +328,71 @@ export class ConnectorRepository {
       .eq("user_id", input.userId)
       .eq("workspace_id", input.workspaceId)
       .eq("provider", "whatsapp_business")
+      .eq("connection_status", "connected")
+      .maybeSingle();
+    if (error) throw error;
+    return (data as ProviderConnectionRow | null) ?? null;
+  }
+
+  static async saveGitHubAppConnection(input: {
+    userId: string;
+    workspaceId: string;
+    installationId: string;
+    accountLogin: string | null;
+    accountId: string | null;
+    setupAction: string | null;
+    metadata?: Record<string, unknown>;
+  }) {
+    assertServerConfigured("github_app");
+    const supabase = admin();
+    const now = new Date().toISOString();
+    const { data: connection, error } = await supabase
+      .from("provider_connections")
+      .upsert(
+        {
+          user_id: input.userId,
+          workspace_id: input.workspaceId,
+          provider: "github_app",
+          provider_account_id: input.accountId ?? input.installationId,
+          provider_account_email: null,
+          provider_account_name: input.accountLogin,
+          connection_status: "connected",
+          granted_scopes: ["contents:write", "metadata:read"],
+          access_token_expires_at: null,
+          has_refresh_token: false,
+          connected_by_user_id: input.userId,
+          connected_at: now,
+          disconnected_at: null,
+          revoked_at: null,
+          last_error_code: null,
+          last_error_message: null,
+          provider_metadata: {
+            ...(input.metadata ?? {}),
+            installationId: input.installationId,
+            accountLogin: input.accountLogin,
+            setupAction: input.setupAction,
+          },
+        },
+        { onConflict: "workspace_id,provider" },
+      )
+      .select("id")
+      .single();
+    if (error) throw error;
+    return connection.id as string;
+  }
+
+  static async getConnectedGitHubAppConnection(input: {
+    userId: string;
+    workspaceId: string;
+  }) {
+    assertServerConfigured("github_app");
+    const supabase = admin();
+    const { data, error } = await supabase
+      .from("provider_connections")
+      .select("*")
+      .eq("user_id", input.userId)
+      .eq("workspace_id", input.workspaceId)
+      .eq("provider", "github_app")
       .eq("connection_status", "connected")
       .maybeSingle();
     if (error) throw error;

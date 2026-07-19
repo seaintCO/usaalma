@@ -5,9 +5,11 @@ import {
   ArrowLeft,
   CheckCircle2,
   Clock3,
+  GitBranch,
   Loader2,
   Play,
   RefreshCw,
+  XCircle,
 } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
@@ -35,6 +37,10 @@ const COPY = {
     error: "Builder project is temporarily unavailable.",
     retry: "Retry",
     start: "Start Builder session",
+    cancel: "Cancel build",
+    saveGithub: "Save to GitHub",
+    savingGithub: "Requesting approval...",
+    revision: "Request a revision",
     starting: "Starting...",
     assistant: "Assistant",
     progress: "Progress",
@@ -44,12 +50,14 @@ const COPY = {
     noEvents: "No events yet.",
     noCheckpoints: "No checkpoints yet.",
     previewMissing: "Preview not available yet",
+    previewExpired: "Preview expired",
     previewBlocked:
       "A real allowlisted preview URL will appear here after a secure Builder Engine publishes one.",
     blocked: "Blocked",
     engineBlocked:
       "The isolated Builder Engine is not configured. No code execution was started.",
     approvals: "Protected actions will appear in Approvals before execution.",
+    approvalReady: "Approval required to save this to GitHub.",
   },
   es: {
     back: "Builder",
@@ -60,6 +68,10 @@ const COPY = {
     error: "El proyecto Builder no esta disponible temporalmente.",
     retry: "Reintentar",
     start: "Iniciar sesion Builder",
+    cancel: "Cancelar build",
+    saveGithub: "Guardar en GitHub",
+    savingGithub: "Solicitando aprobacion...",
+    revision: "Pedir una revision",
     starting: "Iniciando...",
     assistant: "Asistente",
     progress: "Progreso",
@@ -69,6 +81,7 @@ const COPY = {
     noEvents: "Aun no hay eventos.",
     noCheckpoints: "Aun no hay puntos de control.",
     previewMissing: "Preview no disponible todavia",
+    previewExpired: "Preview expirada",
     previewBlocked:
       "Aqui aparecera una URL real y permitida cuando un Builder Engine seguro la publique.",
     blocked: "Bloqueado",
@@ -76,6 +89,7 @@ const COPY = {
       "El Builder Engine aislado no esta configurado. No se ejecuto codigo.",
     approvals:
       "Las acciones protegidas apareceran en Aprobaciones antes de ejecutarse.",
+    approvalReady: "Se requiere aprobacion para guardar esto en GitHub.",
   },
 } as const;
 
@@ -92,6 +106,10 @@ export default function BuilderProjectPage({
   const [checkpoints, setCheckpoints] = useState<BuilderCheckpoint[]>([]);
   const [tab, setTab] = useState<MobileTab>("assistant");
   const [starting, setStarting] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+  const [savingGithub, setSavingGithub] = useState(false);
+  const [revisionPrompt, setRevisionPrompt] = useState("");
+  const [now, setNow] = useState(0);
   const copy = COPY[language];
 
   useEffect(() => {
@@ -154,9 +172,21 @@ export default function BuilderProjectPage({
     void load();
   }, [load]);
 
+  useEffect(() => {
+    const tick = () => setNow(Date.now());
+    tick();
+    const interval = window.setInterval(tick, 60_000);
+    return () => window.clearInterval(interval);
+  }, []);
+
   const safePreview = useMemo(
     () => validateBuilderPreviewUrl(project?.preview_url),
     [project?.preview_url],
+  );
+  const previewExpired = Boolean(
+    project?.preview_expires_at &&
+      now > 0 &&
+      new Date(project.preview_expires_at).getTime() <= now,
   );
 
   async function startSession() {
@@ -165,10 +195,44 @@ export default function BuilderProjectPage({
     try {
       await fetch(`/api/builder/projects/${projectId}/sessions`, {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          starterKey: project?.starter_key ?? project?.metadata?.starterKey,
+          revisionPrompt: revisionPrompt.trim() || null,
+        }),
       });
+      setRevisionPrompt("");
       await load();
     } finally {
       setStarting(false);
+    }
+  }
+
+  async function cancelBuild() {
+    if (!projectId) return;
+    setCancelling(true);
+    try {
+      await fetch(`/api/builder/projects/${projectId}/cancel`, {
+        method: "POST",
+      });
+      await load();
+    } finally {
+      setCancelling(false);
+    }
+  }
+
+  async function saveToGithub() {
+    if (!projectId) return;
+    setSavingGithub(true);
+    try {
+      await fetch(`/api/builder/projects/${projectId}/github`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ repositoryName: project?.slug }),
+      });
+      await load();
+    } finally {
+      setSavingGithub(false);
     }
   }
 
@@ -217,19 +281,55 @@ export default function BuilderProjectPage({
                     {project.original_prompt}
                   </p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => void startSession()}
-                  disabled={starting || project.lifecycle_status === "archived"}
-                  className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-black px-4 text-sm font-medium text-white disabled:bg-[#9CA3AF]"
-                >
-                  {starting ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Play className="h-4 w-4" />
-                  )}
-                  {starting ? copy.starting : copy.start}
-                </button>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => void startSession()}
+                    disabled={
+                      starting || project.lifecycle_status === "archived"
+                    }
+                    className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-black px-4 text-sm font-medium text-white disabled:bg-[#9CA3AF]"
+                  >
+                    {starting ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Play className="h-4 w-4" />
+                    )}
+                    {starting ? copy.starting : copy.start}
+                  </button>
+                  {["provisioning", "building", "validating"].includes(
+                    project.lifecycle_status,
+                  ) ? (
+                    <button
+                      type="button"
+                      onClick={() => void cancelBuild()}
+                      disabled={cancelling}
+                      className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-[#D1D5DB] px-4 text-sm font-medium disabled:opacity-60"
+                    >
+                      {cancelling ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <XCircle className="h-4 w-4" />
+                      )}
+                      {copy.cancel}
+                    </button>
+                  ) : null}
+                  {project.lifecycle_status === "preview_ready" ? (
+                    <button
+                      type="button"
+                      onClick={() => void saveToGithub()}
+                      disabled={savingGithub}
+                      className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-[#D1D5DB] px-4 text-sm font-medium disabled:opacity-60"
+                    >
+                      {savingGithub ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <GitBranch className="h-4 w-4" />
+                      )}
+                      {savingGithub ? copy.savingGithub : copy.saveGithub}
+                    </button>
+                  ) : null}
+                </div>
               </header>
 
               <div className="mb-4 grid grid-cols-3 rounded-xl border border-[#E5E7EB] bg-white p-1 md:hidden">
@@ -254,6 +354,17 @@ export default function BuilderProjectPage({
                   className={`space-y-4 ${tab === "preview" ? "hidden md:block" : ""}`}
                 >
                   <Panel title={copy.assistant} icon={CheckCircle2}>
+                    <label className="mb-4 grid gap-2 text-sm font-medium">
+                      {copy.revision}
+                      <textarea
+                        value={revisionPrompt}
+                        onChange={(event) =>
+                          setRevisionPrompt(event.target.value)
+                        }
+                        rows={4}
+                        className="resize-y rounded-xl border border-[#D1D5DB] bg-[#F9FAFB] p-3 text-sm leading-6 outline-none focus:border-black"
+                      />
+                    </label>
                     {project.last_error_code ===
                     "BUILDER_ENGINE_NOT_CONFIGURED" ? (
                       <div className="rounded-xl border border-[#E5E7EB] bg-[#F9FAFB] p-4">
@@ -296,7 +407,16 @@ export default function BuilderProjectPage({
                   className={`space-y-4 ${tab === "assistant" || tab === "progress" ? "hidden md:block" : ""}`}
                 >
                   <Panel title={copy.preview} icon={AlertCircle}>
-                    {safePreview ? (
+                    {previewExpired ? (
+                      <div className="rounded-xl border border-dashed border-[#D1D5DB] bg-[#F9FAFB] p-5">
+                        <p className="text-sm font-semibold">
+                          {copy.previewExpired}
+                        </p>
+                        <p className="mt-2 text-sm leading-6 text-[#6B7280]">
+                          {copy.previewBlocked}
+                        </p>
+                      </div>
+                    ) : safePreview ? (
                       <iframe
                         title={`${project.title} preview`}
                         src={safePreview.url}

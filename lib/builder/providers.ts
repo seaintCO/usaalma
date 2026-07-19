@@ -1,5 +1,12 @@
+import { CodexCodingProvider } from "./providers/codexCoding.provider";
+import { E2BPreviewProvider } from "./providers/e2bPreview.provider";
+import { E2BWorkspaceProvider } from "./providers/e2bWorkspace.provider";
+
 export type BuilderProviderFailureCode =
   | "BUILDER_ENGINE_NOT_CONFIGURED"
+  | "BUILDER_WORKSPACE_PROVIDER_NOT_CONFIGURED"
+  | "BUILDER_CODING_PROVIDER_NOT_CONFIGURED"
+  | "BUILDER_GITHUB_PROVIDER_NOT_CONFIGURED"
   | "BUILDER_PROVIDER_RETRYABLE"
   | "BUILDER_PROVIDER_FAILED"
   | "BUILDER_APPROVAL_REQUIRED";
@@ -28,6 +35,8 @@ export type BuilderProviderResult<T> =
 export type BuilderProviderProjectRef = {
   providerProjectId: string;
   providerWorkspaceId?: string;
+  sandboxId?: string;
+  sandboxDomain?: string;
 };
 
 export type BuilderProviderSessionRef = {
@@ -38,14 +47,36 @@ export type BuilderProviderSessionRef = {
 export type BuilderProviderPreviewRef = {
   previewUrl: string;
   previewHost: string;
+  expiresAt?: string;
 };
+
+export type BuilderCommandName =
+  | "install"
+  | "typecheck"
+  | "lint"
+  | "test"
+  | "build"
+  | "start_preview"
+  | "git_status"
+  | "git_diff";
 
 export interface WorkspaceProvider {
   provisionWorkspace(input: {
     projectId: string;
     userId: string;
     workspaceId: string | null;
+    sessionId?: string | null;
   }): Promise<BuilderProviderResult<BuilderProviderProjectRef>>;
+  runAllowedCommand?(input: {
+    sandboxId: string;
+    command: BuilderCommandName;
+    cwd?: string;
+  }): Promise<
+    BuilderProviderResult<{ stdout: string; stderr: string; exitCode: number }>
+  >;
+  destroyWorkspace?(input: {
+    sandboxId: string;
+  }): Promise<BuilderProviderResult<{ destroyed: true }>>;
 }
 
 export interface CodingAgentProvider {
@@ -53,6 +84,8 @@ export interface CodingAgentProvider {
     projectId: string;
     prompt: string;
     language: "en" | "es";
+    workingDirectory?: string;
+    starter?: string;
   }): Promise<BuilderProviderResult<BuilderProviderSessionRef>>;
 }
 
@@ -69,6 +102,7 @@ export interface PreviewProvider {
   publishPreview(input: {
     projectId: string;
     checkpointId?: string;
+    sandboxId?: string;
   }): Promise<BuilderProviderResult<BuilderProviderPreviewRef>>;
 }
 
@@ -158,6 +192,17 @@ export const BUILDER_APPROVAL_ACTIONS = [
 export type BuilderApprovalAction = (typeof BUILDER_APPROVAL_ACTIONS)[number];
 
 export function getBuilderProviders(): BuilderProviders {
+  if (process.env.ALMA_BUILDER_ENGINE_ENABLED === "true") {
+    const workspace = new E2BWorkspaceProvider();
+    return {
+      workspace,
+      codingAgent: new CodexCodingProvider(),
+      sourceControl: new UnavailableBuilderProvider(),
+      preview: new E2BPreviewProvider(),
+      deployment: new UnavailableBuilderProvider(),
+      jobs: new UnavailableBuilderProvider(),
+    };
+  }
   const unavailableProvider = new UnavailableBuilderProvider();
   return {
     workspace: unavailableProvider,

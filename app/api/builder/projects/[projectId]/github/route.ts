@@ -16,13 +16,12 @@ export async function POST(
 
   try {
     const body = await request.json().catch(() => ({}));
-    const result = await BuilderService.startSession({
+    const result = await BuilderService.prepareGithubSave({
       userId: auth.user.id,
       workspaceId: workspaceIdFromRequest(request),
       projectId,
-      starterKey: typeof body.starterKey === "string" ? body.starterKey : null,
-      revisionPrompt:
-        typeof body.revisionPrompt === "string" ? body.revisionPrompt : null,
+      repositoryName:
+        typeof body.repositoryName === "string" ? body.repositoryName : null,
     });
     return NextResponse.json({ ok: true, ...result });
   } catch (error) {

@@ -10,8 +10,10 @@
     "check:encoding": "node scripts/check-mojibake.mjs"
   },
   "dependencies": {
+    "@openai/codex-sdk": "^0.144.6",
     "@supabase/ssr": "^0.12.0",
     "@supabase/supabase-js": "^2.108.2",
+    "e2b": "^2.35.0",
     "framer-motion": "^12.42.2",
     "geist": "^1.7.2",
     "html-to-image": "^1.11.13",

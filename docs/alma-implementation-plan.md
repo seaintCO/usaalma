@@ -925,6 +925,57 @@ Remaining blockers:
 - Real builds require an isolated Builder Engine worker, signed callbacks, source-control provider, preview provider, deployment provider, quota limits, log redaction, cleanup jobs, and executable approval adapters.
 - Codex App Server remains experimental and is not a production dependency.
 
+## Completed: ALMA Builder Engine 1
+
+Commit target: `feat(alma): add isolated builder engine`
+
+Date: 2026-07-19
+
+Implemented:
+
+- Added Engine 1 dependencies for E2B workspace provisioning and the server-side
+  Codex SDK.
+- Added additive migration `20260718009000_alma_builder_engine_1.sql` for
+  Engine job statuses, leases, cancellation, heartbeat, claim indexes,
+  service-role-only `alma_claim_builder_job`, Builder preview/source metadata,
+  and `github_app` connector support.
+- Added trusted worker entrypoint under `workers/builder/`.
+- Added E2B workspace and preview providers with allowlisted commands, sandbox
+  metadata, timeout, preview host validation, and redacted command output.
+- Added Codex coding provider with a narrow Builder engineering prompt,
+  credentials kept server-side, no network access, and an explicit isolated
+  worker gate.
+- Added Engine repository functions for job creation, atomic claim, heartbeat,
+  cancellation, redacted events, and runtime project updates.
+- Changed Builder session start to queue durable jobs instead of blocking the
+  browser request on execution.
+- Added starter templates, starter selection, revision requests, cancel build,
+  preview expiration, and approval-gated GitHub save UI.
+- Added GitHub App connector start/callback/disconnect routes using signed
+  state and safe installation metadata.
+- Registered guarded Builder approval executors for repository creation and
+  source push.
+- Added `scripts/check-alma-builder-engine-1.mjs`.
+
+Compatibility notes:
+
+- The Next.js control plane still never runs generated code, Codex, npm, or E2B
+  commands in request handlers.
+- Existing Builder foundation APIs, Approval Center, connector storage, module
+  entitlements, workspace resolver, and shell remain compatible.
+- Live provider execution is skipped unless environment configuration explicitly
+  enables the worker providers.
+
+Remaining blockers:
+
+- Apply the Builder Engine 1 migration before remote Engine 1 runtime use.
+- Configure E2B, Codex/OpenAI, preview-host allowlist, and GitHub App
+  environment values in the target environment.
+- Complete the generated source artifact handoff before GitHub push can create
+  repositories or commits.
+- Run live E2B/Codex/GitHub verification only with explicit approval because it
+  may use paid providers or create external resources.
+
 ## Operating Rules For Every Milestone
 
 - Inspect current implementation first.

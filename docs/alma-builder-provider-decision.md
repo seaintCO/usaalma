@@ -75,3 +75,37 @@ The current adapter returns `blocked` with `BUILDER_ENGINE_NOT_CONFIGURED` for e
 ## Next Decision Point
 
 The next milestone should design the Builder Engine worker contract: job queue, callback signing, source-control provider choice, preview host allowlist, artifact storage, and approval executors. No provider should be enabled until the worker plane passes the threat model in `docs/alma-builder-threat-model.md`.
+
+## Engine 1 Decision Update
+
+Engine 1 selects E2B for isolated Builder workspaces, the server-side Codex SDK
+for the coding pass, and a GitHub App connector for approval-gated source
+control. Vercel deployment, Codex App Server, arbitrary repository import, and
+unrestricted MCP execution remain out of scope.
+
+Live providers fail closed. Missing E2B configuration returns
+`BUILDER_WORKSPACE_PROVIDER_NOT_CONFIGURED`; missing or unsafe Codex worker
+configuration returns `BUILDER_CODING_PROVIDER_NOT_CONFIGURED`; missing GitHub
+App configuration returns connector configuration-required state.
+
+Required GitHub App environment names:
+
+- `GITHUB_APP_ID`
+- `GITHUB_APP_CLIENT_ID`
+- `GITHUB_APP_CLIENT_SECRET`
+- `GITHUB_APP_PRIVATE_KEY`
+- `GITHUB_WEBHOOK_SECRET`
+- `GITHUB_APP_SLUG`
+- `NEXT_PUBLIC_APP_URL`
+
+Callback URL:
+
+- `/api/connectors/github/callback`
+
+Minimum intended GitHub App permissions:
+
+- Metadata: read
+- Contents: read/write
+
+Repository creation/push remains approval-gated and blocked until the worker
+artifact handoff is complete.

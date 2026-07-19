@@ -66,8 +66,8 @@ const checks = [
       "resolveTenantWorkspace",
       "EntitlementService.checkModuleAccess",
       "builder_entitlement_required",
-      "provider_blocked",
-      "No code execution was started.",
+      "BuilderEngineRepository.createBuildJob",
+      "prepareGithubSave",
     ],
   },
   {

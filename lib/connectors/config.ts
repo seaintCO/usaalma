@@ -61,6 +61,20 @@ export const CONNECTOR_DEFINITIONS: Record<
     ],
     scopes: ["whatsapp_business_management", "whatsapp_business_messaging"],
   },
+  github_app: {
+    name: "GitHub App",
+    operational: true,
+    env: [
+      "GITHUB_APP_ID",
+      "GITHUB_APP_CLIENT_ID",
+      "GITHUB_APP_CLIENT_SECRET",
+      "GITHUB_APP_PRIVATE_KEY",
+      "GITHUB_WEBHOOK_SECRET",
+      "GITHUB_APP_SLUG",
+      "APP_ENCRYPTION_KEY",
+    ],
+    scopes: ["Contents read/write", "Metadata read"],
+  },
 };
 
 export function hasServerSupabaseSecret() {
@@ -83,6 +97,10 @@ export function getConnectorCallbackUrl(provider: EmailConnectorProvider) {
 
 export function getWhatsAppCallbackUrl() {
   return `${getAppBaseUrl()}/api/connectors/whatsapp/callback`;
+}
+
+export function getGitHubAppCallbackUrl() {
+  return `${getAppBaseUrl()}/api/connectors/github/callback`;
 }
 
 export function getMissingConnectorEnv(provider: ConnectorProvider) {

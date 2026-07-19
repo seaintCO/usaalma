@@ -11,6 +11,7 @@ import {
   type BuilderLanguage,
   type BuilderLifecycleState,
   type BuilderProject,
+  type BuilderStarterKey,
   type BuilderProjectType,
 } from "./types";
 
@@ -36,6 +37,7 @@ export type BuilderProjectDraftInput = {
   companyContext?: string;
   workspaceId?: string | null;
   idempotencyKey?: string | null;
+  starterKey?: BuilderStarterKey | null;
 };
 
 export type BuilderProjectDraftPatch = Partial<
@@ -168,8 +170,12 @@ export class BuilderRepository {
         lifecycle_status: "draft",
         idempotency_key: idempotencyKey,
         metadata: normalized.companyContext
-          ? { companyContext: normalized.companyContext }
-          : {},
+          ? {
+              companyContext: normalized.companyContext,
+              starterKey: input.starterKey ?? "landing_page",
+            }
+          : { starterKey: input.starterKey ?? "landing_page" },
+        starter_key: input.starterKey ?? "landing_page",
       })
       .select()
       .single();

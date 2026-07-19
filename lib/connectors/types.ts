@@ -6,6 +6,7 @@ export const CONNECTOR_PROVIDERS = [
   "quickbooks",
   "stripe_connect",
   "whatsapp_business",
+  "github_app",
 ] as const;
 
 export type ConnectorProvider = (typeof CONNECTOR_PROVIDERS)[number];

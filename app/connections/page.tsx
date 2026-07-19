@@ -2,6 +2,7 @@
 
 import {
   CheckCircle2,
+  GitBranch,
   KeyRound,
   Loader2,
   Mail,
@@ -71,7 +72,12 @@ const COPY = {
   },
 } as const;
 
-const ACTIVE_PROVIDERS = new Set(["gmail", "outlook", "whatsapp_business"]);
+const ACTIVE_PROVIDERS = new Set([
+  "gmail",
+  "outlook",
+  "whatsapp_business",
+  "github_app",
+]);
 
 export default function ConnectionsPage() {
   const [language, setLanguage] = useState<AlmaShellLanguage>("en");
@@ -116,7 +122,9 @@ export default function ConnectionsPage() {
       const response = await fetch(
         provider === "whatsapp_business"
           ? "/api/connectors/whatsapp/disconnect"
-          : `/api/connectors/oauth/${provider}/disconnect`,
+          : provider === "github_app"
+            ? "/api/connectors/github/disconnect"
+            : `/api/connectors/oauth/${provider}/disconnect`,
         { method: "POST" },
       );
       if (!response.ok) throw new Error("disconnect_failed");
@@ -194,7 +202,11 @@ export default function ConnectionsPage() {
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
                           <div className="flex items-center gap-2">
-                            <Mail className="h-4 w-4" />
+                            {connection.provider === "github_app" ? (
+                              <GitBranch className="h-4 w-4" />
+                            ) : (
+                              <Mail className="h-4 w-4" />
+                            )}
                             <h2 className="truncate text-base font-semibold">
                               {connection.name}
                             </h2>
@@ -252,7 +264,9 @@ export default function ConnectionsPage() {
                             href={
                               connection.provider === "whatsapp_business"
                                 ? "/api/connectors/whatsapp/start?returnTo=%2Fconnections"
-                                : `/api/connectors/oauth/${connection.provider}/start?returnTo=%2Fconnections`
+                                : connection.provider === "github_app"
+                                  ? "/api/connectors/github/start?returnTo=%2Fconnections"
+                                  : `/api/connectors/oauth/${connection.provider}/start?returnTo=%2Fconnections`
                             }
                             className="inline-flex h-10 items-center gap-2 rounded-xl bg-black px-3 text-sm font-medium text-white"
                           >

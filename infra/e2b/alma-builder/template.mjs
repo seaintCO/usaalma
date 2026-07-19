@@ -1,12 +1,17 @@
 import { Template, waitForFile } from "e2b";
+import { resolveAlmaBuilderTemplateContext } from "./template-context.mjs";
 
 export const ALMA_BUILDER_TEMPLATE_NAME = "alma-builder-node-lts";
 export const ALMA_BUILDER_WORKDIR = "/workspace/project";
 export const ALMA_BUILDER_CODEX_VERSION = "0.144.6";
+export const ALMA_BUILDER_READY_FILE = "/tmp/alma-builder-ready";
+export const ALMA_BUILDER_START_COMMAND =
+  "bash -lc 'mkdir -p /workspace/project && touch /tmp/alma-builder-ready && sleep infinity'";
 
 export function createAlmaBuilderTemplate() {
+  const context = resolveAlmaBuilderTemplateContext(import.meta.url);
   return Template({
-    fileContextPath: new URL(".", import.meta.url).pathname,
+    fileContextPath: context.fileContextPath,
     fileIgnorePatterns: [
       ".env",
       ".env.*",
@@ -34,7 +39,7 @@ export function createAlmaBuilderTemplate() {
     .setWorkdir(ALMA_BUILDER_WORKDIR)
     .setUser("user")
     .setStartCmd(
-      "bash -lc 'mkdir -p /workspace/project && touch /tmp/alma-builder-ready && sleep infinity'",
-      waitForFile("/tmp/alma-builder-ready"),
+      ALMA_BUILDER_START_COMMAND,
+      waitForFile(ALMA_BUILDER_READY_FILE),
     );
 }

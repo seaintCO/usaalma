@@ -29,6 +29,7 @@ const checks = [
       '"builder:gateway"',
       '"builder:gateway:check"',
       '"builder:e2b:template:build"',
+      '"builder:e2b:template:preflight"',
       '"builder:e2b:template:smoke"',
     ],
   ],
@@ -67,13 +68,29 @@ const checks = [
       "ALMA_BUILDER_CODEX_VERSION",
       ".fromNodeImage",
       "build-essential",
+      "resolveAlmaBuilderTemplateContext",
       ".setUser",
       "waitForFile",
     ],
   ],
   [
     "infra/e2b/alma-builder/build-template.mjs",
-    ["E2B_API_KEY", "Template.build", "No cloud build was started"],
+    [
+      "E2B_API_KEY",
+      "Template.build",
+      "No cloud build was started",
+      "serializeError",
+    ],
+  ],
+  [
+    "infra/e2b/alma-builder/preflight.mjs",
+    [
+      "cloudBuildStarted: false",
+      "fileContextPath",
+      "smoke-check.sh",
+      "path.win32",
+      "path.posix",
+    ],
   ],
   [
     "infra/e2b/alma-builder/smoke.mjs",

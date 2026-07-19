@@ -3,21 +3,41 @@ import { readFileSync } from "node:fs";
 const requiredFiles = [
   "app/translator/page.tsx",
   "app/api/realtime/session/route.ts",
+  "app/api/realtime/translation-session/route.ts",
   "app/api/translator/transcribe/route.ts",
   "app/api/translator/speech/route.ts",
   "app/api/memory/route.ts",
+  "components/translator/RealtimeConversationInterpreter.tsx",
+  "components/translator/useRealtimeTranslationConversation.ts",
   "components/voice/AlmaVoiceControls.tsx",
   "lib/voice/config.ts",
+  "lib/voice/realtimeTranslation.ts",
   "lib/voice/repository.ts",
   "supabase/migrations/20260718006000_alma_realtime_voice_memory.sql",
 ];
 
 const requiredSnippets = [
   ["app/api/realtime/session/route.ts", "realtime/client_secrets"],
+  [
+    "app/api/realtime/translation-session/route.ts",
+    "realtime/translations/client_secrets",
+  ],
+  [
+    "components/translator/useRealtimeTranslationConversation.ts",
+    "realtime/translations/calls",
+  ],
   ["app/api/realtime/session/route.ts", "getOpenAIApiKey"],
   ["lib/voice/config.ts", "OPENAI_API_KEY"],
   ["app/api/realtime/session/route.ts", "EntitlementService.checkModuleAccess"],
+  [
+    "app/api/realtime/translation-session/route.ts",
+    "EntitlementService.checkModuleAccess",
+  ],
   ["components/voice/AlmaVoiceControls.tsx", "RTCPeerConnection"],
+  [
+    "components/translator/RealtimeConversationInterpreter.tsx",
+    "Live interpretation is unavailable",
+  ],
   ["app/translator/page.tsx", "MediaRecorder"],
   ["app/api/translator/transcribe/route.ts", "audio.transcriptions.create"],
   ["app/api/translator/transcribe/route.ts", "getTranscriptionAudioFileInfo"],

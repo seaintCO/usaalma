@@ -593,6 +593,59 @@ Compatibility notes:
 - Unsupported browsers now get a clear client state instead of uploading an
   arbitrary default recording container.
 
+### Phase 6: Realtime Conversational Translation
+
+Status: completed in this milestone.
+
+Completed work:
+
+- Split Translator into two intentionally different speech experiences:
+  - Push to Talk remains Standard translation using the existing single-turn
+    upload, transcription, translation, and speech path.
+  - Conversation now uses persistent WebRTC translation sessions instead of
+    replaying the batch path.
+- Added dedicated authenticated route
+  `app/api/realtime/translation-session/route.ts`.
+  - Authenticates ALMA users.
+  - Resolves workspace ownership.
+  - Enforces voice entitlements.
+  - Allows only English and Spanish directions.
+  - Uses `ALMA_REALTIME_TRANSLATION_MODEL`.
+  - Requests short-lived OpenAI Realtime Translation client secrets.
+  - Adds a privacy-safe hashed safety identifier.
+  - Rate-limits session creation.
+  - Records safe session metadata through existing `voice_sessions` when
+    available.
+- Added `lib/voice/realtimeTranslation.ts` for canonical English -> Spanish and
+  Spanish -> English direction mapping.
+- Added reusable realtime client hook
+  `components/translator/useRealtimeTranslationConversation.ts`.
+  - Creates one WebRTC translation session per direction.
+  - Uses separate microphone tracks per direction.
+  - Enables only the active speaker direction.
+  - Streams source transcript deltas and translated transcript deltas.
+  - Plays translated remote audio directly from WebRTC.
+  - Tracks setup, first transcript, first translated transcript, first audio,
+    end-of-utterance, and reconnect metrics.
+  - Closes media tracks, peer connections, data channels, audio elements, and
+    timers on end, page hide, mode change, and unmount.
+- Added `components/translator/RealtimeConversationInterpreter.tsx` with
+  speaker-specific controls, session timer, connection state, history, pause,
+  mute, replay, side swap, transcript delete, and honest fallback to Standard
+  Push to Talk.
+- Added deterministic verification in
+  `scripts/check-alma-realtime-conversation.mjs`.
+
+Compatibility notes:
+
+- Existing batch transcription, translation, and speech APIs remain available
+  and continue to back Standard Push to Talk.
+- Conversation never silently reports realtime success if realtime setup fails;
+  it shows "Live interpretation is unavailable. Use Standard Push to Talk."
+- Raw audio is not stored. Transcript persistence remains governed by the
+  existing workspace memory preference and current voice transcript storage
+  behavior.
+
 The older split milestones below are retained as planning history. Their shell,
 Home, Apps/Files, and Approval Center portions are superseded by this completed
 assistant-first milestone.

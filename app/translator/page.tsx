@@ -1,9 +1,19 @@
 "use client";
 
-import { Languages, Mic, Pause, Play, RefreshCw, Volume2 } from "lucide-react";
+import {
+  Clipboard,
+  Languages,
+  Mic,
+  Pause,
+  Play,
+  RefreshCw,
+  RotateCcw,
+  Volume2,
+} from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import AlmaShell from "@/components/alma-shell/AlmaShell";
 import BilingualComposer from "@/components/communications/BilingualComposer";
+import RealtimeConversationInterpreter from "@/components/translator/RealtimeConversationInterpreter";
 import type { AlmaShellLanguage } from "@/components/alma-shell/types";
 
 type Mode = "text" | "talk" | "conversation";
@@ -11,6 +21,10 @@ type RecorderState =
   | "idle"
   | "recording"
   | "processing"
+  | "transcribing"
+  | "translating"
+  | "speaking"
+  | "complete"
   | "permission_denied"
   | "blocked"
   | "unsupported_browser"
@@ -28,6 +42,8 @@ const COPY = {
     conversation: "Conversation",
     hold: "Record",
     stop: "Stop",
+    swap: "Swap languages",
+    copy: "Copy",
     transcript: "Transcript",
     translation: "Translation",
     permission: "Microphone permission is required.",
@@ -41,6 +57,7 @@ const COPY = {
     replay: "Replay",
     slower: "Speak slower",
     disconnected: "Disconnected",
+    standard: "Standard translation",
   },
   es: {
     title: "Traductor",
@@ -50,6 +67,8 @@ const COPY = {
     conversation: "Conversacion",
     hold: "Grabar",
     stop: "Detener",
+    swap: "Cambiar idiomas",
+    copy: "Copiar",
     transcript: "Transcripcion",
     translation: "Traduccion",
     permission: "Se requiere permiso del microfono.",
@@ -63,6 +82,7 @@ const COPY = {
     replay: "Repetir",
     slower: "Mas lento",
     disconnected: "Desconectado",
+    standard: "Traduccion estandar",
   },
 } as const;
 
@@ -79,6 +99,11 @@ export default function TranslatorPage() {
   const chunks = useRef<Blob[]>([]);
   const audio = useRef<HTMLAudioElement | null>(null);
   const audioUrl = useRef<string | null>(null);
+  const cachedSpeech = useRef<{
+    text: string;
+    targetLanguage: "en" | "es";
+    url: string;
+  } | null>(null);
   const copy = COPY[language];
 
   const loadLanguage = useCallback(async () => {
@@ -99,10 +124,18 @@ export default function TranslatorPage() {
   const stopAudio = useCallback(() => {
     audio.current?.pause();
     audio.current = null;
-    if (audioUrl.current) {
+    if (audioUrl.current && audioUrl.current !== cachedSpeech.current?.url) {
       URL.revokeObjectURL(audioUrl.current);
       audioUrl.current = null;
     }
+  }, []);
+
+  const clearCachedSpeech = useCallback(() => {
+    if (cachedSpeech.current?.url) {
+      URL.revokeObjectURL(cachedSpeech.current.url);
+    }
+    cachedSpeech.current = null;
+    audioUrl.current = null;
   }, []);
 
   const cancelRecording = useCallback(() => {
@@ -144,6 +177,7 @@ export default function TranslatorPage() {
         return;
       }
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      clearCachedSpeech();
       recorderStream.current = stream;
       activeTargetLanguage.current = targetLanguage;
       chunks.current = [];
@@ -178,7 +212,7 @@ export default function TranslatorPage() {
 
   async function stopRecording() {
     recorder.current?.stop();
-    setState("processing");
+    setState("transcribing");
   }
 
   async function transcribe(targetLanguage: "en" | "es") {
@@ -212,8 +246,9 @@ export default function TranslatorPage() {
       }
       setTranscript(payload.transcript ?? "");
       setTranslation(payload.translated?.translation ?? "");
-      setState("idle");
-      speak(payload.translated?.translation ?? "", targetLanguage);
+      setState("speaking");
+      await speak(payload.translated?.translation ?? "", targetLanguage);
+      setState("complete");
     } catch {
       stopMicrophoneTracks();
       setState("error");
@@ -222,11 +257,23 @@ export default function TranslatorPage() {
 
   async function speak(
     value = translation,
-    targetLanguage = side === "en" ? "es" : "en",
+    targetLanguage: "en" | "es" = side === "en" ? "es" : "en",
   ) {
     if (!value) return;
     stopAudio();
     try {
+      const cached = cachedSpeech.current;
+      if (
+        cached &&
+        cached.text === value &&
+        cached.targetLanguage === targetLanguage
+      ) {
+        const player = new Audio(cached.url);
+        player.playbackRate = targetLanguage === "es" ? 0.92 : 1;
+        audio.current = player;
+        await player.play();
+        return;
+      }
       const response = await fetch("/api/translator/speech", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -247,6 +294,7 @@ export default function TranslatorPage() {
       };
       audio.current = player;
       audioUrl.current = url;
+      cachedSpeech.current = { text: value, targetLanguage, url };
       await player.play();
       return;
     } catch {
@@ -295,24 +343,28 @@ export default function TranslatorPage() {
 
           {mode === "text" ? (
             <BilingualComposer channel="translator" language={language} />
+          ) : mode === "conversation" ? (
+            <RealtimeConversationInterpreter
+              language={language}
+              onUseStandard={() => setMode("talk")}
+            />
           ) : (
             <section className="rounded-2xl border border-[#E5E7EB] bg-white p-4">
-              {mode === "conversation" ? (
-                <div className="mb-4 grid grid-cols-2 gap-2 rounded-2xl bg-[#F7F7F8] p-1">
-                  {(["en", "es"] as const).map((entry) => (
-                    <button
-                      key={entry}
-                      type="button"
-                      onClick={() => setSide(entry)}
-                      className={`h-12 rounded-xl text-sm font-medium ${
-                        side === entry ? "bg-black text-white" : "text-black"
-                      }`}
-                    >
-                      {entry === "en" ? "English" : "Espanol"}
-                    </button>
-                  ))}
-                </div>
-              ) : null}
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                <span className="rounded-full bg-[#F7F7F8] px-3 py-1 text-xs font-medium text-[#6B7280]">
+                  {copy.standard}
+                </span>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setSide((current) => (current === "en" ? "es" : "en"))
+                  }
+                  className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-[#E5E7EB] px-3 text-sm font-medium"
+                >
+                  <RotateCcw className="h-4 w-4" />
+                  {copy.swap}
+                </button>
+              </div>
 
               <div className="flex flex-wrap gap-2">
                 {state === "recording" ? (
@@ -350,6 +402,16 @@ export default function TranslatorPage() {
                   <Play className="h-5 w-5" />
                   {copy.slower}
                 </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    void navigator.clipboard?.writeText(translation)
+                  }
+                  className="inline-flex min-h-14 items-center gap-2 rounded-2xl border border-[#E5E7EB] px-5 text-base font-medium"
+                >
+                  <Clipboard className="h-5 w-5" />
+                  {copy.copy}
+                </button>
               </div>
 
               {state !== "idle" ? (
@@ -366,11 +428,19 @@ export default function TranslatorPage() {
                             ? copy.usageLimit
                             : state === "provider_unavailable"
                               ? copy.providerUnavailable
-                              : state === "processing"
-                                ? "Processing..."
-                                : state === "recording"
-                                  ? "Recording..."
-                                  : copy.disconnected}
+                              : state === "transcribing"
+                                ? "Transcribing..."
+                                : state === "translating"
+                                  ? "Translating..."
+                                  : state === "speaking"
+                                    ? "Speaking..."
+                                    : state === "complete"
+                                      ? "Complete"
+                                      : state === "processing"
+                                        ? "Processing..."
+                                        : state === "recording"
+                                          ? "Listening..."
+                                          : copy.disconnected}
                 </p>
               ) : null}
 

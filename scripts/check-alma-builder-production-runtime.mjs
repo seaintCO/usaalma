@@ -26,7 +26,11 @@ const checks = [
     [
       "builder:gateway",
       "builder:worker",
+      "builder:runtime:build",
       "builder:runtime:check",
+      "builder:runtime:container-check",
+      "builder:gateway:prod",
+      "builder:worker:prod",
       "builder:e2b:live-smoke",
       "builder:e2e:live",
     ],
@@ -70,17 +74,41 @@ const checks = [
   ],
   [
     "infra/builder/gateway.Dockerfile",
-    ["npm ci", "tsconfig.json", "npm", "run", "builder:gateway"],
+    [
+      "npm ci",
+      "builder:runtime:build",
+      "dist/builder-runtime",
+      "node",
+      "workers/builder/gateway/index.js",
+    ],
   ],
   [
     "infra/builder/worker.Dockerfile",
     [
       "npm ci",
-      "tsconfig.json",
+      "builder:runtime:build",
+      "dist/builder-runtime",
       "builder-starters",
-      "npm",
-      "run",
-      "builder:worker",
+      "node",
+      "workers/builder/index.js",
+    ],
+  ],
+  [
+    "scripts/build-alma-builder-runtime.mjs",
+    [
+      "transpileModule",
+      "ModuleKind.CommonJS",
+      "rewriteAliasRequires",
+      "ALMA_BUILDER_RUNTIME_BUILD_READY",
+    ],
+  ],
+  [
+    "scripts/check-alma-builder-container-runtime.mjs",
+    [
+      "builder:runtime:build",
+      "MODULE_NOT_FOUND",
+      "BUILDER_RUNTIME_CONFIG_INVALID",
+      "docker",
     ],
   ],
   [".dockerignore", [".env", ".git", ".next", "node_modules"]],

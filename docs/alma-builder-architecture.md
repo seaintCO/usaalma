@@ -240,8 +240,9 @@ Remaining production limitations:
 Engine 1.3 packages the existing Builder runtime as two deployable long-running
 processes:
 
-- Builder Gateway service: `npm run builder:gateway`
-- Builder Worker service: `npm run builder:worker`
+- Build runtime artifacts: `npm run builder:runtime:build`
+- Builder Gateway service: `npm run builder:gateway:prod`
+- Builder Worker service: `npm run builder:worker:prod`
 
 Container definitions:
 
@@ -251,6 +252,10 @@ Container definitions:
 Do not run either process inside a Next.js/Vercel request handler. The Next.js
 app remains the control plane that authenticates users, creates projects,
 enqueues jobs, and reads durable events.
+
+Production containers start compiled CommonJS artifacts under
+`dist/builder-runtime`. The Docker images do not rely on `jiti`, Next.js request
+handlers, or TypeScript path alias resolution at runtime.
 
 Health endpoints:
 

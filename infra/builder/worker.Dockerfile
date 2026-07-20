@@ -3,13 +3,21 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
 
+FROM deps AS build
+WORKDIR /app
+COPY . .
+RUN npm run builder:runtime:build
+
+FROM node:22-bookworm-slim AS runtime-deps
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev
+
 FROM node:22-bookworm-slim AS runner
 WORKDIR /app
 ENV NODE_ENV=production
-COPY --from=deps /app/node_modules ./node_modules
+COPY --from=runtime-deps /app/node_modules ./node_modules
 COPY package.json ./
-COPY tsconfig.json ./
+COPY --from=build /app/dist/builder-runtime ./dist/builder-runtime
 COPY builder-starters ./builder-starters
-COPY lib ./lib
-COPY workers ./workers
-CMD ["npm", "run", "builder:worker"]
+CMD ["node", "dist/builder-runtime/workers/builder/index.js", "--loop"]

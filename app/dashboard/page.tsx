@@ -18,6 +18,7 @@ import WorkspaceNavigation from "@/components/alma-shell/WorkspaceNavigation";
 import AlmaMobileDrawer from "@/components/alma-shell/AlmaMobileDrawer";
 import AlmaMobileBottomNav from "@/components/alma-shell/AlmaMobileBottomNav";
 import type { AlmaWorkspaceNavigationKey } from "@/components/alma-shell/types";
+import { useAlmaLocale } from "@/lib/i18n/useAlmaLocale";
 
 type AlmaLanguage = "en" | "es";
 
@@ -184,13 +185,12 @@ export default function DashboardPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeWorkspace, setActiveWorkspace] =
     useState<AlmaWorkspaceNavigationKey>(launchPrompt ? "chat" : "home");
-  const [language, setLanguage] = useState<AlmaLanguage>("en");
+  const { locale: language, setLocale } = useAlmaLocale();
   const [durableChatEnabled, setDurableChatEnabled] = useState(false);
   const t = almaText[language];
 
   function updateLanguage(next: AlmaLanguage) {
-    setLanguage(next);
-    localStorage.setItem("alma_language", next);
+    void setLocale(next);
   }
 
   async function loadHistory() {
@@ -442,12 +442,6 @@ export default function DashboardPage() {
           Boolean((await durableRes.json()).durableChatEnabled),
         );
       setAuthReady(true);
-    }
-
-    const savedLanguage = localStorage.getItem("alma_language");
-    if (savedLanguage === "en" || savedLanguage === "es") {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setLanguage(savedLanguage);
     }
 
     checkOnboarding();

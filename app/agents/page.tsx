@@ -23,7 +23,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import AlmaShell from "@/components/alma-shell/AlmaShell";
-import type { AlmaShellLanguage } from "@/components/alma-shell/types";
+import { useAlmaLocale } from "@/lib/i18n/useAlmaLocale";
 
 type AgentStatus = "draft" | "active" | "paused";
 type ApprovalMode = "always_ask" | "ask_for_sensitive" | "trusted_tools_only";
@@ -376,11 +376,7 @@ function formatDate(value: string) {
 }
 
 export default function AgentsPage() {
-  const [language, setLanguage] = useState<AlmaShellLanguage>(() => {
-    if (typeof window === "undefined") return "es";
-    const saved = window.localStorage.getItem("alma_language");
-    return saved === "en" || saved === "es" ? saved : "es";
-  });
+  const { locale: language } = useAlmaLocale();
   const [mobileSection, setMobileSection] = useState<MobileSection>("agents");
   const [agents, setAgents] = useState<Agent[]>([]);
   const [templates, setTemplates] = useState<AgentTemplate[]>([]);
@@ -404,11 +400,6 @@ export default function AgentsPage() {
   const [confirmClearAll, setConfirmClearAll] = useState(false);
   const t = TEXT[language];
   const mutating = Boolean(mutation);
-
-  function updateLanguage(next: AlmaShellLanguage) {
-    setLanguage(next);
-    localStorage.setItem("alma_language", next);
-  }
 
   function applyDetail(next: AgentDetail) {
     setDetail(next);
@@ -684,12 +675,7 @@ export default function AgentsPage() {
   }
 
   return (
-    <AlmaShell
-      language={language}
-      activeWorkspace="agents"
-      title={t.title}
-      onLanguageChange={updateLanguage}
-    >
+    <AlmaShell language={language} activeWorkspace="agents" title={t.title}>
       <main className="min-w-0 overflow-x-hidden bg-[#F7F7F8] px-3 py-4 text-black md:px-6 md:py-6">
         <div className="mx-auto flex w-full max-w-7xl min-w-0 flex-col gap-4">
           <header className="rounded-2xl border border-[#E5E7EB] bg-white p-4 shadow-sm md:p-5">

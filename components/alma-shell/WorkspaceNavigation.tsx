@@ -9,6 +9,8 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import type { ComponentType } from "react";
+import { useCallback, useEffect, useState } from "react";
+import type { PinnedApp } from "@/lib/platform/app-navigation/types";
 import type { RoutedWorkspace } from "@/lib/platform/workspaceRoutes";
 import type { AlmaShellLabels, AlmaWorkspaceNavigationKey } from "./types";
 
@@ -60,6 +62,30 @@ export default function WorkspaceNavigation({
   onAskAlma,
   onWorkspaceNavigate,
 }: WorkspaceNavigationProps) {
+  const [pinnedApps, setPinnedApps] = useState<PinnedApp[]>([]);
+  const loadPinnedApps = useCallback(async () => {
+    try {
+      const response = await fetch("/api/app-navigation", {
+        cache: "no-store",
+      });
+      if (!response.ok) return;
+      const payload = await response.json();
+      setPinnedApps(
+        Array.isArray(payload.apps) ? payload.apps.slice(0, 8) : [],
+      );
+    } catch {
+      // Navigation remains usable when this optional personalized read fails.
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadPinnedApps();
+    const refresh = () => void loadPinnedApps();
+    window.addEventListener("alma:app-navigation-changed", refresh);
+    return () =>
+      window.removeEventListener("alma:app-navigation-changed", refresh);
+  }, [loadPinnedApps]);
+
   return (
     <>
       <div className="mb-6 space-y-1">
@@ -101,6 +127,34 @@ export default function WorkspaceNavigation({
           icon={AppWindow}
           onClick={() => onWorkspaceNavigate("apps")}
         />
+      </div>
+
+      <div className="mx-2 my-6 h-px bg-[#E5E7EB]" />
+
+      <div className="mb-6 space-y-1" aria-label="My Apps">
+        <h5 className="mb-2 px-2 text-xs font-medium uppercase tracking-wide text-[#6B7280]">
+          My Apps
+        </h5>
+        <div className="max-h-60 overflow-y-auto">
+          {pinnedApps.map((app) => (
+            <a
+              key={app.moduleId}
+              href={app.route}
+              title={app.name}
+              className="flex min-h-10 w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm text-[#6B7280] transition hover:bg-white hover:text-black focus:outline-none focus:ring-2 focus:ring-black"
+            >
+              <AppWindow className="h-4 w-4 shrink-0" />
+              <span className="truncate">{app.name}</span>
+            </a>
+          ))}
+        </div>
+        <button
+          type="button"
+          onClick={() => onWorkspaceNavigate("apps")}
+          className="w-full rounded-lg px-2.5 py-2 text-left text-xs font-medium text-[#6B7280] hover:bg-white hover:text-black focus:outline-none focus:ring-2 focus:ring-black"
+        >
+          View all apps
+        </button>
       </div>
 
       <div className="mx-2 my-6 h-px bg-[#E5E7EB]" />

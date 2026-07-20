@@ -5,8 +5,10 @@ const authState = ".playwright-auth/user.json";
 
 export default defineConfig({
   testDir: "./tests/e2e",
+  globalSetup: "./tests/e2e/global-setup.ts",
   timeout: 30_000,
   fullyParallel: false,
+  workers: 1,
   reporter: [["list"]],
   use: {
     baseURL: "http://127.0.0.1:3101",
@@ -43,11 +45,4 @@ export default defineConfig({
         ]
       : []),
   ],
-  webServer: {
-    command:
-      "node node_modules/next/dist/bin/next dev --hostname 127.0.0.1 --port 3101",
-    url: "http://127.0.0.1:3101/login",
-    reuseExistingServer: true,
-    timeout: 120_000,
-  },
 });

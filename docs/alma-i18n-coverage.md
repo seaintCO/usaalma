@@ -19,6 +19,8 @@ Date: 2026-07-20
 | --------------------------- | ------- | ------- | ----------------------------------------------------------------------------------------------- |
 | Shared shell navigation     | Covered | Covered | Selector now persists centrally                                                                 |
 | Notes                       | Covered | Covered | Duplicate locale control removed; natural Spanish strings and locale-aware dates                |
+| Tasks and Planner           | Covered | Covered | Canonical live locale, localized CRUD/error/confirmation states and locale-aware dates          |
+| Documents                   | Covered | Covered | Canonical live locale, upload/search/download/delete states and localized confirmation          |
 | Apps                        | Covered | Covered | Page dictionary exists; catalog module metadata still needs canonical localized registry fields |
 | Builder project workbench   | Covered | Partial | Technical workbench strings and event-stage translations remain to centralize                   |
 | Remaining canonical modules | Partial | Partial | Existing page-local dictionaries require consolidation and parity validation                    |

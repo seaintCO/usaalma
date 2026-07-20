@@ -101,6 +101,35 @@ assert(
   "Notes ownership filter is missing.",
 );
 
+for (const [moduleId, pagePath] of [
+  ["tasks", "app/tasks/page.tsx"],
+  ["planner", "app/planner/page.tsx"],
+]) {
+  const source = read(pagePath);
+  assert(
+    source.includes("useAlmaLocale") && source.includes("window.confirm"),
+    `${moduleId} lacks canonical locale synchronization or delete confirmation.`,
+  );
+  assert(
+    source.includes('method: "PATCH"') && source.includes('method: "DELETE"'),
+    `${moduleId} CRUD contract is incomplete.`,
+  );
+}
+
+const documentsPage = read("app/documents/page.tsx");
+const documentsDelete = read("app/api/documents/[documentId]/route.ts");
+assert(
+  documentsPage.includes("deleteDocument") &&
+    documentsPage.includes("window.confirm(t.deleteConfirm)"),
+  "Documents delete UX is incomplete.",
+);
+assert(
+  documentsDelete.includes('.eq("user_id", user.id)') &&
+    documentsDelete.includes('.from("alma-documents")') &&
+    documentsDelete.includes("DOCUMENT_DELETE_FAILED"),
+  "Documents owned metadata/storage deletion is incomplete.",
+);
+
 const clientFiles = [];
 function walk(directory) {
   for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {

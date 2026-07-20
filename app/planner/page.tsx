@@ -18,6 +18,7 @@ import {
 import { useEffect, useMemo, useState } from "react";
 import AlmaShell from "@/components/alma-shell/AlmaShell";
 import type { AlmaShellLanguage } from "@/components/alma-shell/types";
+import { useAlmaLocale } from "@/lib/i18n/useAlmaLocale";
 
 type PlannerView = "agenda" | "day" | "week" | "month";
 type PlannerStatus = "scheduled" | "completed" | "cancelled";
@@ -52,12 +53,6 @@ type PlannerDraft = {
   status: PlannerStatus;
 };
 
-function readStoredLanguage(): AlmaShellLanguage {
-  if (typeof window === "undefined") return "en";
-  const saved = window.localStorage.getItem("alma_language");
-  return saved === "en" || saved === "es" ? saved : "en";
-}
-
 function todayString() {
   return new Date().toISOString().slice(0, 10);
 }
@@ -79,6 +74,7 @@ const copy = {
     complete: "Complete",
     reopen: "Reopen",
     delete: "Delete",
+    deleteConfirm: "Delete this planner item permanently?",
     edit: "Edit",
     date: "Date",
     time: "Time",
@@ -112,29 +108,30 @@ const copy = {
   es: {
     title: "Planificador",
     subtitle:
-      "Organiza el dia, protege bloques de enfoque y mantiene compromisos visibles.",
+      "Organiza el día, protege bloques de enfoque y mantén visibles tus compromisos.",
     agenda: "Agenda",
-    day: "Dia",
+    day: "Día",
     week: "Semana",
     month: "Mes",
-    addItem: "Agregar item",
-    editItem: "Editar item",
+    addItem: "Agregar elemento",
+    editItem: "Editar elemento",
     save: "Guardar",
     saving: "Guardando",
     cancel: "Cancelar",
     complete: "Completar",
     reopen: "Reabrir",
     delete: "Eliminar",
+    deleteConfirm: "¿Eliminar este elemento del planificador permanentemente?",
     edit: "Editar",
     date: "Fecha",
     time: "Hora",
-    titleLabel: "Titulo",
-    titlePlaceholder: "Evento, reunion o bloque de trabajo...",
+    titleLabel: "Título",
+    titlePlaceholder: "Evento, reunión o bloque de trabajo...",
     notes: "Notas",
-    notesPlaceholder: "Contexto, lugar o preparacion",
-    category: "Categoria",
+    notesPlaceholder: "Contexto, lugar o preparación",
+    category: "Categoría",
     priority: "Prioridad",
-    duration: "Duracion",
+    duration: "Duración",
     status: "Estado",
     scheduled: "Programado",
     completed: "Completado",
@@ -143,13 +140,13 @@ const copy = {
     medium: "Media",
     high: "Alta",
     urgent: "Urgente",
-    empty: "No hay items aqui.",
+    empty: "No hay elementos aquí.",
     loading: "Cargando planificador",
-    error: "No se pudieron cargar los items.",
-    saveError: "No se pudo guardar. Tus cambios siguen aqui.",
-    deleteError: "No se pudo eliminar el item.",
-    mutationError: "No se pudo actualizar el item.",
-    titleRequired: "Agrega un titulo antes de guardar.",
+    error: "No se pudieron cargar los elementos.",
+    saveError: "No se pudo guardar. Tus cambios siguen aquí.",
+    deleteError: "No se pudo eliminar el elemento.",
+    mutationError: "No se pudo actualizar el elemento.",
+    titleRequired: "Agrega un título antes de guardar.",
     noTime: "Sin hora",
     minutes: "minutos",
     previous: "Anterior",
@@ -246,8 +243,7 @@ function emptyDraft(anchor: string): PlannerDraft {
 }
 
 export default function PlannerPage() {
-  const [language, setLanguage] =
-    useState<AlmaShellLanguage>(readStoredLanguage);
+  const { locale: language } = useAlmaLocale();
   const [anchorDate, setAnchorDate] = useState(todayString);
   const [view, setView] = useState<PlannerView>("agenda");
   const [items, setItems] = useState<PlannerItem[]>([]);
@@ -286,11 +282,6 @@ export default function PlannerPage() {
     return () => window.clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [anchorDate, view]);
-
-  function updateLanguage(next: AlmaShellLanguage) {
-    setLanguage(next);
-    localStorage.setItem("alma_language", next);
-  }
 
   const groupedItems = useMemo(() => {
     return items.reduce<Record<string, PlannerItem[]>>((groups, item) => {
@@ -420,6 +411,7 @@ export default function PlannerPage() {
 
   async function deleteItem(item: PlannerItem) {
     if (mutatingId) return;
+    if (!window.confirm(t.deleteConfirm)) return;
     setMutatingId(item.id);
     setError("");
     try {
@@ -443,12 +435,7 @@ export default function PlannerPage() {
   ];
 
   return (
-    <AlmaShell
-      language={language}
-      activeWorkspace="planner"
-      title={t.title}
-      onLanguageChange={updateLanguage}
-    >
+    <AlmaShell language={language} activeWorkspace="planner" title={t.title}>
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-4 px-3 py-4 text-[#111111] sm:px-4 md:px-6 md:py-8">
         <header className="rounded-3xl border border-[#E5E7EB] bg-white p-4 shadow-sm md:p-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">

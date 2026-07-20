@@ -27,6 +27,7 @@ import {
 } from "react";
 import AlmaShell from "@/components/alma-shell/AlmaShell";
 import type { AlmaShellLanguage } from "@/components/alma-shell/types";
+import { useAlmaLocale } from "@/lib/i18n/useAlmaLocale";
 
 type DocumentRecord = {
   id: string;
@@ -53,12 +54,6 @@ type DocumentsListPayload = {
   error?: { code?: string };
 };
 
-function readStoredLanguage(): AlmaShellLanguage {
-  if (typeof window === "undefined") return "en";
-  const saved = window.localStorage.getItem("alma_language");
-  return saved === "en" || saved === "es" ? saved : "en";
-}
-
 const uploadTypes = new Set(["text/plain", "text/markdown"]);
 const maxUploadSize = 5 * 1024 * 1024;
 
@@ -83,7 +78,8 @@ const copy = {
     download: "Download",
     downloading: "Preparing download",
     delete: "Delete",
-    deleteUnavailable: "Delete is not available in the current Documents API.",
+    deleteConfirm: "Delete this document permanently?",
+    deleteFailed: "Document could not be deleted.",
     noDocuments: "No documents yet.",
     noRecent:
       "Recent documents will appear here after you create or upload one.",
@@ -152,8 +148,8 @@ const copy = {
     download: "Descargar",
     downloading: "Preparando descarga",
     delete: "Eliminar",
-    deleteUnavailable:
-      "Eliminar no esta disponible en la API actual de Documentos.",
+    deleteConfirm: "¿Eliminar este documento permanentemente?",
+    deleteFailed: "No se pudo eliminar el documento.",
     noDocuments: "Aun no tienes documentos.",
     noRecent:
       "Tus documentos recientes apareceran aqui despues de crear o subir uno.",
@@ -278,8 +274,7 @@ function validateFile(file: File, t: (typeof copy)["en"]) {
 }
 
 export default function DocumentsPage() {
-  const [language, setLanguage] =
-    useState<AlmaShellLanguage>(readStoredLanguage);
+  const { locale: language } = useAlmaLocale();
   const [documents, setDocuments] = useState<DocumentRecord[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [activeSection, setActiveSection] = useState<Section>("recent");
@@ -300,6 +295,8 @@ export default function DocumentsPage() {
   const [searchError, setSearchError] = useState("");
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [downloadError, setDownloadError] = useState("");
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState("");
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const t = copy[language];
 
@@ -440,6 +437,27 @@ export default function DocumentsPage() {
     }
   }
 
+  async function deleteDocument(document: DocumentRecord) {
+    if (deletingId || !window.confirm(t.deleteConfirm)) return;
+    setDeletingId(document.id);
+    setDeleteError("");
+    try {
+      const response = await fetch(`/api/documents/${document.id}`, {
+        method: "DELETE",
+      });
+      if (!response.ok) throw new Error("DOCUMENT_DELETE_FAILED");
+      setSearchResults((results) =>
+        results.filter((item) => item.id !== document.id),
+      );
+      setSelectedId(null);
+      await loadDocuments(null);
+    } catch {
+      setDeleteError(t.deleteFailed);
+    } finally {
+      setDeletingId(null);
+    }
+  }
+
   useEffect(() => {
     const timer = window.setTimeout(() => void loadDocuments(), 0);
     return () => window.clearTimeout(timer);
@@ -493,11 +511,6 @@ export default function DocumentsPage() {
     };
   }, [debouncedQuery, t.noSearch]);
 
-  function updateLanguage(next: AlmaShellLanguage) {
-    setLanguage(next);
-    localStorage.setItem("alma_language", next);
-  }
-
   function handleFileInput(event: ChangeEvent<HTMLInputElement>) {
     chooseFile(event.target.files?.[0] ?? null);
     event.target.value = "";
@@ -526,12 +539,7 @@ export default function DocumentsPage() {
     activeSection === "recent" ? recentDocuments : sortedDocuments;
 
   return (
-    <AlmaShell
-      language={language}
-      activeWorkspace="documents"
-      title={t.title}
-      onLanguageChange={updateLanguage}
-    >
+    <AlmaShell language={language} activeWorkspace="documents" title={t.title}>
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-4 px-3 py-4 text-[#111111] sm:px-4 md:px-6 md:py-8">
         <header className="rounded-3xl border border-[#E5E7EB] bg-white p-4 shadow-sm md:p-6">
           <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
@@ -598,8 +606,11 @@ export default function DocumentsPage() {
             text={t}
             downloading={downloadingId === selectedDocument.id}
             downloadError={downloadError}
+            deleteError={deleteError}
+            deleting={deletingId === selectedDocument.id}
             onBack={() => setSelectedId(null)}
             onDownload={() => void downloadDocument(selectedDocument)}
+            onDelete={() => void deleteDocument(selectedDocument)}
           />
         ) : (
           <div className="grid gap-4 lg:grid-cols-[280px_minmax(0,1fr)_280px]">
@@ -666,8 +677,10 @@ export default function DocumentsPage() {
                   }
                   onOpen={openDocument}
                   onDownload={(document) => void downloadDocument(document)}
+                  onDelete={(document) => void deleteDocument(document)}
                   onRetry={() => void loadDocuments()}
                   downloadingId={downloadingId}
+                  deletingId={deletingId}
                 />
               )}
 
@@ -885,8 +898,10 @@ export default function DocumentsPage() {
                         onDownload={(document) =>
                           void downloadDocument(document)
                         }
+                        onDelete={(document) => void deleteDocument(document)}
                         onRetry={() => setDebouncedQuery(searchQuery.trim())}
                         downloadingId={downloadingId}
+                        deletingId={deletingId}
                         compact
                       />
                     )}
@@ -933,8 +948,10 @@ function DocumentList({
   emptyText,
   onOpen,
   onDownload,
+  onDelete,
   onRetry,
   downloadingId,
+  deletingId,
   compact = false,
 }: {
   documents: DocumentRecord[];
@@ -945,8 +962,10 @@ function DocumentList({
   emptyText: string;
   onOpen: (document: DocumentRecord) => void;
   onDownload: (document: DocumentRecord) => void;
+  onDelete: (document: DocumentRecord) => void;
   onRetry: () => void;
   downloadingId: string | null;
+  deletingId: string | null;
   compact?: boolean;
 }) {
   if (state === "loading") return <LoadingState text={text.loading} />;
@@ -973,6 +992,7 @@ function DocumentList({
         {documents.map((document) => {
           const canDownload = Boolean(document.file_path);
           const isDownloading = downloadingId === document.id;
+          const isDeleting = deletingId === document.id;
           return (
             <article
               key={document.id}
@@ -1027,11 +1047,15 @@ function DocumentList({
                 </button>
                 <button
                   type="button"
-                  disabled
-                  title={text.deleteUnavailable}
-                  className="inline-flex items-center justify-center gap-2 rounded-full border border-[#E5E7EB] px-4 py-2 text-sm font-medium text-[#9CA3AF]"
+                  disabled={isDeleting}
+                  onClick={() => onDelete(document)}
+                  className="inline-flex items-center justify-center gap-2 rounded-full border border-[#E5E7EB] px-4 py-2 text-sm font-medium text-[#991B1B] disabled:text-[#9CA3AF]"
                 >
-                  <Trash2 className="h-4 w-4" />
+                  {isDeleting ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-4 w-4" />
+                  )}
                   {text.delete}
                 </button>
               </div>
@@ -1049,16 +1073,22 @@ function DocumentDetail({
   text,
   downloading,
   downloadError,
+  deleteError,
+  deleting,
   onBack,
   onDownload,
+  onDelete,
 }: {
   document: DocumentRecord;
   language: AlmaShellLanguage;
   text: (typeof copy)["en"];
   downloading: boolean;
   downloadError: string;
+  deleteError: string;
+  deleting: boolean;
   onBack: () => void;
   onDownload: () => void;
+  onDelete: () => void;
 }) {
   const canDownload = Boolean(document.file_path);
 
@@ -1144,16 +1174,21 @@ function DocumentDetail({
           </button>
           <button
             type="button"
-            disabled
-            title={text.deleteUnavailable}
-            className="inline-flex items-center justify-center gap-2 rounded-full border border-[#E5E7EB] px-4 py-3 text-sm font-medium text-[#9CA3AF]"
+            disabled={deleting}
+            onClick={onDelete}
+            className="inline-flex items-center justify-center gap-2 rounded-full border border-[#E5E7EB] px-4 py-3 text-sm font-medium text-[#991B1B] disabled:text-[#9CA3AF]"
           >
-            <Trash2 className="h-4 w-4" />
+            {deleting ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Trash2 className="h-4 w-4" />
+            )}
             {text.delete}
           </button>
         </div>
 
         {downloadError ? <ErrorNote message={downloadError} /> : null}
+        {deleteError ? <ErrorNote message={deleteError} /> : null}
         <div className="mt-4 rounded-2xl bg-[#F7F7F8] p-4 text-sm leading-6 text-[#6B7280]">
           {text.editUnavailable}
         </div>

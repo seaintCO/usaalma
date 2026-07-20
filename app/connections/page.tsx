@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import AlmaShell from "@/components/alma-shell/AlmaShell";
-import type { AlmaShellLanguage } from "@/components/alma-shell/types";
+import { useAlmaLocale } from "@/lib/i18n/useAlmaLocale";
 import type { ConnectorSummary, ConnectorStatus } from "@/lib/connectors/types";
 
 type LoadState = "loading" | "ready" | "auth" | "error";
@@ -80,7 +80,7 @@ const ACTIVE_PROVIDERS = new Set([
 ]);
 
 export default function ConnectionsPage() {
-  const [language, setLanguage] = useState<AlmaShellLanguage>("en");
+  const { locale: language } = useAlmaLocale();
   const [connections, setConnections] = useState<ConnectorSummary[]>([]);
   const [state, setState] = useState<LoadState>("loading");
   const [mutatingProvider, setMutatingProvider] = useState<string | null>(null);
@@ -89,10 +89,9 @@ export default function ConnectionsPage() {
   const load = useCallback(async () => {
     setState("loading");
     try {
-      const [connectionsResponse, languageResponse] = await Promise.all([
-        fetch("/api/connections", { cache: "no-store" }),
-        fetch("/api/settings/language", { cache: "no-store" }),
-      ]);
+      const connectionsResponse = await fetch("/api/connections", {
+        cache: "no-store",
+      });
       if (connectionsResponse.status === 401) {
         setState("auth");
       } else if (!connectionsResponse.ok) {
@@ -101,10 +100,6 @@ export default function ConnectionsPage() {
         const payload = await connectionsResponse.json();
         setConnections(payload.connections ?? []);
         setState("ready");
-      }
-      if (languageResponse.ok) {
-        const languagePayload = await languageResponse.json();
-        setLanguage(languagePayload.language === "es" ? "es" : "en");
       }
     } catch {
       setState("error");
@@ -141,7 +136,6 @@ export default function ConnectionsPage() {
       language={language}
       activeWorkspace="connections"
       title={copy.title}
-      onLanguageChange={setLanguage}
     >
       <div className="min-h-full px-4 pb-24 pt-6 text-[#111111] md:px-8 md:pb-10 md:pt-10">
         <div className="mx-auto max-w-5xl">

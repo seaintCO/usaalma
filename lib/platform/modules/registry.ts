@@ -158,6 +158,7 @@ export const ALMA_MODULE_REGISTRY = [
     group: "free_core",
     category: "Productivity",
     description: "Create and manage owned ALMA workspaces.",
+    route: WORKSPACE_ROUTES.workspaces,
     releaseStatus: "active",
     requiredPlan: "personal",
     entitlementKey: "workspaces",

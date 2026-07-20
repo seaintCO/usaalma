@@ -25,6 +25,7 @@ export const WORKSPACE_ROUTES = {
   marketplace: "/marketplace",
   billing: "/billing",
   settings: "/settings",
+  workspaces: "/workspaces",
 } as const;
 
 export type RoutedWorkspace = keyof typeof WORKSPACE_ROUTES;

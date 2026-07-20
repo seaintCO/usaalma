@@ -12,7 +12,7 @@ import {
 import { useCallback, useEffect, useMemo, useState } from "react";
 import AlmaShell from "@/components/alma-shell/AlmaShell";
 import BilingualComposer from "@/components/communications/BilingualComposer";
-import type { AlmaShellLanguage } from "@/components/alma-shell/types";
+import { useAlmaLocale } from "@/lib/i18n/useAlmaLocale";
 
 type ApprovalStatus =
   | "proposed"
@@ -127,7 +127,7 @@ function payloadLabel(payload: Record<string, unknown>) {
 }
 
 export default function ApprovalsPage() {
-  const [language, setLanguage] = useState<AlmaShellLanguage>("en");
+  const { locale: language } = useAlmaLocale();
   const [approvals, setApprovals] = useState<UnifiedApproval[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [filter, setFilter] = useState<ApprovalFilter>("pending");
@@ -139,10 +139,9 @@ export default function ApprovalsPage() {
   const load = useCallback(async () => {
     setState("loading");
     try {
-      const [approvalResponse, languageResponse] = await Promise.all([
-        fetch("/api/approvals", { cache: "no-store" }),
-        fetch("/api/settings/language", { cache: "no-store" }),
-      ]);
+      const approvalResponse = await fetch("/api/approvals", {
+        cache: "no-store",
+      });
       const payload = (await approvalResponse.json()) as {
         ok?: boolean;
         approvals?: UnifiedApproval[];
@@ -165,10 +164,6 @@ export default function ApprovalsPage() {
         setApprovals(nextApprovals);
         setSelectedId((current) => current ?? nextApprovals[0]?.id ?? null);
         setState("ready");
-      }
-      if (languageResponse.ok) {
-        const languagePayload = await languageResponse.json();
-        setLanguage(languagePayload.language === "es" ? "es" : "en");
       }
     } catch {
       setState("error");
@@ -230,7 +225,6 @@ export default function ApprovalsPage() {
       language={language}
       activeWorkspace="approvals"
       title={copy.title}
-      onLanguageChange={setLanguage}
     >
       <div className="min-h-full px-4 pb-24 pt-6 text-[#111111] md:px-8 md:pb-10 md:pt-10">
         <div className="mx-auto max-w-6xl">

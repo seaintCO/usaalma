@@ -11,6 +11,7 @@ import {
 import { useCallback, useEffect, useMemo, useState } from "react";
 import AlmaShell from "@/components/alma-shell/AlmaShell";
 import type { AlmaShellLanguage } from "@/components/alma-shell/types";
+import { useAlmaLocale } from "@/lib/i18n/useAlmaLocale";
 import type {
   MarketplaceCatalogResponse,
   MarketplaceItem,
@@ -140,7 +141,7 @@ function statusClass(item: MarketplaceItem) {
 }
 
 export default function AppsPage() {
-  const [language, setLanguage] = useState<AlmaShellLanguage>("en");
+  const { locale: language } = useAlmaLocale();
   const [catalog, setCatalog] = useState<MarketplaceCatalogResponse | null>(
     null,
   );
@@ -152,12 +153,10 @@ export default function AppsPage() {
   const load = useCallback(async () => {
     setState("loading");
     try {
-      const [catalogResponse, languageResponse, navigationResponse] =
-        await Promise.all([
-          fetch("/api/marketplace/catalog", { cache: "no-store" }),
-          fetch("/api/settings/language", { cache: "no-store" }),
-          fetch("/api/app-navigation", { cache: "no-store" }),
-        ]);
+      const [catalogResponse, navigationResponse] = await Promise.all([
+        fetch("/api/marketplace/catalog", { cache: "no-store" }),
+        fetch("/api/app-navigation", { cache: "no-store" }),
+      ]);
       const payload = (await catalogResponse.json()) as
         MarketplaceCatalogResponse | { ok: false; error?: { code?: string } };
       if (catalogResponse.status === 401) {
@@ -169,10 +168,6 @@ export default function AppsPage() {
       } else {
         setCatalog(payload);
         setState("ready");
-      }
-      if (languageResponse.ok) {
-        const languagePayload = await languageResponse.json();
-        setLanguage(languagePayload.language === "es" ? "es" : "en");
       }
       if (navigationResponse.ok) {
         const navigationPayload = await navigationResponse.json();
@@ -259,12 +254,7 @@ export default function AppsPage() {
   }, [catalog?.items]);
 
   return (
-    <AlmaShell
-      language={language}
-      activeWorkspace="apps"
-      title={copy.title}
-      onLanguageChange={setLanguage}
-    >
+    <AlmaShell language={language} activeWorkspace="apps" title={copy.title}>
       <div className="min-h-full px-4 pb-24 pt-6 text-[#111111] md:px-8 md:pb-10 md:pt-10">
         <div className="mx-auto max-w-6xl">
           <header className="mb-8">

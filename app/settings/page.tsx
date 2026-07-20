@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import AlmaShell from "@/components/alma-shell/AlmaShell";
 import type { AlmaShellLanguage } from "@/components/alma-shell/types";
+import { useAlmaLocale } from "@/lib/i18n/useAlmaLocale";
 import { DASHBOARD_ROUTE } from "@/lib/platform/workspaceRoutes";
 
 type Settings = {
@@ -152,6 +153,7 @@ const copy = {
   },
 } as const;
 export default function SettingsPage() {
+  const { locale: language, setLocale } = useAlmaLocale();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [settings, setSettings] = useState<Settings>(fallback);
   const [textModels, setTextModels] = useState<string[]>([
@@ -175,9 +177,9 @@ export default function SettingsPage() {
   );
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-  const language = profile?.language === "es" ? "es" : "en";
   const t = copy[language];
   function updateLanguage(next: AlmaShellLanguage) {
+    void setLocale(next);
     setProfile((current) =>
       current ? { ...current, language: next } : current,
     );
@@ -192,7 +194,10 @@ export default function SettingsPage() {
       ]);
     const data = await settingsRes.json();
     if (data.ok) {
-      setProfile(data.profile);
+      setProfile({
+        ...data.profile,
+        language: data.profile.language === "es" ? "es" : "en",
+      });
       setSettings(data.settings);
       setTextModels(data.modelChoices.text);
       setImageModels(data.modelChoices.image);
@@ -263,8 +268,8 @@ export default function SettingsPage() {
   };
   if (!profile)
     return (
-      <AlmaShell language="en" activeWorkspace="settings" title={copy.en.title}>
-        <div className="p-8 text-gray-500">{copy.en.loading}</div>
+      <AlmaShell language={language} activeWorkspace="settings" title={t.title}>
+        <div className="p-8 text-gray-500">{t.loading}</div>
       </AlmaShell>
     );
   const field = (label: string, child: React.ReactNode) => (
@@ -317,7 +322,6 @@ export default function SettingsPage() {
                     }
                     className="w-full rounded-xl border border-gray-200 bg-white p-3"
                   >
-                    <option value="auto">{t.auto}</option>
                     <option value="en">{t.en}</option>
                     <option value="es">{t.es}</option>
                   </select>,

@@ -15,15 +15,17 @@ Date: 2026-07-20
 
 ## Current coverage
 
-| Surface                     | English | Spanish | Notes                                                                                           |
-| --------------------------- | ------- | ------- | ----------------------------------------------------------------------------------------------- |
-| Shared shell navigation     | Covered | Covered | Selector now persists centrally                                                                 |
-| Notes                       | Covered | Covered | Duplicate locale control removed; natural Spanish strings and locale-aware dates                |
-| Tasks and Planner           | Covered | Covered | Canonical live locale, localized CRUD/error/confirmation states and locale-aware dates          |
-| Documents                   | Covered | Covered | Canonical live locale, upload/search/download/delete states and localized confirmation          |
-| Apps                        | Covered | Covered | Page dictionary exists; catalog module metadata still needs canonical localized registry fields |
-| Builder project workbench   | Covered | Partial | Technical workbench strings and event-stage translations remain to centralize                   |
-| Remaining canonical modules | Partial | Partial | Existing page-local dictionaries require consolidation and parity validation                    |
+| Surface                                                | English | Spanish | Notes                                                                                           |
+| ------------------------------------------------------ | ------- | ------- | ----------------------------------------------------------------------------------------------- |
+| Shared shell navigation                                | Covered | Covered | Selector now persists centrally                                                                 |
+| Notes                                                  | Covered | Covered | Duplicate locale control removed; natural Spanish strings and locale-aware dates                |
+| Tasks and Planner                                      | Covered | Covered | Canonical live locale, localized CRUD/error/confirmation states and locale-aware dates          |
+| Documents                                              | Covered | Covered | Canonical live locale, upload/search/download/delete states and localized confirmation          |
+| Apps, Marketplace, Approvals, Connections and Settings | Covered | Covered | Canonical live locale replaces per-page language fetch/state                                    |
+| Workspaces                                             | Covered | Covered | Shared shell, personal fallback, owned create/list/invite and truthful request states           |
+| Apps                                                   | Covered | Covered | Page dictionary exists; catalog module metadata still needs canonical localized registry fields |
+| Builder project workbench                              | Covered | Partial | Technical workbench strings and event-stage translations remain to centralize                   |
+| Remaining canonical modules                            | Partial | Partial | Existing page-local dictionaries require consolidation and parity validation                    |
 
 ## Known legacy systems to retire safely
 

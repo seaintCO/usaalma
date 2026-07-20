@@ -130,6 +130,34 @@ assert(
   "Documents owned metadata/storage deletion is incomplete.",
 );
 
+const workspacesPage = read("app/workspaces/page.tsx");
+const workspaceInvite = read("app/api/workspaces/invite/route.ts");
+assert(
+  workspacesPage.includes("useAlmaLocale") &&
+    workspacesPage.includes('activeWorkspace="workspaces"') &&
+    workspacesPage.includes("if (!response.ok)"),
+  "Workspaces bilingual truthful UI contract is incomplete.",
+);
+assert(
+  workspaceInvite.includes("resolveTenantWorkspace") &&
+    workspaceInvite.includes('tenant.source !== "workspace_owner"') &&
+    workspaceInvite.includes("WORKSPACE_OWNER_REQUIRED"),
+  "Workspace invitations do not enforce owner authority.",
+);
+
+for (const pagePath of [
+  "app/dashboard/apps/page.tsx",
+  "app/marketplace/page.tsx",
+  "app/approvals/page.tsx",
+  "app/connections/page.tsx",
+  "app/settings/page.tsx",
+]) {
+  assert(
+    read(pagePath).includes("useAlmaLocale"),
+    `${pagePath} is not synchronized to the canonical locale.`,
+  );
+}
+
 const clientFiles = [];
 function walk(directory) {
   for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {

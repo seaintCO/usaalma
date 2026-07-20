@@ -79,6 +79,17 @@ Still blocked or intentionally deferred:
 - The app-navigation migration must be applied by an authorized operator before
   pinning can persist in a deployed environment.
 
+Validation update:
+
+- `npm run milestone6:check` now enforces the critical static contracts for
+  server-only configuration, structured chat failures, registry/entitlement and
+  workspace checks, app-navigation RLS, Builder API wiring, iframe isolation,
+  preview allowlisting, terminal states, and mobile fallback without external
+  requests.
+- The compiled Builder container-runtime check passes after stripping Next.js's
+  build-time-only `server-only` sentinel from packaged worker artifacts. Docker
+  execution remains skipped where Docker is unavailable.
+
 ## Milestone 0: Audit And Baseline
 
 Status: completed at `080d1de`.

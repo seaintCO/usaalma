@@ -41,13 +41,10 @@ function relativeImport(fromFile, targetWithoutExtension) {
 function rewriteAliasRequires(input, outputFile) {
   return input
     .replace(/^require\(["']server-only["']\);\r?\n/m, "")
-    .replace(
-      /require\(["']@\/([^"']+)["']\)/g,
-      (_match, aliasPath) => {
-        const target = path.join(outRoot, `${aliasPath}.js`);
-        return `require("${relativeImport(outputFile, target).replace(/\.js$/, "")}")`;
-      },
-    );
+    .replace(/require\(["']@\/([^"']+)["']\)/g, (_match, aliasPath) => {
+      const target = path.join(outRoot, `${aliasPath}.js`);
+      return `require("${relativeImport(outputFile, target).replace(/\.js$/, "")}")`;
+    });
 }
 
 function compileFile(sourcePath) {

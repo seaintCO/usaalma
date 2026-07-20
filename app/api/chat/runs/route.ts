@@ -3,6 +3,10 @@ import { SubscriptionRepository } from "@/lib/db/repositories/billing/subscripti
 import { ConversationRepository } from "@/lib/db/repositories/conversation.repository";
 import { AgentService } from "@/lib/services/agents/agent.service";
 import { createAdminClient } from "@/lib/supabase/admin";
+import {
+  isRuntimeConfigError,
+  safeRuntimeConfigErrorBody,
+} from "@/lib/runtime/config";
 
 type ChatRunRequestBody = {
   message?: unknown;
@@ -179,6 +183,17 @@ export async function POST(request: Request) {
       { status: 202 },
     );
   } catch (error) {
+    if (isRuntimeConfigError(error)) {
+      console.error("ALMA_CHAT_RUN_ENQUEUE_CONFIG_ERROR", {
+        userId: user.id,
+        capability: error.readiness.capability,
+        missing: error.readiness.missing,
+        invalid: error.readiness.invalid,
+      });
+      return Response.json(safeRuntimeConfigErrorBody(error), {
+        status: 503,
+      });
+    }
     console.error("ALMA_CHAT_RUN_ENQUEUE_ERROR", {
       userId: user.id,
       category: "durable_enqueue_failed",

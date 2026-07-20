@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "check:encoding": "node scripts/check-mojibake.mjs",
+    "runtime:config:check": "node scripts/check-alma-runtime-config.mjs",
     "builder:worker": "jiti workers/builder/index.ts --loop",
     "builder:worker:once": "jiti workers/builder/index.ts --once",
     "builder:gateway": "jiti workers/builder/gateway/index.ts",

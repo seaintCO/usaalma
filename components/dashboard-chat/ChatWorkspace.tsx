@@ -99,6 +99,7 @@ const copy: Record<ChatLanguage, Copy> = {
 };
 
 const conversationMarker = /\[CONVERSATION_ID:([^\]]+)\]\n?/g;
+const streamErrorMarker = /\[ALMA_ERROR:({.*?})\]\n?/g;
 const requestedLanguage = (message: string): ChatLanguage | null => {
   const normalized = message.normalize("NFD").replace(/\p{Diacritic}/gu, "");
   return /\b(en espanol|spanish)\b/i.test(normalized)
@@ -124,6 +125,37 @@ function createTimedController(timeoutMs: number) {
     clear: () => clearTimeout(timeoutId),
     timedOut: () => timedOut,
   };
+}
+
+function extractStreamError(content: string): {
+  content: string;
+  category: ChatErrorCategory | null;
+} {
+  let category: ChatErrorCategory | null = null;
+  const cleaned = content.replace(streamErrorMarker, (_match, raw) => {
+    try {
+      const parsed = JSON.parse(raw) as { category?: unknown };
+      if (
+        parsed.category === "offline" ||
+        parsed.category === "auth_expired" ||
+        parsed.category === "timeout" ||
+        parsed.category === "server_unavailable" ||
+        parsed.category === "rate_limited" ||
+        parsed.category === "durable_enqueue_failed" ||
+        parsed.category === "durable_worker_failed" ||
+        parsed.category === "invalid_response" ||
+        parsed.category === "unknown"
+      ) {
+        category = parsed.category;
+      } else {
+        category = "server_unavailable";
+      }
+    } catch {
+      category = "server_unavailable";
+    }
+    return "";
+  });
+  return { content: cleaned, category };
 }
 
 function MessageContent({ content }: { content: string }) {
@@ -839,6 +871,7 @@ export default function ChatWorkspace({
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let streamed = "";
+      let terminalStreamError: ChatErrorCategory | null = null;
       while (true) {
         const { value, done } = await reader.read();
         if (done) break;
@@ -850,6 +883,9 @@ export default function ChatWorkspace({
           }
         }
         streamed += chunk.replace(conversationMarker, "");
+        const extracted = extractStreamError(streamed);
+        streamed = extracted.content;
+        terminalStreamError = extracted.category ?? terminalStreamError;
         setMessages((current) =>
           current.map((message) =>
             message.id === submission.draftId
@@ -859,14 +895,18 @@ export default function ChatWorkspace({
         );
       }
       streamed += decoder.decode();
+      const extracted = extractStreamError(streamed);
+      streamed = extracted.content;
+      terminalStreamError = extracted.category ?? terminalStreamError;
       setMessages((current) =>
         current.map((message) =>
           message.id === submission.draftId
             ? {
                 ...message,
                 content: streamed,
-                status: undefined,
-                retry: undefined,
+                status: terminalStreamError ? "error" : undefined,
+                errorCategory: terminalStreamError ?? undefined,
+                retry: terminalStreamError ? retry : undefined,
               }
             : message,
         ),

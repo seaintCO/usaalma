@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth/user";
-import { OAuthRepository } from "@/lib/db/repositories/oauth/oauth.repository";
 
 export async function POST(req: Request) {
   const user = await getCurrentUser();
@@ -13,7 +12,17 @@ export async function POST(req: Request) {
   if (!body.provider)
     return NextResponse.json({ error: "Missing provider" }, { status: 400 });
 
-  const connection = await OAuthRepository.mockConnect(user.id, body.provider);
-
-  return NextResponse.json(connection);
+  return NextResponse.json(
+    {
+      ok: false,
+      error: {
+        code: "legacy_mock_connection_disabled",
+        message:
+          "This legacy connection route cannot create real provider access. Use the provider-specific connection flow.",
+        provider: String(body.provider),
+        retryable: false,
+      },
+    },
+    { status: 410 },
+  );
 }

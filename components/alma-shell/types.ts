@@ -13,6 +13,8 @@ export type AlmaShellLabels = {
   platform: string;
   primary: string;
   secondary: string;
+  myApps: string;
+  viewAllApps: string;
   active: string;
   pro: string;
   beta?: string;

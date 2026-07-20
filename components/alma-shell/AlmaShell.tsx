@@ -18,96 +18,14 @@ import type {
   AlmaWorkspaceNavigationKey,
   AlmaWorkspaceReleaseOverrides,
 } from "./types";
+import { persistAlmaLocale } from "@/lib/i18n/useAlmaLocale";
+import { shellMessages } from "@/lib/i18n/messages";
 
 const EMPTY_CONVERSATIONS = [] as const;
 const EMPTY_STATUSES = {};
 
-export const ALMA_SHELL_LABELS: Record<AlmaShellLanguage, AlmaShellLabels> = {
-  en: {
-    language: "Language",
-    newChat: "New Chat",
-    search: "Search...",
-    history: "History",
-    core: "Core",
-    business: "Business",
-    ai: "AI",
-    platform: "Platform",
-    primary: "Primary",
-    secondary: "Secondary",
-    active: "Active",
-    pro: "Pro",
-    beta: "Beta",
-    included: "Included",
-    upgradeRequired: "Upgrade",
-    comingSoon: "Soon",
-    unavailable: "Unavailable",
-    home: "Home",
-    approvals: "Approvals",
-    files: "Files",
-    apps: "Apps",
-    connections: "Connections",
-    profile: "Profile",
-    planner: "Planner",
-    tasks: "Tasks",
-    notes: "Notes",
-    documents: "Documents",
-    fitness: "Fitness",
-    crm: "CRM",
-    construction: "Construction",
-    invoices: "Invoices",
-    alma: "ALMA",
-    images: "Images",
-    creativeStudio: "Creative Studio",
-    launchStudio: "Launch Studio",
-    trader: "Trader",
-    agentBuilder: "Agent Builder",
-    marketplace: "Marketplace",
-    billing: "Billing",
-    settings: "Settings",
-  },
-  es: {
-    language: "Idioma",
-    newChat: "Nuevo Chat",
-    search: "Buscar...",
-    history: "Historial",
-    core: "Core",
-    business: "Negocio",
-    ai: "IA",
-    platform: "Plataforma",
-    primary: "Principal",
-    secondary: "Secundario",
-    active: "Activo",
-    pro: "Pro",
-    beta: "Beta",
-    included: "Incluido",
-    upgradeRequired: "Mejora",
-    comingSoon: "Pronto",
-    unavailable: "No disponible",
-    home: "Inicio",
-    approvals: "Aprobaciones",
-    files: "Archivos",
-    apps: "Apps",
-    connections: "Conexiones",
-    profile: "Perfil",
-    planner: "Planificador",
-    tasks: "Tareas",
-    notes: "Notas",
-    documents: "Documentos",
-    fitness: "Fitness",
-    crm: "CRM",
-    construction: "Construccion",
-    invoices: "Facturas",
-    alma: "ALMA",
-    images: "Imagenes",
-    creativeStudio: "Estudio Creativo",
-    launchStudio: "Launch Studio",
-    trader: "Trader",
-    agentBuilder: "Agent Builder",
-    marketplace: "Marketplace",
-    billing: "Pagos",
-    settings: "Configuracion",
-  },
-};
+export const ALMA_SHELL_LABELS: Record<AlmaShellLanguage, AlmaShellLabels> =
+  shellMessages;
 
 const SHELL_WORKSPACE_RELEASES: AlmaWorkspaceReleaseOverrides = {
   approvals: "active",
@@ -144,10 +62,11 @@ export default function AlmaShell({
 }: AlmaShellProps) {
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const labels = ALMA_SHELL_LABELS[language];
+  const labels = shellMessages[language];
 
   function updateLanguage(next: AlmaShellLanguage) {
     onLanguageChange?.(next);
+    void persistAlmaLocale(next);
   }
 
   function openDashboard() {

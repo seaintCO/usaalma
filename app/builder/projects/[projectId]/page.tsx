@@ -31,6 +31,8 @@ import type {
 } from "@/lib/builder/types";
 import { validateBuilderPreviewUrl } from "@/lib/builder/preview";
 import { WORKSPACE_ROUTES } from "@/lib/platform/workspaceRoutes";
+import type { AlmaLocale } from "@/lib/i18n/locale";
+import { useAlmaLocale } from "@/lib/i18n/useAlmaLocale";
 
 type Mode = "preview" | "design" | "code" | "activity";
 type Viewport = "desktop" | "tablet" | "mobile";
@@ -41,12 +43,50 @@ const VIEWPORT_WIDTH: Record<Viewport, string> = {
   tablet: "768px",
   mobile: "390px",
 };
+const BUILDER_MODE_LABELS: Record<AlmaLocale, Record<Mode, string>> = {
+  en: {
+    preview: "Preview",
+    design: "Design",
+    code: "Code",
+    activity: "Activity",
+  },
+  es: {
+    preview: "Vista previa",
+    design: "Diseño",
+    code: "Código",
+    activity: "Actividad",
+  },
+};
+const BUILDER_STAGE_ES: Record<string, string> = {
+  project_created: "Proyecto creado",
+  project_updated: "Proyecto actualizado",
+  session_requested: "Solicitud aceptada",
+  provisioning_started: "Preparando entorno aislado",
+  provider_blocked: "Proveedor bloqueado",
+  build_started: "Compilación iniciada",
+  command_started: "Validación iniciada",
+  command_completed: "Validación completada",
+  validation_started: "Verificando proyecto",
+  validation_completed: "Verificación completada",
+  checkpoint_created: "Version guardada",
+  approval_requested: "Aprobación requerida",
+  preview_ready: "Vista previa lista",
+  build_failed: "Compilación fallida",
+  build_cancelled: "Compilación cancelada",
+};
+function builderStageLabel(value: string, locale: AlmaLocale) {
+  return locale === "es"
+    ? (BUILDER_STAGE_ES[value] ?? value.replaceAll("_", " "))
+    : value.replaceAll("_", " ");
+}
 
 export default function BuilderProjectPage({
   params,
 }: {
   params: Promise<{ projectId: string }>;
 }) {
+  const { locale, setLocale } = useAlmaLocale();
+  const modeLabels = BUILDER_MODE_LABELS[locale];
   const [projectId, setProjectId] = useState("");
   const [state, setState] = useState<LoadState>("loading");
   const [project, setProject] = useState<BuilderProject | null>(null);
@@ -203,7 +243,7 @@ export default function BuilderProjectPage({
               ) : (
                 <Clock3 />
               )}
-              {item}
+              {modeLabels[item]}
             </button>
           ))}
         </div>
@@ -256,6 +296,18 @@ export default function BuilderProjectPage({
           >
             {assistantOpen ? <PanelLeftClose /> : <PanelLeftOpen />}
           </button>
+          <button
+            className="tool w-auto px-2 text-[11px] font-semibold"
+            onClick={() => void setLocale(locale === "en" ? "es" : "en")}
+            aria-label={
+              locale === "en"
+                ? "Cambiar interfaz a español"
+                : "Switch interface to English"
+            }
+            title={locale === "en" ? "Español" : "English"}
+          >
+            {locale.toUpperCase()}
+          </button>
         </div>
       </header>
 
@@ -265,7 +317,7 @@ export default function BuilderProjectPage({
             <div className="border-b border-white/10 p-4">
               <div className="flex items-center justify-between">
                 <h1 className="text-sm font-semibold">ALMA Builder</h1>
-                <Status status={project.lifecycle_status} />
+                <Status status={project.lifecycle_status} locale={locale} />
               </div>
               <p className="mt-2 line-clamp-3 text-xs leading-5 text-[#8d969f]">
                 {project.original_prompt}
@@ -283,7 +335,9 @@ export default function BuilderProjectPage({
               {events.length ? (
                 [...events]
                   .reverse()
-                  .map((event) => <EventCard key={event.id} event={event} />)
+                  .map((event) => (
+                    <EventCard key={event.id} event={event} locale={locale} />
+                  ))
               ) : (
                 <Notice title="No activity yet">
                   Submit a revision to create a real Builder session and job.
@@ -393,7 +447,7 @@ export default function BuilderProjectPage({
                   onClick={() => setMode(item)}
                   className={`h-11 text-xs capitalize ${mode === item ? "border-b-2 border-[#53cfc5] text-white" : "text-[#8d969f]"}`}
                 >
-                  {item}
+                  {modeLabels[item]}
                 </button>
               ),
             )}
@@ -514,7 +568,13 @@ function PreviewCanvas({
     </div>
   );
 }
-function EventCard({ event }: { event: BuilderEvent }) {
+function EventCard({
+  event,
+  locale,
+}: {
+  event: BuilderEvent;
+  locale: AlmaLocale;
+}) {
   return (
     <article className="rounded-lg border border-white/8 bg-white/[.025] p-3">
       <div className="flex items-start gap-2">
@@ -522,7 +582,7 @@ function EventCard({ event }: { event: BuilderEvent }) {
         <div>
           <p className="text-xs font-medium leading-5">{event.summary}</p>
           <p className="mt-1 text-[10px] text-[#68717a]">
-            {event.event_type.replaceAll("_", " ")} ·{" "}
+            {builderStageLabel(event.event_type, locale)} ·{" "}
             {new Date(event.created_at).toLocaleString()}
           </p>
         </div>
@@ -530,7 +590,7 @@ function EventCard({ event }: { event: BuilderEvent }) {
     </article>
   );
 }
-function Status({ status }: { status: string }) {
+function Status({ status, locale }: { status: string; locale: AlmaLocale }) {
   const working = ACTIVE.has(status);
   return (
     <span
@@ -543,7 +603,7 @@ function Status({ status }: { status: string }) {
       ) : (
         <Check />
       )}
-      {status.replaceAll("_", " ")}
+      {builderStageLabel(status, locale)}
     </span>
   );
 }

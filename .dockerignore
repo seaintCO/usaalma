@@ -1,0 +1,10 @@
+.env
+.env.*
+.git
+.next
+coverage
+dist
+node_modules
+npm-debug.log*
+supabase/.branches
+supabase/.temp

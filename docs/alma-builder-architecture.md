@@ -232,6 +232,78 @@ Remaining production limitations:
   storage calls.
 - Provider-level E2B egress restrictions must be verified in a live development
   E2B template before production enablement.
-- Preview cleanup after expiration still needs a scheduled maintenance worker.
 - GitHub repository writes remain blocked until a later approved source writer
   milestone; approvals now verify checkpoint ownership first.
+
+## Engine 1.3 Deployable Runtime
+
+Engine 1.3 packages the existing Builder runtime as two deployable long-running
+processes:
+
+- Builder Gateway service: `npm run builder:gateway`
+- Builder Worker service: `npm run builder:worker`
+
+Container definitions:
+
+- `infra/builder/gateway.Dockerfile`
+- `infra/builder/worker.Dockerfile`
+
+Do not run either process inside a Next.js/Vercel request handler. The Next.js
+app remains the control plane that authenticates users, creates projects,
+enqueues jobs, and reads durable events.
+
+Health endpoints:
+
+- Gateway: `GET /healthz`, `GET /readyz`
+- Worker: `GET /healthz`, `GET /readyz` on `ALMA_BUILDER_WORKER_HEALTH_PORT`
+
+Readiness validates configuration only. It does not call OpenAI or E2B.
+
+Environment placement:
+
+- Vercel control plane:
+  - `ALMA_BUILDER_ENGINE_ENABLED=true`
+  - `ALMA_BUILDER_WORKER_SECRET`
+  - `ALMA_BUILDER_PREVIEW_HOSTS`
+  - `NEXT_PUBLIC_SUPABASE_URL`
+  - browser/public Supabase values already required by the app
+- Builder Gateway service:
+  - `ALMA_BUILDER_GATEWAY_SIGNING_KEY`
+  - `ALMA_BUILDER_CODEX_MODEL`
+  - `OPENAI_API_KEY`
+  - `NEXT_PUBLIC_SUPABASE_URL`
+  - `SUPABASE_SERVICE_ROLE_KEY`
+  - optional `ALMA_BUILDER_GATEWAY_PORT`
+  - optional `ALMA_BUILDER_GATEWAY_AUDIENCE`
+- Builder Worker service:
+  - `ALMA_BUILDER_ENGINE_ENABLED=true`
+  - `ALMA_BUILDER_E2B_TEMPLATE=alma-builder-node-lts`
+  - `ALMA_BUILDER_GATEWAY_URL`
+  - `ALMA_BUILDER_GATEWAY_SIGNING_KEY`
+  - `ALMA_BUILDER_WORKER_SECRET`
+  - `ALMA_BUILDER_CODEX_MODEL`
+  - `ALMA_BUILDER_CODEX_WORKER_ISOLATED=true`
+  - `ALMA_BUILDER_PREVIEW_HOSTS`
+  - `E2B_API_KEY`
+  - `NEXT_PUBLIC_SUPABASE_URL`
+  - `SUPABASE_SERVICE_ROLE_KEY`
+  - optional `ALMA_BUILDER_WORKER_POLL_MS`
+  - optional `ALMA_BUILDER_WORKER_HEALTH_PORT`
+
+The worker heartbeats leased jobs while long E2B/Codex/validation operations
+run. Stale leases are recovered by the service-role-only
+`alma_claim_builder_job` RPC, and the existing partial unique index enforces one
+active job per Builder project. Successful readiness runs clean up the E2B
+sandbox after the preview URL has been verified unless
+`ALMA_BUILDER_KEEP_PREVIEW_SANDBOX=true` is explicitly set for a short manual
+preview inspection window.
+
+Opt-in live checks:
+
+- E2B template smoke:
+  `ALMA_BUILDER_LIVE_E2B_CONFIRM=run-one-e2b-smoke npm run builder:e2b:live-smoke`
+- Controlled Builder E2E:
+  `ALMA_BUILDER_LIVE_E2E_CONFIRM=run-one-builder-e2e npm run builder:e2e:live`
+
+Both commands may incur external usage and must only be run against a
+non-production project with non-production credentials.

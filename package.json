@@ -12,9 +12,12 @@
     "builder:worker:once": "jiti workers/builder/index.ts --once",
     "builder:gateway": "jiti workers/builder/gateway/index.ts",
     "builder:gateway:check": "node scripts/check-alma-builder-secure-runtime.mjs --gateway-only",
+    "builder:runtime:check": "node scripts/check-alma-builder-production-runtime.mjs",
     "builder:e2b:template:build": "node infra/e2b/alma-builder/build-template.mjs",
     "builder:e2b:template:preflight": "node infra/e2b/alma-builder/preflight.mjs",
-    "builder:e2b:template:smoke": "node infra/e2b/alma-builder/smoke.mjs"
+    "builder:e2b:template:smoke": "node infra/e2b/alma-builder/smoke.mjs",
+    "builder:e2b:live-smoke": "node scripts/check-alma-builder-e2b-live-smoke.mjs",
+    "builder:e2e:live": "node scripts/run-alma-builder-live-e2e.mjs"
   },
   "dependencies": {
     "@openai/codex-sdk": "^0.144.6",

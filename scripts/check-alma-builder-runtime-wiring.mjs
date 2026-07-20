@@ -57,7 +57,7 @@ const checks = [
       "runAllowedCommand",
       "extractArtifact",
       "start_preview",
-      "destroyWorkspaceAfterFailure",
+      "destroyBuilderWorkspace",
     ],
   ],
   [

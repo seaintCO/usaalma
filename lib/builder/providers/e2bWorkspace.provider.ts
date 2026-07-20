@@ -56,7 +56,11 @@ export class E2BWorkspaceProvider implements WorkspaceProvider {
     workspaceId: string | null;
     sessionId?: string | null;
   }): Promise<BuilderProviderResult<BuilderProviderProjectRef>> {
-    if (!process.env.E2B_API_KEY || !process.env.ALMA_BUILDER_E2B_TEMPLATE) {
+    if (
+      !process.env.E2B_API_KEY ||
+      !process.env.ALMA_BUILDER_E2B_TEMPLATE ||
+      process.env.ALMA_BUILDER_CODEX_WORKER_ISOLATED !== "true"
+    ) {
       return missingWorkspace();
     }
     try {

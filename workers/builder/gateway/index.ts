@@ -7,10 +7,15 @@ import {
 } from "@/lib/builder/gatewayTokens";
 import { redactBuilderSecrets } from "@/lib/builder/redaction";
 import { BUILDER_RUNTIME_LIMITS } from "@/lib/builder/runtime";
+import {
+  assertBuilderRuntimeConfig,
+  builderRuntimeHealthBody,
+} from "@/lib/builder/runtimeConfig";
 
 const port = Number(process.env.ALMA_BUILDER_GATEWAY_PORT ?? 8787);
 const allowedModel = process.env.ALMA_BUILDER_CODEX_MODEL;
 const openAiKey = process.env.OPENAI_API_KEY;
+let startupReady = false;
 
 function json(res: http.ServerResponse, status: number, body: unknown) {
   res.writeHead(status, {
@@ -43,6 +48,17 @@ function bearerToken(req: http.IncomingMessage) {
 const server = http.createServer(async (req, res) => {
   const requestId = randomUUID();
   try {
+    if (req.method === "GET" && req.url === "/healthz") {
+      return json(res, 200, {
+        ok: true,
+        service: "alma-builder-gateway",
+        ready: startupReady,
+      });
+    }
+    if (req.method === "GET" && req.url === "/readyz") {
+      const body = builderRuntimeHealthBody("gateway");
+      return json(res, body.ok ? 200 : 503, body);
+    }
     if (req.method !== "POST" || req.url !== "/v1/responses") {
       return json(res, 404, {
         error: {
@@ -134,6 +150,28 @@ const server = http.createServer(async (req, res) => {
     });
   }
 });
+
+try {
+  assertBuilderRuntimeConfig("gateway");
+  startupReady = true;
+} catch (error) {
+  console.error(
+    JSON.stringify({
+      ok: false,
+      service: "alma-builder-gateway",
+      code:
+        error instanceof Error && "code" in error
+          ? error.code
+          : "BUILDER_RUNTIME_CONFIG_INVALID",
+      message: error instanceof Error ? error.message : "Gateway failed.",
+      validation:
+        error instanceof Error && "validation" in error
+          ? error.validation
+          : builderRuntimeHealthBody("gateway"),
+    }),
+  );
+  process.exit(1);
+}
 
 server.listen(port, () => {
   console.log(

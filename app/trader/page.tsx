@@ -19,7 +19,7 @@ import {
   X,
 } from "lucide-react";
 import AlmaShell from "@/components/alma-shell/AlmaShell";
-import type { AlmaShellLanguage } from "@/components/alma-shell/types";
+import { useAlmaLocale } from "@/lib/i18n/useAlmaLocale";
 import TradingViewAdvancedChart from "@/components/trader/TradingViewAdvancedChart";
 import { pick } from "@/lib/i18n/appLanguage";
 
@@ -115,12 +115,6 @@ type JournalForm = {
   screenshot_id: string;
   analysis_id: string;
 };
-
-function readStoredLanguage(): AlmaShellLanguage {
-  if (typeof window === "undefined") return "en";
-  const saved = window.localStorage.getItem("alma_language");
-  return saved === "en" || saved === "es" ? saved : "en";
-}
 
 const emptyData: Data = {
   watchlist: [],
@@ -581,8 +575,7 @@ function SectionHeader({
 }
 
 export default function TraderPage() {
-  const [language, setLanguage] =
-    useState<AlmaShellLanguage>(readStoredLanguage);
+  const { locale: language } = useAlmaLocale();
   const t = pick(language, copy.en, copy.es);
   const [activeTab, setActiveTab] = useState<TabKey>("overview");
   const [data, setData] = useState<Data>(emptyData);
@@ -643,11 +636,6 @@ export default function TraderPage() {
       if (chartPreview) URL.revokeObjectURL(chartPreview);
     };
   }, [chartPreview]);
-
-  function updateLanguage(next: AlmaShellLanguage) {
-    setLanguage(next);
-    localStorage.setItem("alma_language", next);
-  }
 
   const filteredWatchlist = useMemo(() => {
     const query = watchQuery.trim().toLowerCase();
@@ -1468,12 +1456,7 @@ export default function TraderPage() {
   };
 
   return (
-    <AlmaShell
-      language={language}
-      activeWorkspace="trader"
-      title={t.title}
-      onLanguageChange={updateLanguage}
-    >
+    <AlmaShell language={language} activeWorkspace="trader" title={t.title}>
       <div className="min-w-0 bg-[#F7F7F8] px-3 py-4 text-black sm:px-4 md:px-6">
         <div className="mx-auto w-full min-w-0 max-w-7xl overflow-hidden">
           <header className="mb-4 min-w-0 max-w-full">

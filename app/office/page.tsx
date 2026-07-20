@@ -12,7 +12,7 @@ import {
 import { useCallback, useEffect, useMemo, useState } from "react";
 import AlmaShell from "@/components/alma-shell/AlmaShell";
 import BilingualComposer from "@/components/communications/BilingualComposer";
-import type { AlmaShellLanguage } from "@/components/alma-shell/types";
+import { useAlmaLocale } from "@/lib/i18n/useAlmaLocale";
 
 type Tab = "overview" | "customers" | "estimates" | "invoices" | "priceBook";
 type LoadState = "loading" | "ready" | "auth" | "error";
@@ -99,7 +99,7 @@ const COPY = {
 } as const;
 
 export default function OfficePage() {
-  const [language, setLanguage] = useState<AlmaShellLanguage>("en");
+  const { locale: language } = useAlmaLocale();
   const [state, setState] = useState<LoadState>("loading");
   const [tab, setTab] = useState<Tab>("overview");
   const [overview, setOverview] = useState<OfficeOverview | null>(null);
@@ -118,13 +118,11 @@ export default function OfficePage() {
         servicesResponse,
         estimatesResponse,
         customersResponse,
-        languageResponse,
       ] = await Promise.all([
         fetch("/api/office/overview", { cache: "no-store" }),
         fetch("/api/office/services", { cache: "no-store" }),
         fetch("/api/office/estimates", { cache: "no-store" }),
         fetch("/api/office/customers", { cache: "no-store" }),
-        fetch("/api/settings/language", { cache: "no-store" }),
       ]);
       if (overviewResponse.status === 401) {
         setState("auth");
@@ -139,10 +137,6 @@ export default function OfficePage() {
       setServices(servicesPayload.services ?? []);
       setEstimates(estimatesPayload.estimates ?? []);
       setCustomers(customersPayload.customers ?? {});
-      if (languageResponse.ok) {
-        const languagePayload = await languageResponse.json();
-        setLanguage(languagePayload.language === "es" ? "es" : "en");
-      }
       setState("ready");
     } catch {
       setState("error");
@@ -196,12 +190,7 @@ export default function OfficePage() {
   }
 
   return (
-    <AlmaShell
-      language={language}
-      activeWorkspace="apps"
-      title={copy.title}
-      onLanguageChange={setLanguage}
-    >
+    <AlmaShell language={language} activeWorkspace="apps" title={copy.title}>
       <div className="min-h-full px-4 pb-24 pt-6 text-[#111111] md:px-8 md:pb-10 md:pt-10">
         <div className="mx-auto max-w-6xl">
           <header className="mb-6">

@@ -14,7 +14,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import AlmaShell from "@/components/alma-shell/AlmaShell";
 import BilingualComposer from "@/components/communications/BilingualComposer";
 import RealtimeConversationInterpreter from "@/components/translator/RealtimeConversationInterpreter";
-import type { AlmaShellLanguage } from "@/components/alma-shell/types";
+import { useAlmaLocale } from "@/lib/i18n/useAlmaLocale";
 
 type Mode = "text" | "talk" | "conversation";
 type RecorderState =
@@ -87,7 +87,7 @@ const COPY = {
 } as const;
 
 export default function TranslatorPage() {
-  const [language, setLanguage] = useState<AlmaShellLanguage>("en");
+  const { locale: language } = useAlmaLocale();
   const [mode, setMode] = useState<Mode>("text");
   const [state, setState] = useState<RecorderState>("idle");
   const [transcript, setTranscript] = useState("");
@@ -105,16 +105,6 @@ export default function TranslatorPage() {
     url: string;
   } | null>(null);
   const copy = COPY[language];
-
-  const loadLanguage = useCallback(async () => {
-    const response = await fetch("/api/settings/language", {
-      cache: "no-store",
-    });
-    if (response.ok) {
-      const payload = await response.json();
-      setLanguage(payload.language === "es" ? "es" : "en");
-    }
-  }, []);
 
   const stopMicrophoneTracks = useCallback(() => {
     recorderStream.current?.getTracks().forEach((track) => track.stop());
@@ -148,11 +138,6 @@ export default function TranslatorPage() {
     chunks.current = [];
     recorder.current = null;
   }, [stopMicrophoneTracks]);
-
-  useEffect(() => {
-    const id = window.setTimeout(() => void loadLanguage(), 0);
-    return () => window.clearTimeout(id);
-  }, [loadLanguage]);
 
   useEffect(() => {
     function handleVisibilityChange() {
@@ -304,12 +289,7 @@ export default function TranslatorPage() {
   }
 
   return (
-    <AlmaShell
-      language={language}
-      activeWorkspace="apps"
-      title={copy.title}
-      onLanguageChange={setLanguage}
-    >
+    <AlmaShell language={language} activeWorkspace="apps" title={copy.title}>
       <div className="min-h-full px-4 pb-24 pt-6 text-[#111111] md:px-8 md:pb-10 md:pt-10">
         <div className="mx-auto max-w-5xl">
           <header className="mb-6">

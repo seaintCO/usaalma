@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import AlmaShell from "@/components/alma-shell/AlmaShell";
 import type { AlmaShellLanguage } from "@/components/alma-shell/types";
+import { useAlmaLocale } from "@/lib/i18n/useAlmaLocale";
 import { WORKSPACE_ROUTES } from "@/lib/platform/workspaceRoutes";
 import {
   BUILDER_STARTERS,
@@ -70,7 +71,7 @@ const COPY = {
 
 export default function NewBuilderProjectPage() {
   const router = useRouter();
-  const [language, setLanguage] = useState<AlmaShellLanguage>("en");
+  const { locale: language } = useAlmaLocale();
   const [projectType, setProjectType] = useState<BuilderProjectType>("website");
   const [starterKey, setStarterKey] =
     useState<BuilderStarter["key"]>("landing_page");
@@ -118,12 +119,7 @@ export default function NewBuilderProjectPage() {
   }
 
   return (
-    <AlmaShell
-      language={language}
-      activeWorkspace="apps"
-      title={copy.title}
-      onLanguageChange={setLanguage}
-    >
+    <AlmaShell language={language} activeWorkspace="apps" title={copy.title}>
       <main className="min-h-full px-4 pb-24 pt-6 text-[#111111] md:px-8 md:pb-10 md:pt-10">
         <div className="mx-auto max-w-4xl">
           <Link

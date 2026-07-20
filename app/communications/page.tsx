@@ -4,7 +4,7 @@ import { Inbox, Loader2, MessageCircle, RefreshCw, Send } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import AlmaShell from "@/components/alma-shell/AlmaShell";
 import BilingualComposer from "@/components/communications/BilingualComposer";
-import type { AlmaShellLanguage } from "@/components/alma-shell/types";
+import { useAlmaLocale } from "@/lib/i18n/useAlmaLocale";
 
 type Thread = {
   id: string;
@@ -55,7 +55,7 @@ const COPY = {
 } as const;
 
 export default function CommunicationsPage() {
-  const [language, setLanguage] = useState<AlmaShellLanguage>("en");
+  const { locale: language } = useAlmaLocale();
   const [state, setState] = useState<LoadState>("loading");
   const [threads, setThreads] = useState<Thread[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -66,10 +66,9 @@ export default function CommunicationsPage() {
   const load = useCallback(async () => {
     setState("loading");
     try {
-      const [threadsResponse, languageResponse] = await Promise.all([
-        fetch("/api/communications/threads", { cache: "no-store" }),
-        fetch("/api/settings/language", { cache: "no-store" }),
-      ]);
+      const threadsResponse = await fetch("/api/communications/threads", {
+        cache: "no-store",
+      });
       if (threadsResponse.status === 401) {
         setState("auth");
       } else if (!threadsResponse.ok) {
@@ -80,10 +79,6 @@ export default function CommunicationsPage() {
         setThreads(nextThreads);
         setSelectedId((current) => current ?? nextThreads[0]?.id ?? null);
         setState("ready");
-      }
-      if (languageResponse.ok) {
-        const payload = await languageResponse.json();
-        setLanguage(payload.language === "es" ? "es" : "en");
       }
     } catch {
       setState("error");
@@ -120,12 +115,7 @@ export default function CommunicationsPage() {
   }
 
   return (
-    <AlmaShell
-      language={language}
-      activeWorkspace="apps"
-      title={copy.title}
-      onLanguageChange={setLanguage}
-    >
+    <AlmaShell language={language} activeWorkspace="apps" title={copy.title}>
       <div className="min-h-full px-4 pb-24 pt-6 text-[#111111] md:px-8 md:pb-10 md:pt-10">
         <div className="mx-auto max-w-6xl">
           <header className="mb-6">

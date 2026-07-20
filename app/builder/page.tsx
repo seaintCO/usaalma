@@ -11,7 +11,7 @@ import {
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import AlmaShell from "@/components/alma-shell/AlmaShell";
-import type { AlmaShellLanguage } from "@/components/alma-shell/types";
+import { useAlmaLocale } from "@/lib/i18n/useAlmaLocale";
 import { WORKSPACE_ROUTES } from "@/lib/platform/workspaceRoutes";
 import type { BuilderProject } from "@/lib/builder/types";
 
@@ -58,7 +58,7 @@ const COPY = {
 } as const;
 
 export default function BuilderPage() {
-  const [language, setLanguage] = useState<AlmaShellLanguage>("en");
+  const { locale: language } = useAlmaLocale();
   const [state, setState] = useState<LoadState>("loading");
   const [projects, setProjects] = useState<BuilderProject[]>([]);
   const copy = COPY[language];
@@ -66,10 +66,9 @@ export default function BuilderPage() {
   const load = useCallback(async () => {
     setState("loading");
     try {
-      const [projectsResponse, languageResponse] = await Promise.all([
-        fetch("/api/builder/projects", { cache: "no-store" }),
-        fetch("/api/settings/language", { cache: "no-store" }),
-      ]);
+      const projectsResponse = await fetch("/api/builder/projects", {
+        cache: "no-store",
+      });
       const payload = await projectsResponse.json().catch(() => ({}));
       if (projectsResponse.status === 401) {
         setProjects([]);
@@ -87,10 +86,6 @@ export default function BuilderPage() {
         setProjects(payload.projects ?? []);
         setState("ready");
       }
-      if (languageResponse.ok) {
-        const languagePayload = await languageResponse.json();
-        setLanguage(languagePayload.language === "es" ? "es" : "en");
-      }
     } catch {
       setState("error");
     }
@@ -102,12 +97,7 @@ export default function BuilderPage() {
   }, [load]);
 
   return (
-    <AlmaShell
-      language={language}
-      activeWorkspace="apps"
-      title={copy.title}
-      onLanguageChange={setLanguage}
-    >
+    <AlmaShell language={language} activeWorkspace="apps" title={copy.title}>
       <main className="min-h-full px-4 pb-24 pt-6 text-[#111111] md:px-8 md:pb-10 md:pt-10">
         <div className="mx-auto max-w-6xl">
           <header className="mb-8">

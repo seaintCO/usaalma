@@ -23,6 +23,10 @@ Date: 2026-07-20
 | Documents                                              | Covered | Covered | Canonical live locale, upload/search/download/delete states and localized confirmation          |
 | Apps, Marketplace, Approvals, Connections and Settings | Covered | Covered | Canonical live locale replaces per-page language fetch/state                                    |
 | Workspaces                                             | Covered | Covered | Shared shell, personal fallback, owned create/list/invite and truthful request states           |
+| Office and Communications                              | Covered | Covered | Canonical live locale replaces isolated API-backed language state                               |
+| Translator                                             | Covered | Covered | Interface locale is canonical; translation direction remains an independent feature control     |
+| Fitness, Images, Creative, Launch Studio and Trader    | Covered | Covered | Existing paired dictionaries now consume canonical live locale                                  |
+| Builder list and create                                | Covered | Covered | Canonical live locale; project language remains a separate project setting                      |
 | Apps                                                   | Covered | Covered | Page dictionary exists; catalog module metadata still needs canonical localized registry fields |
 | Builder project workbench                              | Covered | Partial | Technical workbench strings and event-stage translations remain to centralize                   |
 | Remaining canonical modules                            | Partial | Partial | Existing page-local dictionaries require consolidation and parity validation                    |

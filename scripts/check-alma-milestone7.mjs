@@ -151,10 +151,39 @@ for (const pagePath of [
   "app/approvals/page.tsx",
   "app/connections/page.tsx",
   "app/settings/page.tsx",
+  "app/office/page.tsx",
+  "app/communications/page.tsx",
+  "app/translator/page.tsx",
+  "app/fitness/page.tsx",
+  "app/images/page.tsx",
+  "app/creative/page.tsx",
+  "app/launch-studio/page.tsx",
+  "app/trader/page.tsx",
+  "app/builder/page.tsx",
+  "app/builder/new/page.tsx",
 ]) {
   assert(
     read(pagePath).includes("useAlmaLocale"),
     `${pagePath} is not synchronized to the canonical locale.`,
+  );
+}
+
+const UI_LITERAL_ALLOWLIST = new Set(["ALMA"]);
+for (const pagePath of [
+  "app/tasks/page.tsx",
+  "app/planner/page.tsx",
+  "app/notes/page.tsx",
+  "app/documents/page.tsx",
+  "app/workspaces/page.tsx",
+]) {
+  const candidates = [
+    ...read(pagePath).matchAll(/>\s*([A-Za-z][A-Za-z ]{2,})\s*</g),
+  ]
+    .map((match) => match[1].trim())
+    .filter((literal) => !UI_LITERAL_ALLOWLIST.has(literal));
+  assert(
+    candidates.length === 0,
+    `${pagePath} contains untranslated JSX literals: ${candidates.join(", ")}`,
   );
 }
 

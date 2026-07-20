@@ -20,6 +20,65 @@ Baseline blockers:
 - Approval center is not product-complete.
 - Shared tenant/workspace model is not the canonical data boundary yet.
 
+## Milestone 6: Runtime Readiness, App Navigation, And Builder Workbench
+
+Status: in progress.
+
+Confirmed runtime root cause:
+
+- The local environment contains `NEXT_PUBLIC_SUPABASE_URL` and
+  `NEXT_PUBLIC_SUPABASE_ANON_KEY`, but does not contain
+  `SUPABASE_SERVICE_ROLE_KEY`.
+- Durable chat enqueue, durable chat polling, and the internal chat-run
+  processor create a service-role Supabase client because they persist and read
+  trusted queue/execution state that normal authenticated RLS clients cannot
+  mutate safely.
+- Before this milestone, `lib/supabase/admin.ts` and the worker-secret branch of
+  `lib/supabase/server.ts` passed non-null asserted environment values directly
+  to the Supabase SDK. When the service-role key was absent, the SDK threw the
+  raw error `supabaseKey is required`.
+- `/api/chat/stream` also caught processor errors and streamed a generic
+  assistant-looking message over HTTP 200 without a machine-readable terminal
+  failure marker, which allowed the client to treat failed processing as a
+  completed response.
+
+Initial repair decisions:
+
+- Add one server-only runtime readiness layer that separates public Supabase,
+  service-role Supabase, optional provider, durable-chat, Builder control-plane,
+  Builder Gateway, and Builder Worker configuration.
+- Return only safe readiness metadata: capability, ready state, `SET`,
+  `MISSING`, or `INVALID`, safe missing variable names, retryability, and a
+  remediation message. Never return or log secret values.
+- Keep durable chat service-role use for queue/execution ownership transitions;
+  do not use service role to bypass user-facing data ownership.
+- Add a structured terminal stream marker so legacy streaming can preserve the
+  streaming transport while still rendering a failed terminal state with Retry.
+
+Implemented in this milestone pass:
+
+- Canonical, value-free readiness evaluation plus server-only Supabase accessors
+  and a browser-safe public configuration accessor.
+- Structured legacy-stream terminal errors consumed by the existing retry card.
+- Additive `app_navigation_preferences` persistence with personal/workspace
+  uniqueness, RLS, ownership validation, deterministic ordering, registry
+  constraints, and entitlement-checked pin/unpin APIs.
+- A bounded My Apps section in the shared navigation and persistent Apps-page
+  install, pin, unpin, open, and upgrade actions.
+- A project-scoped dark Builder workbench with a real event feed, responsive
+  preview widths, allowlisted sandboxed previews, checkpoint history, real
+  session submission/cancellation, and explicit unavailable states for source
+  and direct-design editing that are not safely connected yet.
+
+Still blocked or intentionally deferred:
+
+- No live paid Builder job was started.
+- Artifact file browsing, checkpoint restore, direct design/source edits,
+  publishing, and source push remain unavailable until their protected and
+  ownership-checked executors are connected.
+- The app-navigation migration must be applied by an authorized operator before
+  pinning can persist in a deployed environment.
+
 ## Milestone 0: Audit And Baseline
 
 Status: completed at `080d1de`.

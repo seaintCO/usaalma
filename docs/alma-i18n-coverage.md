@@ -26,10 +26,11 @@ Date: 2026-07-20
 | Office and Communications                              | Covered | Covered | Canonical live locale replaces isolated API-backed language state                               |
 | Translator                                             | Covered | Covered | Interface locale is canonical; translation direction remains an independent feature control     |
 | Fitness, Images, Creative, Launch Studio and Trader    | Covered | Covered | Existing paired dictionaries now consume canonical live locale                                  |
+| CRM, Invoicing and Construction                        | Covered | Covered | Secondary business routes now consume canonical live locale; invoice action labels are localized |
 | Builder list and create                                | Covered | Covered | Canonical live locale; project language remains a separate project setting                      |
 | Apps                                                   | Covered | Covered | Page dictionary exists; catalog module metadata still needs canonical localized registry fields |
 | Builder project workbench                              | Covered | Partial | Technical workbench strings and event-stage translations remain to centralize                   |
-| Remaining canonical modules                            | Partial | Partial | Existing page-local dictionaries require consolidation and parity validation                    |
+| Legacy and non-registry routes                         | Partial | Partial | Admin, experimental, and older standalone pages require separate release-scope decisions         |
 
 ## Known legacy systems to retire safely
 

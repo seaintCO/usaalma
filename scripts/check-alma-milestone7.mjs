@@ -163,6 +163,9 @@ for (const pagePath of [
   "app/builder/new/page.tsx",
   "app/agents/page.tsx",
   "app/dashboard/page.tsx",
+  "app/crm/page.tsx",
+  "app/invoicing/page.tsx",
+  "app/construction/page.tsx",
 ]) {
   assert(
     read(pagePath).includes("useAlmaLocale"),

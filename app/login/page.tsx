@@ -1,75 +1,96 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
+import AuthLocaleToggle from "@/components/auth/AuthLocaleToggle";
+import { authMessages } from "@/lib/i18n/messages";
+import { useAlmaLocale } from "@/lib/i18n/useAlmaLocale";
 import { createClient } from "@/lib/supabase/client";
 
 export default function LoginPage() {
+  const { locale } = useAlmaLocale();
+  const text = authMessages[locale];
   const supabase = createClient();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  async function login(e:React.FormEvent) {
-    e.preventDefault();
+  async function login(event: React.FormEvent) {
+    event.preventDefault();
+    if (loading) return;
     setLoading(true);
-
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-
+    setError("");
+    const result = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
-
-    if (error) {
-      alert(error.message);
-      return;
-    }
-
-    window.location.href = "/dashboard";
+    if (result.error) return setError(text.loginFailed);
+    window.location.assign("/dashboard");
   }
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-[#F7F7F8] px-5 text-black">
-      <div className="w-full max-w-md rounded-[2rem] border border-[#E5E7EB] bg-white p-8 shadow-2xl shadow-black/10">
-        <div className="text-center">
+      <div className="w-full max-w-md rounded-[2rem] border border-[#E5E7EB] bg-white p-7 shadow-xl shadow-black/5 md:p-8">
+        <AuthLocaleToggle />
+        <div className="mt-5 text-center">
           <h1 className="text-4xl font-normal tracking-tight">ALMA</h1>
-          <p className="mt-1 text-sm text-[#6B7280]">Powered by SEAINT</p>
+          <p className="mt-1 text-sm text-[#6B7280]">{text.poweredBy}</p>
         </div>
-
-        <div className="mt-10">
-          <h2 className="text-4xl font-normal tracking-tight">Iniciar sesión</h2>
-          <p className="mt-3 text-lg leading-8 text-[#6B7280]">
-            Entra a tu sistema operativo personal y empresarial.
+        <div className="mt-8">
+          <h2 className="text-3xl font-normal tracking-tight">
+            {text.loginTitle}
+          </h2>
+          <p className="mt-3 text-base leading-7 text-[#6B7280]">
+            {text.loginSubtitle}
           </p>
         </div>
-
-        <form onSubmit={login} className="mt-8 space-y-4" autoComplete="on">
-          <input
-            value={email}
-            onChange={(e)=>setEmail(e.target.value)}
-            type="email"
-            autoComplete="email"
-            inputMode="email"
-            required
-            placeholder="Correo electrónico"
-            className="w-full rounded-2xl border border-[#E5E7EB] bg-white px-5 py-4 text-lg outline-none focus:border-black"
-          />
-
-          <input
-            value={password}
-            onChange={(e)=>setPassword(e.target.value)}
-            type="password"
-            autoComplete="current-password"
-            required
-            placeholder="Contraseña"
-            className="w-full rounded-2xl border border-[#E5E7EB] bg-white px-5 py-4 text-lg outline-none focus:border-black"
-          />
-
-          <button disabled={loading} className="w-full rounded-2xl bg-black py-4 text-lg font-medium text-white disabled:opacity-50">
-            {loading ? "Entrando..." : "Entrar"}
+        <form onSubmit={login} className="mt-7 space-y-4" autoComplete="on">
+          <label className="block text-sm font-medium">
+            <span>{text.email}</span>
+            <input
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              type="email"
+              autoComplete="email"
+              inputMode="email"
+              required
+              aria-label={text.email}
+              className="mt-2 w-full rounded-2xl border border-[#D1D5DB] px-4 py-3 outline-none focus:border-black"
+            />
+          </label>
+          <label className="block text-sm font-medium">
+            <span>{text.password}</span>
+            <input
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              type="password"
+              autoComplete="current-password"
+              required
+              aria-label={text.password}
+              className="mt-2 w-full rounded-2xl border border-[#D1D5DB] px-4 py-3 outline-none focus:border-black"
+            />
+          </label>
+          {error ? (
+            <p
+              role="alert"
+              className="rounded-xl bg-red-50 p-3 text-sm text-red-800"
+            >
+              {error}
+            </p>
+          ) : null}
+          <button
+            disabled={loading}
+            className="w-full rounded-2xl bg-black py-3.5 font-medium text-white disabled:opacity-50"
+          >
+            {loading ? text.signingIn : text.signIn}
           </button>
         </form>
-
-        <div className="mt-8 flex items-center justify-between text-sm text-[#6B7280]">
-          <a href="/forgot-password" className="hover:text-black">Olvidé mi contraseña</a>
-          <a href="/signup" className="hover:text-black">Crear cuenta</a>
+        <div className="mt-7 flex items-center justify-between gap-4 text-sm text-[#6B7280]">
+          <Link href="/forgot-password" className="hover:text-black">
+            {text.forgot}
+          </Link>
+          <Link href="/signup" className="hover:text-black">
+            {text.createAccount}
+          </Link>
         </div>
       </div>
     </main>

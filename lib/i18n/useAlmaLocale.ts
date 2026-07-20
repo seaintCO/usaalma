@@ -20,9 +20,10 @@ function initialLocale(): AlmaLocale {
 }
 
 export function useAlmaLocale() {
-  const [locale, setLocaleState] = useState<AlmaLocale>(initialLocale);
+  const [locale, setLocaleState] = useState<AlmaLocale>(DEFAULT_ALMA_LOCALE);
 
   useEffect(() => {
+    setLocaleState(initialLocale());
     const onChange = (event: Event) => {
       const next = (event as CustomEvent<unknown>).detail;
       if (isAlmaLocale(next)) setLocaleState(next);

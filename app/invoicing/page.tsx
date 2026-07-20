@@ -2,15 +2,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { Download, Plus, RefreshCw, Trash2 } from "lucide-react";
 import AlmaShell from "@/components/alma-shell/AlmaShell";
-import type { AlmaShellLanguage } from "@/components/alma-shell/types";
-import { pick } from "@/lib/i18n/appLanguage";
+import { useAlmaLocale } from "@/lib/i18n/useAlmaLocale";
 import { DASHBOARD_ROUTE } from "@/lib/platform/workspaceRoutes";
-
-function readStoredLanguage(): AlmaShellLanguage {
-  if (typeof window === "undefined") return "en";
-  const saved = window.localStorage.getItem("alma_language");
-  return saved === "en" || saved === "es" ? saved : "en";
-}
 
 type Invoice = {
   id: string;
@@ -51,6 +44,9 @@ const copy = {
     retry: "Retry",
     delete: "Delete draft",
     duplicate: "Duplicate",
+    send: "Send",
+    markPaid: "Mark paid",
+    deleteLine: "Delete line",
     loading: "Loading invoices…",
     error: "Invoices could not be loaded.",
   },
@@ -71,6 +67,9 @@ const copy = {
     retry: "Reintentar",
     delete: "Eliminar borrador",
     duplicate: "Duplicar",
+    send: "Enviar",
+    markPaid: "Marcar como pagada",
+    deleteLine: "Eliminar concepto",
     loading: "Cargando facturas…",
     error: "No se pudieron cargar las facturas.",
   },
@@ -83,8 +82,8 @@ const newLine = (): Line => ({
   line_total: 0,
 });
 export default function InvoicingPage() {
-  const [lang, setLang] = useState<AlmaShellLanguage>(readStoredLanguage);
-  const t = pick(lang, copy.en, copy.es);
+  const { locale: lang, setLocale } = useAlmaLocale();
+  const t = copy[lang];
   const [invoices, setInvoices] = useState<Invoice[]>([]),
     [selected, setSelected] = useState<Invoice | null>(null),
     [lines, setLines] = useState<Line[]>([]),
@@ -112,10 +111,6 @@ export default function InvoicingPage() {
   useEffect(() => {
     void load();
   }, [load]);
-  function updateLanguage(next: AlmaShellLanguage) {
-    setLang(next);
-    localStorage.setItem("alma_language", next);
-  }
   const open = async (id: string) => {
     const r = await fetch(`/api/invoices/${id}`);
     if (!r.ok) return;
@@ -224,7 +219,7 @@ export default function InvoicingPage() {
       language={lang}
       activeWorkspace="invoicing"
       title={t.title}
-      onLanguageChange={updateLanguage}
+      onLanguageChange={setLocale}
     >
       <div className="p-4 text-[#111111] md:p-8">
         <div className="mx-auto max-w-7xl">
@@ -410,7 +405,7 @@ export default function InvoicingPage() {
                           className="rounded-lg bg-[#F7F7F8] p-2 text-sm"
                         />
                         <button
-                          aria-label="Delete line"
+                          aria-label={t.deleteLine}
                           onClick={() => void deleteLine(line)}
                           className="p-2 text-red-600"
                         >
@@ -446,7 +441,7 @@ export default function InvoicingPage() {
                           onClick={() => void lifecycle("sent")}
                           className="rounded-full border px-4 py-2 text-sm"
                         >
-                          Send
+                          {t.send}
                         </button>
                         <button
                           onClick={() => void remove()}
@@ -463,7 +458,7 @@ export default function InvoicingPage() {
                         onClick={() => void lifecycle("paid")}
                         className="rounded-full border px-4 py-2 text-sm"
                       >
-                        Mark paid
+                        {t.markPaid}
                       </button>
                     )}
                     <button

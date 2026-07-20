@@ -11,7 +11,8 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import AlmaShell from "@/components/alma-shell/AlmaShell";
-import type { AlmaShellLanguage } from "@/components/alma-shell/types";
+import BilingualComposer from "@/components/communications/BilingualComposer";
+import { useAlmaLocale } from "@/lib/i18n/useAlmaLocale";
 
 type ApprovalStatus =
   | "proposed"
@@ -69,6 +70,7 @@ const COPY = {
     subject: "Subject",
     body: "Body",
     readOnly: "This approval cannot be edited here.",
+    composer: "Message helper",
   },
   es: {
     title: "Aprobaciones",
@@ -94,6 +96,7 @@ const COPY = {
     subject: "Asunto",
     body: "Cuerpo",
     readOnly: "Esta aprobacion no se puede editar aqui.",
+    composer: "Ayuda para mensaje",
   },
 } as const;
 
@@ -124,7 +127,7 @@ function payloadLabel(payload: Record<string, unknown>) {
 }
 
 export default function ApprovalsPage() {
-  const [language, setLanguage] = useState<AlmaShellLanguage>("en");
+  const { locale: language } = useAlmaLocale();
   const [approvals, setApprovals] = useState<UnifiedApproval[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [filter, setFilter] = useState<ApprovalFilter>("pending");
@@ -136,10 +139,9 @@ export default function ApprovalsPage() {
   const load = useCallback(async () => {
     setState("loading");
     try {
-      const [approvalResponse, languageResponse] = await Promise.all([
-        fetch("/api/approvals", { cache: "no-store" }),
-        fetch("/api/settings/language", { cache: "no-store" }),
-      ]);
+      const approvalResponse = await fetch("/api/approvals", {
+        cache: "no-store",
+      });
       const payload = (await approvalResponse.json()) as {
         ok?: boolean;
         approvals?: UnifiedApproval[];
@@ -162,10 +164,6 @@ export default function ApprovalsPage() {
         setApprovals(nextApprovals);
         setSelectedId((current) => current ?? nextApprovals[0]?.id ?? null);
         setState("ready");
-      }
-      if (languageResponse.ok) {
-        const languagePayload = await languageResponse.json();
-        setLanguage(languagePayload.language === "es" ? "es" : "en");
       }
     } catch {
       setState("error");
@@ -227,7 +225,6 @@ export default function ApprovalsPage() {
       language={language}
       activeWorkspace="approvals"
       title={copy.title}
-      onLanguageChange={setLanguage}
     >
       <div className="min-h-full px-4 pb-24 pt-6 text-[#111111] md:px-8 md:pb-10 md:pt-10">
         <div className="mx-auto max-w-6xl">
@@ -379,39 +376,86 @@ export default function ApprovalsPage() {
                         {copy.payload}
                       </h3>
                       {selected.editable &&
-                      selected.actionKey === "gmail.send" ? (
+                      (selected.actionKey === "gmail.send" ||
+                        selected.actionKey === "office.estimate.deliver" ||
+                        selected.actionKey === "whatsapp.message.send") ? (
                         <div className="space-y-3">
                           <Field
                             label={copy.to}
-                            value={safeString(draftPayload.to)}
+                            value={safeString(
+                              draftPayload.to ??
+                                draftPayload.recipient ??
+                                draftPayload.toPhone,
+                            )}
                             onChange={(value) =>
                               setDraftPayload((current) => ({
                                 ...current,
-                                to: value,
+                                ...(selected.actionKey === "gmail.send"
+                                  ? { to: value }
+                                  : selected.actionKey ===
+                                      "whatsapp.message.send"
+                                    ? { toPhone: value }
+                                    : { recipient: value }),
                               }))
                             }
                           />
-                          <Field
-                            label={copy.subject}
-                            value={safeString(draftPayload.subject)}
-                            onChange={(value) =>
-                              setDraftPayload((current) => ({
-                                ...current,
-                                subject: value,
-                              }))
-                            }
-                          />
+                          {selected.actionKey !== "whatsapp.message.send" ? (
+                            <Field
+                              label={copy.subject}
+                              value={safeString(draftPayload.subject)}
+                              onChange={(value) =>
+                                setDraftPayload((current) => ({
+                                  ...current,
+                                  subject: value,
+                                }))
+                              }
+                            />
+                          ) : null}
                           <Field
                             label={copy.body}
-                            value={safeString(draftPayload.body)}
+                            value={safeString(
+                              draftPayload.body ?? draftPayload.message,
+                            )}
                             rows={8}
                             onChange={(value) =>
                               setDraftPayload((current) => ({
                                 ...current,
-                                body: value,
+                                ...(selected.actionKey === "gmail.send"
+                                  ? { body: value }
+                                  : selected.actionKey ===
+                                      "whatsapp.message.send"
+                                    ? { body: value }
+                                    : { message: value }),
                               }))
                             }
                           />
+                          <div>
+                            <p className="mb-2 text-xs font-medium text-[#6B7280]">
+                              {copy.composer}
+                            </p>
+                            <BilingualComposer
+                              channel={
+                                selected.actionKey === "office.estimate.deliver"
+                                  ? "office"
+                                  : "email"
+                              }
+                              initialText={safeString(
+                                draftPayload.body ?? draftPayload.message,
+                              )}
+                              language={language}
+                              onUse={(value) =>
+                                setDraftPayload((current) => ({
+                                  ...current,
+                                  ...(selected.actionKey === "gmail.send"
+                                    ? { body: value }
+                                    : selected.actionKey ===
+                                        "whatsapp.message.send"
+                                      ? { body: value }
+                                      : { message: value }),
+                                }))
+                              }
+                            />
+                          </div>
                         </div>
                       ) : (
                         <pre className="max-h-[420px] overflow-auto rounded-xl bg-[#F7F7F8] p-3 text-xs leading-5 text-[#374151]">

@@ -21,7 +21,7 @@ import {
   X,
 } from "lucide-react";
 import AlmaShell from "@/components/alma-shell/AlmaShell";
-import type { AlmaShellLanguage } from "@/components/alma-shell/types";
+import { useAlmaLocale } from "@/lib/i18n/useAlmaLocale";
 
 type TabKey = "today" | "meals" | "add" | "goals" | "progress";
 type MealKey = "breakfast" | "lunch" | "dinner" | "snack";
@@ -295,12 +295,6 @@ const COPY = {
   },
 };
 
-function readStoredLanguage(): AlmaShellLanguage {
-  if (typeof window === "undefined") return "en";
-  const saved = window.localStorage.getItem("alma_language");
-  return saved === "en" || saved === "es" ? saved : "en";
-}
-
 function numberValue(value: string | number | null | undefined) {
   const parsed = Number(value || 0);
   return Number.isFinite(parsed) ? parsed : 0;
@@ -352,8 +346,7 @@ function normalizeMeal(meal: string | null | undefined): MealKey {
 }
 
 export default function FitnessPage() {
-  const [language, setLanguage] =
-    useState<AlmaShellLanguage>(readStoredLanguage);
+  const { locale: language } = useAlmaLocale();
   const t = COPY[language];
   const [activeTab, setActiveTab] = useState<TabKey>("today");
   const [goals, setGoals] = useState<Goals>(DEFAULT_GOALS);
@@ -493,11 +486,6 @@ export default function FitnessPage() {
       window.clearTimeout(timeout);
     };
   }, [searchQuery]);
-
-  function updateLanguage(next: AlmaShellLanguage) {
-    setLanguage(next);
-    localStorage.setItem("alma_language", next);
-  }
 
   const totals = summary?.totals || EMPTY_TOTALS;
   const calorieTarget = numberValue(goals.calories);
@@ -820,12 +808,7 @@ export default function FitnessPage() {
   ];
 
   return (
-    <AlmaShell
-      language={language}
-      activeWorkspace="fitness"
-      title={t.title}
-      onLanguageChange={updateLanguage}
-    >
+    <AlmaShell language={language} activeWorkspace="fitness" title={t.title}>
       <div className="min-w-0 bg-[#F7F7F8] px-3 py-4 text-black sm:px-4 md:px-6">
         <div className="mx-auto w-full min-w-0 max-w-7xl overflow-hidden">
           <header className="mb-4 min-w-0">

@@ -1,8 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
+import { getSupabaseServiceRoleConfig } from "@/lib/runtime/config";
 
 export function createAdminClient() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
+  const config = getSupabaseServiceRoleConfig();
+  return createClient(config.url, config.serviceRoleKey);
 }

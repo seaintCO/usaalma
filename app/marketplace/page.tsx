@@ -6,13 +6,12 @@ import {
 } from "@/components/marketplace/MarketplaceCatalogCard";
 import { MarketplaceDetailDialog } from "@/components/marketplace/MarketplaceDetailDialog";
 import AlmaShell from "@/components/alma-shell/AlmaShell";
-import type { AlmaShellLanguage } from "@/components/alma-shell/types";
 import {
   getMarketplaceCopy,
   localizeMarketplaceItem,
   MARKETPLACE_CATEGORIES,
-  type MarketplaceLanguage,
 } from "@/components/marketplace/marketplaceCopy";
+import { useAlmaLocale } from "@/lib/i18n/useAlmaLocale";
 import { DASHBOARD_ROUTE } from "@/lib/platform/workspaceRoutes";
 import type {
   MarketplaceCatalogErrorResponse,
@@ -129,7 +128,7 @@ export default function MarketplacePage() {
   );
   const [state, setState] = useState<LoadState>("loading");
   const [error, setError] = useState<string | null>(null);
-  const [language, setLanguage] = useState<MarketplaceLanguage>("en");
+  const { locale: language } = useAlmaLocale();
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState<"all" | MarketplaceItem["category"]>(
     "all",
@@ -144,10 +143,6 @@ export default function MarketplacePage() {
 
   const copy = getMarketplaceCopy(language);
 
-  function updateLanguage(next: AlmaShellLanguage) {
-    setLanguage(next);
-  }
-
   const loadCatalog = useCallback(async () => {
     requestRef.current?.abort();
     const controller = new AbortController();
@@ -156,16 +151,10 @@ export default function MarketplacePage() {
     setError(null);
 
     try {
-      const [catalogResponse, languageResponse] = await Promise.all([
-        fetch("/api/marketplace/catalog", {
-          signal: controller.signal,
-          cache: "no-store",
-        }),
-        fetch("/api/settings/language", {
-          signal: controller.signal,
-          cache: "no-store",
-        }),
-      ]);
+      const catalogResponse = await fetch("/api/marketplace/catalog", {
+        signal: controller.signal,
+        cache: "no-store",
+      });
       const payload: unknown = await catalogResponse.json();
       if (catalogResponse.status === 401) {
         if (!controller.signal.aborted) {
@@ -182,10 +171,6 @@ export default function MarketplacePage() {
       if (!controller.signal.aborted) {
         setCatalog(payload);
         setState("ready");
-      }
-      if (languageResponse.ok && !controller.signal.aborted) {
-        const languagePayload = await languageResponse.json();
-        setLanguage(languagePayload.language === "es" ? "es" : "en");
       }
     } catch (loadError) {
       if (controller.signal.aborted) return;
@@ -299,7 +284,6 @@ export default function MarketplacePage() {
       language={language}
       activeWorkspace="marketplace"
       title={copy.eyebrow}
-      onLanguageChange={updateLanguage}
     >
       <div className="px-6 py-10 text-[#111111]">
         <div className="mx-auto max-w-7xl">

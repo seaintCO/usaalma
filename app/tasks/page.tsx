@@ -17,6 +17,7 @@ import {
 import { useEffect, useMemo, useState } from "react";
 import AlmaShell from "@/components/alma-shell/AlmaShell";
 import type { AlmaShellLanguage } from "@/components/alma-shell/types";
+import { useAlmaLocale } from "@/lib/i18n/useAlmaLocale";
 
 type TaskPriority = "low" | "medium" | "high" | "urgent";
 type TaskStatus = "open" | "in_progress" | "completed" | "cancelled";
@@ -45,12 +46,6 @@ type TaskDraft = {
   dueTime: string;
 };
 
-function readStoredLanguage(): AlmaShellLanguage {
-  if (typeof window === "undefined") return "en";
-  const saved = window.localStorage.getItem("alma_language");
-  return saved === "en" || saved === "es" ? saved : "en";
-}
-
 const emptyDraft: TaskDraft = {
   title: "",
   description: "",
@@ -76,6 +71,7 @@ const copy = {
     complete: "Complete",
     reopen: "Reopen",
     delete: "Delete",
+    deleteConfirm: "Delete this task permanently?",
     edit: "Edit",
     search: "Search",
     searchPlaceholder: "Search tasks",
@@ -113,7 +109,7 @@ const copy = {
     subtitle:
       "Un espacio enfocado para prioridades, recordatorios y pendientes.",
     today: "Hoy",
-    upcoming: "Proximas",
+    upcoming: "Próximas",
     all: "Todas",
     completed: "Completadas",
     addTask: "Agregar tarea",
@@ -124,25 +120,26 @@ const copy = {
     complete: "Completar",
     reopen: "Reabrir",
     delete: "Eliminar",
+    deleteConfirm: "¿Eliminar esta tarea permanentemente?",
     edit: "Editar",
     search: "Buscar",
     searchPlaceholder: "Buscar tareas",
     status: "Estado",
     priority: "Prioridad",
-    dueDate: "Fecha limite",
-    dueTime: "Hora limite",
-    description: "Descripcion",
-    titlePlaceholder: "Titulo de la tarea",
+    dueDate: "Fecha límite",
+    dueTime: "Hora límite",
+    description: "Descripción",
+    titlePlaceholder: "Título de la tarea",
     descriptionPlaceholder: "Notas, contexto o siguiente paso",
     loading: "Cargando tareas",
-    empty: "No hay tareas aqui.",
+    empty: "No hay tareas aquí.",
     error: "No se pudieron cargar las tareas.",
-    saveError: "No se pudo guardar. Tus cambios siguen aqui.",
+    saveError: "No se pudo guardar. Tus cambios siguen aquí.",
     deleteError: "No se pudo eliminar la tarea.",
     mutationError: "No se pudo actualizar la tarea.",
-    titleRequired: "Agrega un titulo antes de guardar.",
+    titleRequired: "Agrega un título antes de guardar.",
     overdue: "Vencida",
-    noDueDate: "Sin fecha limite",
+    noDueDate: "Sin fecha límite",
     open: "Abierta",
     inProgress: "En progreso",
     cancelled: "Cancelada",
@@ -154,7 +151,7 @@ const copy = {
     manual: "Manual",
     almaChat: "ALMA",
     planner: "Planificador",
-    import: "Importacion",
+    import: "Importación",
   },
 };
 
@@ -229,8 +226,7 @@ function sourceLabel(
 }
 
 export default function TasksPage() {
-  const [language, setLanguage] =
-    useState<AlmaShellLanguage>(readStoredLanguage);
+  const { locale: language } = useAlmaLocale();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [section, setSection] = useState<Section>("today");
   const [query, setQuery] = useState("");
@@ -273,11 +269,6 @@ export default function TasksPage() {
     return () => window.clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query, priorityFilter]);
-
-  function updateLanguage(next: AlmaShellLanguage) {
-    setLanguage(next);
-    localStorage.setItem("alma_language", next);
-  }
 
   const visibleTasks = useMemo(() => {
     const today = new Date();
@@ -387,6 +378,7 @@ export default function TasksPage() {
 
   async function deleteTask(task: Task) {
     if (mutatingId) return;
+    if (!window.confirm(t.deleteConfirm)) return;
     setMutatingId(task.id);
     setError("");
     try {
@@ -415,7 +407,6 @@ export default function TasksPage() {
       activeWorkspace="tasks"
       title={t.title}
       description={t.subtitle}
-      onLanguageChange={updateLanguage}
     >
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-3 py-4 text-[#111111] sm:px-4 md:px-6 md:py-8">
         <header className="rounded-3xl border border-[#E5E7EB] bg-white p-4 shadow-sm md:p-6">

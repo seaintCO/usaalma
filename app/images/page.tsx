@@ -24,7 +24,7 @@ import {
   type ReactNode,
 } from "react";
 import AlmaShell from "@/components/alma-shell/AlmaShell";
-import type { AlmaShellLanguage } from "@/components/alma-shell/types";
+import { useAlmaLocale } from "@/lib/i18n/useAlmaLocale";
 
 type SectionKey = "create" | "edit" | "gallery";
 type AspectRatio = "square" | "landscape" | "portrait";
@@ -210,12 +210,6 @@ const ASPECTS: AspectRatio[] = ["square", "landscape", "portrait"];
 const QUALITIES: Quality[] = ["medium", "high"];
 const MAX_UPLOAD_SIZE = 10 * 1024 * 1024;
 
-function readStoredLanguage(): AlmaShellLanguage {
-  if (typeof window === "undefined") return "en";
-  const saved = window.localStorage.getItem("alma_language");
-  return saved === "en" || saved === "es" ? saved : "en";
-}
-
 function imageSrc(image?: ImageRecord | null) {
   if (!image?.image_base64) return null;
   return `data:${image.mime_type ?? "image/png"};base64,${image.image_base64}`;
@@ -236,8 +230,7 @@ function safeApiMessage(message: string | undefined, fallback: string) {
 }
 
 export default function ImagesPage() {
-  const [language, setLanguage] =
-    useState<AlmaShellLanguage>(readStoredLanguage);
+  const { locale: language } = useAlmaLocale();
   const t: ImageCopy = language === "es" ? copy.es : copy.en;
   const [section, setSection] = useState<SectionKey>("create");
   const [prompt, setPrompt] = useState("");
@@ -317,11 +310,6 @@ export default function ImagesPage() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void load();
   }, [load]);
-
-  function updateLanguage(next: AlmaShellLanguage) {
-    setLanguage(next);
-    localStorage.setItem("alma_language", next);
-  }
 
   async function runMutation<T>(
     kind: MutationKind,
@@ -472,12 +460,7 @@ export default function ImagesPage() {
   }
 
   return (
-    <AlmaShell
-      language={language}
-      activeWorkspace="images"
-      title={t.title}
-      onLanguageChange={updateLanguage}
-    >
+    <AlmaShell language={language} activeWorkspace="images" title={t.title}>
       <main className="min-w-0 overflow-x-hidden bg-[#F7F7F8] px-3 py-4 text-black md:px-6 md:py-6">
         <div className="mx-auto flex w-full max-w-7xl min-w-0 flex-col gap-4">
           <header className="rounded-2xl border border-[#E5E7EB] bg-white p-4 shadow-sm md:p-5">

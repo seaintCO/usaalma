@@ -2,15 +2,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import AlmaShell from "@/components/alma-shell/AlmaShell";
-import type { AlmaShellLanguage } from "@/components/alma-shell/types";
-import { pick } from "@/lib/i18n/appLanguage";
+import { useAlmaLocale } from "@/lib/i18n/useAlmaLocale";
 import { DASHBOARD_ROUTE } from "@/lib/platform/workspaceRoutes";
-
-function readStoredLanguage(): AlmaShellLanguage {
-  if (typeof window === "undefined") return "en";
-  const saved = window.localStorage.getItem("alma_language");
-  return saved === "en" || saved === "es" ? saved : "en";
-}
 
 type Entity = {
   id: string;
@@ -64,8 +57,8 @@ const stages = [
   "lost",
 ];
 export default function CRM() {
-  const [lang, setLang] = useState<AlmaShellLanguage>(readStoredLanguage);
-  const t = pick(lang, text.en, text.es);
+  const { locale: lang, setLocale } = useAlmaLocale();
+  const t = text[lang];
   const [data, setData] = useState<Data | null>(null),
     [contact, setContact] = useState(""),
     [company, setCompany] = useState(""),
@@ -85,10 +78,6 @@ export default function CRM() {
   useEffect(() => {
     void load();
   }, [load]);
-  function updateLanguage(next: AlmaShellLanguage) {
-    setLang(next);
-    localStorage.setItem("alma_language", next);
-  }
   const post = async (url: string, body: unknown) => {
     const r = await fetch(url, {
       method: "POST",
@@ -110,7 +99,7 @@ export default function CRM() {
         language={lang}
         activeWorkspace="crm"
         title={t.title}
-        onLanguageChange={updateLanguage}
+        onLanguageChange={setLocale}
       >
         <div className="p-8 text-[#111111]">{error || t.loading}</div>
       </AlmaShell>
@@ -120,7 +109,7 @@ export default function CRM() {
       language={lang}
       activeWorkspace="crm"
       title={t.title}
-      onLanguageChange={updateLanguage}
+      onLanguageChange={setLocale}
     >
       <div className="p-4 text-[#111111] md:p-8">
         <div className="mx-auto max-w-7xl">

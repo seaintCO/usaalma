@@ -10,17 +10,11 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import AlmaShell from "@/components/alma-shell/AlmaShell";
-import type { AlmaShellLanguage } from "@/components/alma-shell/types";
+import { useAlmaLocale } from "@/lib/i18n/useAlmaLocale";
 import { pick } from "@/lib/i18n/appLanguage";
 import { DASHBOARD_ROUTE } from "@/lib/platform/workspaceRoutes";
 import { useCreativeResourceDetail } from "@/components/creative-studio/useCreativeResourceDetail";
 import { CreativeDetailPanel } from "@/components/creative-studio/CreativeDetailPanel";
-
-function readStoredLanguage(): AlmaShellLanguage {
-  if (typeof window === "undefined") return "en";
-  const saved = window.localStorage.getItem("alma_language");
-  return saved === "en" || saved === "es" ? saved : "en";
-}
 
 type Asset = {
   id: string;
@@ -99,8 +93,7 @@ const copy = {
 };
 export default function CreativeStudioPage() {
   const creativeResourceDetail = useCreativeResourceDetail();
-  const [language, setLanguage] =
-    useState<AlmaShellLanguage>(readStoredLanguage);
+  const { locale: language } = useAlmaLocale();
   const t = pick(language, copy.en, copy.es);
   const [assets, setAssets] = useState<Asset[]>([]),
     [folders, setFolders] = useState<Folder[]>([]),
@@ -205,17 +198,8 @@ export default function CreativeStudioPage() {
         idempotencyKey: crypto.randomUUID(),
       });
   };
-  function updateLanguage(next: AlmaShellLanguage) {
-    setLanguage(next);
-    localStorage.setItem("alma_language", next);
-  }
   return (
-    <AlmaShell
-      language={language}
-      activeWorkspace="creative"
-      title={t.title}
-      onLanguageChange={updateLanguage}
-    >
+    <AlmaShell language={language} activeWorkspace="creative" title={t.title}>
       <div className="px-4 py-8 text-black md:px-6">
         <div className="mx-auto max-w-7xl">
           <a href={DASHBOARD_ROUTE} className="text-sm text-[#6B7280]">

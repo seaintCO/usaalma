@@ -11,18 +11,12 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import AlmaShell from "@/components/alma-shell/AlmaShell";
-import type { AlmaShellLanguage } from "@/components/alma-shell/types";
+import { useAlmaLocale } from "@/lib/i18n/useAlmaLocale";
 import { pick } from "@/lib/i18n/appLanguage";
 import {
   DASHBOARD_ROUTE,
   WORKSPACE_ROUTES,
 } from "@/lib/platform/workspaceRoutes";
-
-function readStoredLanguage(): AlmaShellLanguage {
-  if (typeof window === "undefined") return "en";
-  const saved = window.localStorage.getItem("alma_language");
-  return saved === "en" || saved === "es" ? saved : "en";
-}
 
 type Project = {
   id: string;
@@ -140,8 +134,7 @@ function toMarkdown(
 }
 
 export default function LaunchStudioPage() {
-  const [language, setLanguage] =
-    useState<AlmaShellLanguage>(readStoredLanguage);
+  const { locale: language } = useAlmaLocale();
   const t = pick(language, text.en, text.es);
   const [projects, setProjects] = useState<Project[]>([]);
   const [project, setProject] = useState<Project | null>(null);
@@ -224,18 +217,9 @@ export default function LaunchStudioPage() {
         : `Build a launch plan for ${title || "my company"}. ${data.description || ""}`;
     window.location.href = `/dashboard?prompt=${encodeURIComponent(prompt)}`;
   };
-  function updateLanguage(next: AlmaShellLanguage) {
-    setLanguage(next);
-    localStorage.setItem("alma_language", next);
-  }
 
   return (
-    <AlmaShell
-      language={language}
-      activeWorkspace="launch"
-      title={t.title}
-      onLanguageChange={updateLanguage}
-    >
+    <AlmaShell language={language} activeWorkspace="launch" title={t.title}>
       <div className="px-4 py-8 text-black md:px-8">
         <div className="mx-auto max-w-7xl">
           <a href={DASHBOARD_ROUTE} className="text-sm text-[#6B7280]">

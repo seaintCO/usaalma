@@ -25,6 +25,16 @@ import {
 } from "@/lib/ai/modules/permissions";
 import { traderTool } from "@/lib/tools/trader/traderTools";
 import { prepareAuditedAction } from "@/lib/platform/actions/executionBoundary";
+import { officeTool } from "@/lib/tools/office/officeTools";
+import type { Tool } from "openai/resources/responses/responses";
+
+type ToolArguments = Record<string, unknown>;
+type AlmaFunctionTool = Tool & {
+  type: "function";
+  name: string;
+  description: string;
+  parameters: Record<string, unknown>;
+};
 
 export const toolDefinitions = [
   {
@@ -242,6 +252,190 @@ export const toolDefinitions = [
     name: "list_crm",
     description: "List owned CRM contacts, companies and opportunities.",
     parameters: { type: "object", properties: {}, additionalProperties: false },
+  },
+  {
+    type: "function",
+    name: "find_customer",
+    description: "Find owned CRM contacts and companies for Alma Office.",
+    parameters: {
+      type: "object",
+      properties: { query: { type: "string" } },
+      additionalProperties: false,
+    },
+  },
+  {
+    type: "function",
+    name: "create_customer_draft",
+    description: "Create an owned customer draft using CRM contacts.",
+    parameters: {
+      type: "object",
+      properties: {
+        name: { type: "string" },
+        email: { type: "string" },
+        phone: { type: "string" },
+        companyId: { type: "string" },
+      },
+      required: ["name"],
+      additionalProperties: false,
+    },
+  },
+  {
+    type: "function",
+    name: "find_services",
+    description:
+      "Find saved Alma Office price-book services. Do not invent pricing.",
+    parameters: {
+      type: "object",
+      properties: { query: { type: "string" } },
+      additionalProperties: false,
+    },
+  },
+  {
+    type: "function",
+    name: "draft_estimate",
+    description:
+      "Draft an owned estimate using saved line pricing and deterministic totals.",
+    parameters: {
+      type: "object",
+      properties: {
+        contactId: { type: "string" },
+        companyId: { type: "string" },
+        projectId: { type: "string" },
+        currency: { type: "string" },
+        scope: { type: "string" },
+        message: { type: "string" },
+        taxRate: { type: "number" },
+        depositPercentage: { type: "number" },
+        idempotencyKey: { type: "string" },
+        lines: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              serviceId: { type: "string" },
+              description: { type: "string" },
+              quantity: { type: "number" },
+              unitType: { type: "string" },
+              unitRate: { type: "number" },
+              discountAmount: { type: "number" },
+              taxable: { type: "boolean" },
+            },
+            required: ["description", "quantity", "unitRate"],
+            additionalProperties: false,
+          },
+        },
+      },
+      required: ["lines"],
+      additionalProperties: false,
+    },
+  },
+  {
+    type: "function",
+    name: "revise_estimate",
+    description:
+      "Revise an owned estimate before approval. Totals remain deterministic.",
+    parameters: {
+      type: "object",
+      properties: {
+        estimateId: { type: "string" },
+        lines: { type: "array", items: { type: "object" } },
+        scope: { type: "string" },
+        message: { type: "string" },
+      },
+      required: ["estimateId", "lines"],
+      additionalProperties: true,
+    },
+  },
+  {
+    type: "function",
+    name: "attach_project_photos",
+    description: "Attach owned project photos or documents to an estimate.",
+    parameters: {
+      type: "object",
+      properties: {
+        estimateId: { type: "string" },
+        documentId: { type: "string" },
+        fileName: { type: "string" },
+        filePath: { type: "string" },
+        mimeType: { type: "string" },
+        notes: { type: "string" },
+      },
+      required: ["estimateId"],
+      additionalProperties: false,
+    },
+  },
+  {
+    type: "function",
+    name: "analyze_project_photos",
+    description:
+      "Create preliminary scope observations from project photos without claiming exact measurements.",
+    parameters: {
+      type: "object",
+      properties: {
+        visibleElements: { type: "string" },
+        preliminaryScope: { type: "string" },
+        missingMeasurements: { type: "string" },
+        customerQuestions: { type: "string" },
+        matchedServiceIds: { type: "array", items: { type: "string" } },
+      },
+      additionalProperties: false,
+    },
+  },
+  {
+    type: "function",
+    name: "prepare_estimate_delivery",
+    description:
+      "Prepare an external estimate delivery approval. Never mark sent directly.",
+    parameters: {
+      type: "object",
+      properties: {
+        estimateId: { type: "string" },
+        customer: { type: "string" },
+        recipient: { type: "string" },
+        message: { type: "string" },
+        deliveryChannel: { type: "string" },
+      },
+      required: ["estimateId", "recipient", "message"],
+      additionalProperties: false,
+    },
+  },
+  {
+    type: "function",
+    name: "convert_accepted_estimate_to_invoice",
+    description: "Convert an accepted owned estimate to a draft invoice.",
+    parameters: {
+      type: "object",
+      properties: { estimateId: { type: "string" } },
+      required: ["estimateId"],
+      additionalProperties: false,
+    },
+  },
+  {
+    type: "function",
+    name: "prepare_deposit_request",
+    description:
+      "Prepare a deposit request, blocking if payment connectivity is unavailable.",
+    parameters: {
+      type: "object",
+      properties: { estimateId: { type: "string" } },
+      required: ["estimateId"],
+      additionalProperties: false,
+    },
+  },
+  {
+    type: "function",
+    name: "schedule_estimate_follow_up",
+    description: "Schedule an owned estimate follow-up task.",
+    parameters: {
+      type: "object",
+      properties: {
+        estimateNumber: { type: "string" },
+        title: { type: "string" },
+        description: { type: "string" },
+        dueAt: { type: "string" },
+      },
+      additionalProperties: false,
+    },
   },
   {
     type: "function",
@@ -527,13 +721,13 @@ export const toolDefinitions = [
       additionalProperties: false,
     },
   },
-] as any[];
+] as unknown as AlmaFunctionTool[];
 
-async function logAndReturn(
+async function logAndReturn<T>(
   userId: string,
   name: string,
-  args: any,
-  result: any,
+  args: ToolArguments,
+  result: T,
 ) {
   await ToolRunRepository.create(userId, name, args, result);
   return result;
@@ -549,7 +743,7 @@ function blocked(moduleName: string) {
 export async function executeTool(
   userId: string,
   name: string,
-  args: any,
+  args: ToolArguments,
   context?: { executionId?: string },
 ) {
   try {
@@ -584,29 +778,56 @@ export async function executeTool(
         await createTaskTool(userId, {
           title,
           description: cleanString(args.description) || undefined,
-          priority: ["low", "medium", "high", "urgent"].includes(args.priority)
-            ? args.priority
+          priority: ["low", "medium", "high", "urgent"].includes(
+            cleanString(args.priority),
+          )
+            ? (cleanString(args.priority) as
+                "low" | "medium" | "high" | "urgent")
             : undefined,
           dueAt: cleanString(args.dueAt) || undefined,
           sourceExecutionId: context?.executionId,
         }),
       );
     }
+
+    if (
+      [
+        "find_customer",
+        "create_customer_draft",
+        "find_services",
+        "draft_estimate",
+        "revise_estimate",
+        "attach_project_photos",
+        "analyze_project_photos",
+        "prepare_estimate_delivery",
+        "convert_accepted_estimate_to_invoice",
+        "prepare_deposit_request",
+        "schedule_estimate_follow_up",
+      ].includes(name)
+    ) {
+      if (!userHasModule(installed, "office")) return blocked("Alma Office");
+      return await logAndReturn(
+        userId,
+        name,
+        args,
+        await officeTool(userId, name, args, context?.executionId),
+      );
+    }
     if (name === "list_tasks") {
       if (!userHasModule(installed, "tasks")) return blocked("Tasks");
+      const requestedStatus = cleanString(args.status);
       const tasks = await TaskRepository.list(userId, {
         status: ["open", "completed", "overdue", "today", "all"].includes(
-          args.status,
+          requestedStatus,
         )
-          ? args.status
+          ? (requestedStatus as
+              "open" | "completed" | "overdue" | "today" | "all")
           : "open",
       });
       return {
         success: true,
         message: tasks.length
-          ? tasks
-              .map((task: any) => `${task.title} (${task.status})`)
-              .join("\n")
+          ? tasks.map((task) => `${task.title} (${task.status})`).join("\n")
           : "No tasks found.",
         tasks,
       };
@@ -657,7 +878,7 @@ export async function executeTool(
       return {
         success: true,
         message: notes.length
-          ? notes.map((note: any) => note.title).join("\n")
+          ? notes.map((note) => note.title).join("\n")
           : "No notes found.",
         notes,
       };

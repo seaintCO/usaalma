@@ -3,6 +3,7 @@
 import {
   ArrowUp,
   Camera,
+  Languages,
   LogIn,
   Mic,
   Paperclip,
@@ -15,6 +16,8 @@ import {
   useRef,
   useState,
 } from "react";
+import BilingualComposer from "@/components/communications/BilingualComposer";
+import AlmaVoiceControls from "@/components/voice/AlmaVoiceControls";
 import {
   CHAT_REQUEST_TIMEOUT_MS,
   createChatSubmissionKey,
@@ -96,6 +99,7 @@ const copy: Record<ChatLanguage, Copy> = {
 };
 
 const conversationMarker = /\[CONVERSATION_ID:([^\]]+)\]\n?/g;
+const streamErrorMarker = /\[ALMA_ERROR:({.*?})\]\n?/g;
 const requestedLanguage = (message: string): ChatLanguage | null => {
   const normalized = message.normalize("NFD").replace(/\p{Diacritic}/gu, "");
   return /\b(en espanol|spanish)\b/i.test(normalized)
@@ -121,6 +125,37 @@ function createTimedController(timeoutMs: number) {
     clear: () => clearTimeout(timeoutId),
     timedOut: () => timedOut,
   };
+}
+
+function extractStreamError(content: string): {
+  content: string;
+  category: ChatErrorCategory | null;
+} {
+  let category: ChatErrorCategory | null = null;
+  const cleaned = content.replace(streamErrorMarker, (_match, raw) => {
+    try {
+      const parsed = JSON.parse(raw) as { category?: unknown };
+      if (
+        parsed.category === "offline" ||
+        parsed.category === "auth_expired" ||
+        parsed.category === "timeout" ||
+        parsed.category === "server_unavailable" ||
+        parsed.category === "rate_limited" ||
+        parsed.category === "durable_enqueue_failed" ||
+        parsed.category === "durable_worker_failed" ||
+        parsed.category === "invalid_response" ||
+        parsed.category === "unknown"
+      ) {
+        category = parsed.category;
+      } else {
+        category = "server_unavailable";
+      }
+    } catch {
+      category = "server_unavailable";
+    }
+    return "";
+  });
+  return { content: cleaned, category };
 }
 
 function MessageContent({ content }: { content: string }) {
@@ -309,9 +344,24 @@ export function ChatComposer({
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
+  const [composerOpen, setComposerOpen] = useState(false);
+  const [voiceOpen, setVoiceOpen] = useState(false);
   return (
     <div className="border-t border-[#E5E7EB] bg-white px-3 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 md:px-6">
       <div className="mx-auto w-full max-w-3xl">
+        {composerOpen ? (
+          <div className="mb-3">
+            <BilingualComposer
+              channel="chat"
+              initialText={value}
+              language={language === "es" ? "es" : "en"}
+              onUse={(next) => {
+                onChange(next);
+                setComposerOpen(false);
+              }}
+            />
+          </div>
+        ) : null}
         <div className="relative flex flex-col overflow-hidden rounded-2xl border border-[#E5E7EB] bg-[#F7F7F8] shadow-sm">
           <textarea
             value={value}
@@ -367,7 +417,24 @@ export function ChatComposer({
             >
               <Camera className="h-5 w-5" />
             </button>
-            <Mic className="h-5 w-5 p-0.5 text-[#6B7280]" />
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => setComposerOpen((current) => !current)}
+              className="rounded-md p-1 text-[#6B7280] hover:bg-gray-200 hover:text-black"
+              aria-label="Open bilingual composer"
+            >
+              <Languages className="h-5 w-5" />
+            </button>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => setVoiceOpen((current) => !current)}
+              className="rounded-md p-1 text-[#6B7280] hover:bg-gray-200 hover:text-black"
+              aria-label="Open ALMA voice"
+            >
+              <Mic className="h-5 w-5" />
+            </button>
           </div>
           <button
             type="button"
@@ -381,6 +448,11 @@ export function ChatComposer({
         <p className="pt-2 text-center text-[10px] text-gray-400">
           {copy[language].disclaimer}
         </p>
+        {voiceOpen ? (
+          <div className="pt-2">
+            <AlmaVoiceControls language={language === "es" ? "es" : "en"} />
+          </div>
+        ) : null}
       </div>
     </div>
   );
@@ -799,6 +871,7 @@ export default function ChatWorkspace({
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let streamed = "";
+      let terminalStreamError: ChatErrorCategory | null = null;
       while (true) {
         const { value, done } = await reader.read();
         if (done) break;
@@ -810,6 +883,9 @@ export default function ChatWorkspace({
           }
         }
         streamed += chunk.replace(conversationMarker, "");
+        const extracted = extractStreamError(streamed);
+        streamed = extracted.content;
+        terminalStreamError = extracted.category ?? terminalStreamError;
         setMessages((current) =>
           current.map((message) =>
             message.id === submission.draftId
@@ -819,14 +895,18 @@ export default function ChatWorkspace({
         );
       }
       streamed += decoder.decode();
+      const extracted = extractStreamError(streamed);
+      streamed = extracted.content;
+      terminalStreamError = extracted.category ?? terminalStreamError;
       setMessages((current) =>
         current.map((message) =>
           message.id === submission.draftId
             ? {
                 ...message,
                 content: streamed,
-                status: undefined,
-                retry: undefined,
+                status: terminalStreamError ? "error" : undefined,
+                errorCategory: terminalStreamError ?? undefined,
+                retry: terminalStreamError ? retry : undefined,
               }
             : message,
         ),

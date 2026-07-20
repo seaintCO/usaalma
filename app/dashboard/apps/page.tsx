@@ -1,9 +1,17 @@
 "use client";
 
-import { AppWindow, ArrowUpRight, Loader2, RefreshCw } from "lucide-react";
+import {
+  AppWindow,
+  ArrowUpRight,
+  Loader2,
+  Pin,
+  PinOff,
+  RefreshCw,
+} from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import AlmaShell from "@/components/alma-shell/AlmaShell";
 import type { AlmaShellLanguage } from "@/components/alma-shell/types";
+import { useAlmaLocale } from "@/lib/i18n/useAlmaLocale";
 import type {
   MarketplaceCatalogResponse,
   MarketplaceItem,
@@ -86,6 +94,10 @@ const COPY = {
     upgrade: "Upgrade required",
     comingSoon: "Coming soon",
     unavailable: "Unavailable",
+    addSidebar: "Add to sidebar",
+    removeSidebar: "Remove from sidebar",
+    install: "Install",
+    requestUpgrade: "Request upgrade",
   },
   es: {
     title: "Apps",
@@ -100,6 +112,10 @@ const COPY = {
     upgrade: "Requiere mejora",
     comingSoon: "Proximamente",
     unavailable: "No disponible",
+    addSidebar: "Agregar a la barra",
+    removeSidebar: "Quitar de la barra",
+    install: "Instalar",
+    requestUpgrade: "Solicitar mejora",
   },
 } as const;
 
@@ -125,19 +141,21 @@ function statusClass(item: MarketplaceItem) {
 }
 
 export default function AppsPage() {
-  const [language, setLanguage] = useState<AlmaShellLanguage>("en");
+  const { locale: language } = useAlmaLocale();
   const [catalog, setCatalog] = useState<MarketplaceCatalogResponse | null>(
     null,
   );
   const [state, setState] = useState<LoadState>("loading");
+  const [pinned, setPinned] = useState<Set<string>>(new Set());
+  const [pendingModule, setPendingModule] = useState<string | null>(null);
   const copy = COPY[language];
 
   const load = useCallback(async () => {
     setState("loading");
     try {
-      const [catalogResponse, languageResponse] = await Promise.all([
+      const [catalogResponse, navigationResponse] = await Promise.all([
         fetch("/api/marketplace/catalog", { cache: "no-store" }),
-        fetch("/api/settings/language", { cache: "no-store" }),
+        fetch("/api/app-navigation", { cache: "no-store" }),
       ]);
       const payload = (await catalogResponse.json()) as
         MarketplaceCatalogResponse | { ok: false; error?: { code?: string } };
@@ -151,14 +169,63 @@ export default function AppsPage() {
         setCatalog(payload);
         setState("ready");
       }
-      if (languageResponse.ok) {
-        const languagePayload = await languageResponse.json();
-        setLanguage(languagePayload.language === "es" ? "es" : "en");
+      if (navigationResponse.ok) {
+        const navigationPayload = await navigationResponse.json();
+        setPinned(
+          new Set(
+            (navigationPayload.apps ?? []).map(
+              (app: { moduleId: string }) => app.moduleId,
+            ),
+          ),
+        );
       }
     } catch {
       setState("error");
     }
   }, []);
+
+  const setAppPinned = useCallback(
+    async (moduleId: string, nextPinned: boolean) => {
+      setPendingModule(moduleId);
+      try {
+        const response = await fetch("/api/app-navigation", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ moduleId, pinned: nextPinned }),
+        });
+        if (!response.ok) return;
+        const payload = await response.json();
+        setPinned(
+          new Set(
+            (payload.apps ?? []).map(
+              (app: { moduleId: string }) => app.moduleId,
+            ),
+          ),
+        );
+        window.dispatchEvent(new Event("alma:app-navigation-changed"));
+      } finally {
+        setPendingModule(null);
+      }
+    },
+    [],
+  );
+
+  const installApp = useCallback(
+    async (moduleKey: string) => {
+      setPendingModule(moduleKey);
+      try {
+        const response = await fetch("/api/modules/install", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ moduleKey }),
+        });
+        if (response.ok) await load();
+      } finally {
+        setPendingModule(null);
+      }
+    },
+    [load],
+  );
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -187,12 +254,7 @@ export default function AppsPage() {
   }, [catalog?.items]);
 
   return (
-    <AlmaShell
-      language={language}
-      activeWorkspace="apps"
-      title={copy.title}
-      onLanguageChange={setLanguage}
-    >
+    <AlmaShell language={language} activeWorkspace="apps" title={copy.title}>
       <div className="min-h-full px-4 pb-24 pt-6 text-[#111111] md:px-8 md:pb-10 md:pt-10">
         <div className="mx-auto max-w-6xl">
           <header className="mb-8">
@@ -268,15 +330,56 @@ export default function AppsPage() {
                               {statusLabel(item, copy)}
                             </span>
                           </div>
-                          {item.route && item.accessStatus === "included" ? (
-                            <a
-                              href={item.route}
-                              className="mt-4 inline-flex h-10 items-center gap-2 rounded-xl bg-black px-3 text-sm font-medium text-white"
-                            >
-                              {copy.open}
-                              <ArrowUpRight className="h-4 w-4" />
-                            </a>
-                          ) : null}
+                          <div className="mt-4 flex flex-wrap gap-2">
+                            {item.route && item.accessStatus === "included" ? (
+                              <a
+                                href={item.route}
+                                className="inline-flex h-10 items-center gap-2 rounded-xl bg-black px-3 text-sm font-medium text-white"
+                              >
+                                {copy.open}
+                                <ArrowUpRight className="h-4 w-4" />
+                              </a>
+                            ) : null}
+                            {item.route && item.accessStatus === "included" ? (
+                              <button
+                                type="button"
+                                disabled={pendingModule === item.key}
+                                onClick={() =>
+                                  void setAppPinned(
+                                    item.key,
+                                    !pinned.has(item.key),
+                                  )
+                                }
+                                className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-[#D1D5DB] px-3 text-sm font-medium disabled:opacity-50"
+                              >
+                                {pinned.has(item.key) ? (
+                                  <PinOff className="h-4 w-4" />
+                                ) : (
+                                  <Pin className="h-4 w-4" />
+                                )}
+                                {pinned.has(item.key)
+                                  ? copy.removeSidebar
+                                  : copy.addSidebar}
+                              </button>
+                            ) : item.accessStatus === "upgrade_required" ? (
+                              <a
+                                href="/billing"
+                                className="inline-flex min-h-10 items-center rounded-xl border border-[#D1D5DB] px-3 text-sm font-medium"
+                              >
+                                {copy.requestUpgrade}
+                              </a>
+                            ) : null}
+                            {item.installStatus === "available" ? (
+                              <button
+                                type="button"
+                                disabled={pendingModule === item.key}
+                                onClick={() => void installApp(item.key)}
+                                className="inline-flex min-h-10 items-center rounded-xl border border-[#D1D5DB] px-3 text-sm font-medium disabled:opacity-50"
+                              >
+                                {copy.install}
+                              </button>
+                            ) : null}
+                          </div>
                         </article>
                       ))}
                     </div>

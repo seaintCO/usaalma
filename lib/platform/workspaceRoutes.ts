@@ -5,6 +5,9 @@ export const WORKSPACE_ROUTES = {
   files: "/files",
   apps: "/dashboard/apps",
   connections: "/connections",
+  communications: "/communications",
+  translator: "/translator",
+  office: "/office",
   tasks: "/tasks",
   notes: "/notes",
   planner: "/planner",
@@ -18,9 +21,11 @@ export const WORKSPACE_ROUTES = {
   launch: "/launch-studio",
   trader: "/trader",
   agents: "/agents",
+  builder: "/builder",
   marketplace: "/marketplace",
   billing: "/billing",
   settings: "/settings",
+  workspaces: "/workspaces",
 } as const;
 
 export type RoutedWorkspace = keyof typeof WORKSPACE_ROUTES;

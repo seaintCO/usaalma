@@ -18,6 +18,14 @@ type StreamInput = {
   idempotencyKey?: string | null;
 };
 
+function encodeTerminalError(input: {
+  code: string;
+  category: string;
+  message: string;
+}) {
+  return `[ALMA_ERROR:${JSON.stringify(input)}]\n`;
+}
+
 function createChatStreamResponse(input: StreamInput) {
   const encoder = new TextEncoder();
   const readable = new ReadableStream({
@@ -26,7 +34,8 @@ function createChatStreamResponse(input: StreamInput) {
         encoder.encode(`[CONVERSATION_ID:${input.conversationId}]\n`),
       );
       try {
-        await processCanonicalChatRun({
+        let terminalFailureEmitted = false;
+        const result = await processCanonicalChatRun({
           userId: input.userId,
           conversationId: input.conversationId,
           userMessage: input.message,
@@ -42,8 +51,31 @@ function createChatStreamResponse(input: StreamInput) {
             if (event.type === "image") {
               controller.enqueue(encoder.encode(event.content));
             }
+            if (event.type === "failed") {
+              terminalFailureEmitted = true;
+              controller.enqueue(
+                encoder.encode(
+                  encodeTerminalError({
+                    code: event.error.code,
+                    category: "server_unavailable",
+                    message: event.error.message,
+                  }),
+                ),
+              );
+            }
           },
         });
+        if (!result.ok && !terminalFailureEmitted) {
+          controller.enqueue(
+            encoder.encode(
+              encodeTerminalError({
+                code: result.code,
+                category: "server_unavailable",
+                message: result.message,
+              }),
+            ),
+          );
+        }
       } catch (error) {
         console.error("ALMA_CHAT_PROCESSOR_ERROR", {
           conversationId: input.conversationId,
@@ -55,6 +87,15 @@ function createChatStreamResponse(input: StreamInput) {
             ? "ALMA could not process that request right now."
             : "ALMA no pudo procesar esa solicitud ahora.";
         controller.enqueue(encoder.encode(reply));
+        controller.enqueue(
+          encoder.encode(
+            encodeTerminalError({
+              code: "chat_processor_failed",
+              category: "server_unavailable",
+              message: reply,
+            }),
+          ),
+        );
       } finally {
         controller.close();
       }

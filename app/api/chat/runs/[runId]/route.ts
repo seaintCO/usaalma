@@ -1,5 +1,10 @@
 import { getCurrentUser } from "@/lib/auth/user";
 import { createAdminClient } from "@/lib/supabase/admin";
+import {
+  isRuntimeConfigError,
+  safeRuntimeConfigErrorBody,
+} from "@/lib/runtime/config";
+
 export async function GET(
   _request: Request,
   ctx: { params: Promise<{ runId: string }> },
@@ -7,7 +12,23 @@ export async function GET(
   const user = await getCurrentUser();
   if (!user) return new Response("Unauthorized", { status: 401 });
   const { runId } = await ctx.params;
-  const admin = createAdminClient();
+  let admin: ReturnType<typeof createAdminClient>;
+  try {
+    admin = createAdminClient();
+  } catch (error) {
+    if (isRuntimeConfigError(error)) {
+      console.error("ALMA_CHAT_RUN_STATUS_CONFIG_ERROR", {
+        runId,
+        capability: error.readiness.capability,
+        missing: error.readiness.missing,
+        invalid: error.readiness.invalid,
+      });
+      return Response.json(safeRuntimeConfigErrorBody(error), {
+        status: 503,
+      });
+    }
+    throw error;
+  }
   const { data, error } = await admin
     .from("chat_runs")
     .select(

@@ -1,0 +1,134 @@
+# ALMA Builder Threat Model
+
+Date: 2026-07-19
+
+## Implemented Protections
+
+- Tenant separation: every Builder table carries `user_id` and optional `workspace_id`; RLS and ownership triggers enforce owner/member access.
+- No anonymous access: Builder RLS policies require `auth.uid() = user_id`.
+- No in-process code execution: Builder APIs do not expose shell execution, run generated code, install dependencies, or execute customer projects inside Next.js.
+- Provider fail-closed behavior: missing providers return `BUILDER_ENGINE_NOT_CONFIGURED` and persist a safe blocked event.
+- Approval boundary: repository creation, workspace provisioning, source pushes, checkpoint restore, preview publish, and deployment are protected action definitions.
+- Secret hygiene: provider IDs are stored as identifiers only; provider credentials must use the existing encrypted connector architecture in a later milestone.
+- Preview validation: only allowlisted hosts and safe protocols are rendered; previews use restrictive iframe sandboxing.
+- Event hygiene: Builder events store summaries and metadata only, not raw secrets or full command output.
+- Idempotency: project creation and future job rows include idempotency keys.
+
+## Primary Threats
+
+- Arbitrary-code execution: generated apps can run malicious install scripts or runtime code.
+- Prompt injection: user or file content may instruct a Builder agent to leak secrets, disable tests, or bypass approvals.
+- Malicious dependencies: packages can exfiltrate data or run supply-chain payloads during install/build.
+- Secret exfiltration: environment variables, provider tokens, and ALMA service keys must never enter Builder workspaces.
+- SSRF: generated code or preview callbacks may attempt internal network access.
+- Unsafe preview URLs: a malicious host can attempt credential theft, clickjacking, or browser exploitation.
+- Callback spoofing: provider webhooks/events may be forged without signature checks and replay protection.
+- Command injection: user prompts, filenames, or branch names can become shell arguments if not isolated and escaped.
+- Log leakage: terminal output can include tokens, URLs, headers, or customer secrets.
+- Abandoned workspaces: orphaned build environments can leak cost, data, or credentials.
+- Duplicate jobs: retries can trigger duplicate repository pushes, previews, or deployments without idempotency.
+- Replayed approvals: an old approval can be reused if executor idempotency and status transitions are weak.
+- Resource exhaustion: builds can consume CPU, memory, disk, network, or paid provider quota.
+- Deployment ownership: deployments must prove they belong to the user/workspace and approved checkpoint.
+
+## Required Before Real Builds
+
+- Isolated worker runtime with per-project credentials and no ALMA secrets.
+- Network egress policy and SSRF protections.
+- Signed provider callbacks with nonce/replay checks.
+- Dependency install sandboxing, timeout, and quota enforcement.
+- Structured command allowlists in the worker plane.
+- Redacted log ingestion with maximum length and secret scanning.
+- Repository, preview, and deployment provider adapters with verified ownership.
+- Approval executors for Builder actions with idempotency and terminal-state guards.
+- Cleanup jobs for stale sessions, workspaces, artifacts, and previews.
+
+Until those are complete, Builder remains a product foundation and project planning surface only.
+
+## Engine 1 Mitigations
+
+- Engine 1 job leasing uses a service-role-only claim function, row locks, lease
+  expiration, attempt counts, and one active job per project.
+- Workspace provisioning uses a separate E2B sandbox per Builder session and
+  returns only provider identifiers to the control plane.
+- The worker can choose only install, validation, build, preview, and read-only
+  git status/diff command categories.
+- The Codex provider stays blocked unless the worker explicitly declares it is
+  running inside an isolated Builder workspace.
+- Source control uses a GitHub App installation flow with signed state and safe
+  metadata persistence, not personal access tokens.
+- GitHub save intent creates `builder.source.push` approval and the executor
+  fails closed without a connected app and generated source checkpoint.
+
+Engine 1 remaining risks:
+
+- E2B/Codex live execution must be verified only in a non-production provider
+  workspace with no ALMA secrets available to generated code.
+- GitHub push currently requires the worker artifact handoff before it can
+  safely write generated source files.
+- Network egress policy and dependency install hardening still depend on the
+  ALMA-owned E2B template configuration.
+- Cleanup of stale previews and orphaned sandboxes should become a scheduled
+  maintenance job.
+- GitHub webhook signature handling is documented/configured but webhook event
+  processing is not implemented in Engine 1.
+
+## Engine 1.1 Hard Stop
+
+Engine 1.1 found a security-critical runtime ambiguity: the current Codex SDK
+working directory cannot be proven to be the same remote E2B filesystem used for
+validation and preview. The worker must not run live generated builds until
+that boundary is repaired.
+
+Fail-closed requirements added in this stage:
+
+- Worker package scripts exit with `BUILDER_RUNTIME_WIRING_BLOCKED` instead of
+  starting an unsafe live worker.
+- The Codex provider returns `BUILDER_CODING_PROVIDER_NOT_CONFIGURED` until a
+  remote E2B filesystem bridge exists.
+- Failed coding or validation attempts call sandbox cleanup when an E2B sandbox
+  was provisioned.
+- The ALMA-owned E2B template is documented and smoke-testable without cloud
+  execution.
+
+Remaining mandatory controls before live builds:
+
+- Starter transfer into E2B.
+- Same-workspace proof for all generated source reads and writes.
+- A generated source artifact handoff with manifest and SHA-256 checksums.
+- Path traversal, symlink escape, and unsafe filename rejection.
+- Secret scans over logs and artifacts before persistence.
+- Cleanup-state persistence for successful cleanup, failed cleanup, and stale
+  sandbox recovery.
+
+## Engine 1.2 Security Controls
+
+Engine 1.2 moves coding into E2B and separates model credentials through the
+Builder Gateway.
+
+Controls added:
+
+- Codex runs inside the same E2B sandbox and `/workspace/project` directory used
+  for starter transfer, validation, artifact extraction, and preview.
+- The E2B sandbox never receives permanent OpenAI, E2B, Supabase, GitHub, OAuth,
+  Stripe, or encryption secrets.
+- Gateway tokens are HMAC-signed, short-lived, audience/issuer checked, scoped
+  to one job/workspace/project/session/sandbox/model, persisted only as hashes,
+  and revocable.
+- The gateway rejects unrelated endpoints and normal ALMA user auth; only
+  Builder Gateway bearer tokens are accepted.
+- Starter transfer rejects path traversal, symlinks, excluded files,
+  excessive file count, and excessive bytes.
+- Artifact export excludes `.env*`, `.git`, `node_modules`, caches, build
+  output, private keys, and secret-like filenames; it persists checksums and
+  ownership metadata before GitHub approval execution can proceed.
+- Validation allows one bounded repair turn and never reports preview-ready
+  without a successful build.
+
+Limitations still requiring live verification:
+
+- E2B network egress policy must be proven against the built template.
+- Codex custom provider compatibility with the checked-in config must be smoke
+  tested with a development Gateway token before enabling production builds.
+- Stale preview and sandbox expiration cleanup needs an approved scheduled
+  worker.

@@ -22,6 +22,7 @@ import {
 import { useEffect, useMemo, useState } from "react";
 import AlmaShell from "@/components/alma-shell/AlmaShell";
 import type { AlmaShellLanguage } from "@/components/alma-shell/types";
+import { useAlmaLocale } from "@/lib/i18n/useAlmaLocale";
 import { AnnotationWorkspace } from "@/components/construction/AnnotationWorkspace";
 import { ConstructionSummary } from "@/components/construction/ConstructionSummary";
 import { CrewWorkspace } from "@/components/construction/CrewWorkspace";
@@ -122,12 +123,6 @@ const workflowSteps: WorkflowStep[] = [
   "crew",
   "preview",
 ];
-
-function readStoredLanguage(): AlmaShellLanguage {
-  if (typeof window === "undefined") return "en";
-  const saved = window.localStorage.getItem("alma_language");
-  return saved === "en" || saved === "es" ? saved : "en";
-}
 
 const emptyDraft: ProjectDraft = {
   projectName: "",
@@ -658,8 +653,7 @@ function draftFromProject(project: ConstructionProject): ProjectDraft {
 }
 
 export default function ConstructionPage() {
-  const [language, setLanguage] =
-    useState<AlmaShellLanguage>(readStoredLanguage);
+  const { locale: language, setLocale } = useAlmaLocale();
   const [projects, setProjects] = useState<ConstructionProject[]>([]);
   const [contacts, setContacts] = useState<CrmContact[]>([]);
   const [companies, setCompanies] = useState<CrmCompany[]>([]);
@@ -723,11 +717,6 @@ export default function ConstructionPage() {
     return () => window.clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  function updateLanguage(next: AlmaShellLanguage) {
-    setLanguage(next);
-    localStorage.setItem("alma_language", next);
-  }
 
   const filteredProjects = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -872,7 +861,7 @@ export default function ConstructionPage() {
       language={language}
       activeWorkspace="construction"
       title={t.title}
-      onLanguageChange={updateLanguage}
+      onLanguageChange={setLocale}
       releaseBadge={t.beta}
     >
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-4 px-3 py-4 text-[#111111] sm:px-4 md:px-6 md:py-8">

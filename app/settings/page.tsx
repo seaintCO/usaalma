@@ -1,9 +1,10 @@
 "use client";
-import { ArrowLeft, ShieldCheck } from "lucide-react";
+import { ArrowLeft, ShieldCheck, Volume2 } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import AlmaShell from "@/components/alma-shell/AlmaShell";
 import type { AlmaShellLanguage } from "@/components/alma-shell/types";
+import { useAlmaLocale } from "@/lib/i18n/useAlmaLocale";
 import { DASHBOARD_ROUTE } from "@/lib/platform/workspaceRoutes";
 
 type Settings = {
@@ -30,6 +31,13 @@ type Connection = {
     | "setup_required"
     | "coming_soon";
 };
+type MemoryCandidate = {
+  id: string;
+  source: string;
+  memory_key: string;
+  memory_value: string;
+  status: string;
+};
 const fallback: Settings = {
   timezone: "America/Chicago",
   theme: "light",
@@ -54,7 +62,11 @@ const copy = {
     image: "Image model",
     memory: "Memory",
     memoryText:
-      "Long-term memory is stored securely with your ALMA agent. Memory editing controls are coming soon.",
+      "Review what ALMA proposes remembering. Raw audio is not stored by default.",
+    memoryEmpty: "No proposed memories yet.",
+    voice: "Voice preview",
+    voiceText:
+      "Warm, calm, professional bilingual voice. External actions still require approval.",
     notifications: "Notifications",
     inbox: "Recent notifications",
     none: "No notifications yet.",
@@ -102,7 +114,11 @@ const copy = {
     image: "Modelo de imagen",
     memory: "Memoria",
     memoryText:
-      "La memoria a largo plazo se guarda de forma segura con tu agente ALMA. Los controles de edición estarán disponibles próximamente.",
+      "Revisa lo que ALMA propone recordar. El audio sin procesar no se guarda por defecto.",
+    memoryEmpty: "Aun no hay recuerdos propuestos.",
+    voice: "Vista previa de voz",
+    voiceText:
+      "Voz bilingue calida, calmada y profesional. Las acciones externas aun requieren aprobacion.",
     notifications: "Notificaciones",
     inbox: "Notificaciones recientes",
     none: "Aún no hay notificaciones.",
@@ -137,6 +153,7 @@ const copy = {
   },
 } as const;
 export default function SettingsPage() {
+  const { locale: language, setLocale } = useAlmaLocale();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [settings, setSettings] = useState<Settings>(fallback);
   const [textModels, setTextModels] = useState<string[]>([
@@ -155,24 +172,32 @@ export default function SettingsPage() {
       created_at: string;
     }[]
   >([]);
+  const [memoryCandidates, setMemoryCandidates] = useState<MemoryCandidate[]>(
+    [],
+  );
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-  const language = profile?.language === "es" ? "es" : "en";
   const t = copy[language];
   function updateLanguage(next: AlmaShellLanguage) {
+    void setLocale(next);
     setProfile((current) =>
       current ? { ...current, language: next } : current,
     );
   }
   const load = useCallback(async () => {
-    const [settingsRes, catalogRes, notificationsRes] = await Promise.all([
-      fetch("/api/settings", { cache: "no-store" }),
-      fetch("/api/marketplace/catalog", { cache: "no-store" }),
-      fetch("/api/settings/notifications", { cache: "no-store" }),
-    ]);
+    const [settingsRes, catalogRes, notificationsRes, memoryRes] =
+      await Promise.all([
+        fetch("/api/settings", { cache: "no-store" }),
+        fetch("/api/marketplace/catalog", { cache: "no-store" }),
+        fetch("/api/settings/notifications", { cache: "no-store" }),
+        fetch("/api/memory", { cache: "no-store" }),
+      ]);
     const data = await settingsRes.json();
     if (data.ok) {
-      setProfile(data.profile);
+      setProfile({
+        ...data.profile,
+        language: data.profile.language === "es" ? "es" : "en",
+      });
       setSettings(data.settings);
       setTextModels(data.modelChoices.text);
       setImageModels(data.modelChoices.image);
@@ -190,6 +215,10 @@ export default function SettingsPage() {
     if (notificationsRes.ok) {
       const data = await notificationsRes.json();
       setNotifications(data.notifications ?? []);
+    }
+    if (memoryRes.ok) {
+      const data = await memoryRes.json();
+      setMemoryCandidates(data.candidates ?? []);
     }
   }, []);
   useEffect(() => {
@@ -239,8 +268,8 @@ export default function SettingsPage() {
   };
   if (!profile)
     return (
-      <AlmaShell language="en" activeWorkspace="settings" title={copy.en.title}>
-        <div className="p-8 text-gray-500">{copy.en.loading}</div>
+      <AlmaShell language={language} activeWorkspace="settings" title={t.title}>
+        <div className="p-8 text-gray-500">{t.loading}</div>
       </AlmaShell>
     );
   const field = (label: string, child: React.ReactNode) => (
@@ -293,7 +322,6 @@ export default function SettingsPage() {
                     }
                     className="w-full rounded-xl border border-gray-200 bg-white p-3"
                   >
-                    <option value="auto">{t.auto}</option>
                     <option value="en">{t.en}</option>
                     <option value="es">{t.es}</option>
                   </select>,
@@ -483,10 +511,37 @@ export default function SettingsPage() {
               })}
             </div>
           </section>
-          <div className="mt-6 grid gap-6 md:grid-cols-3">
+          <div className="mt-6 grid gap-6 md:grid-cols-4">
             <section className="rounded-[2rem] border border-gray-200 bg-white p-6">
               <h2 className="text-xl font-medium">{t.memory}</h2>
               <p className="mt-3 text-sm text-gray-500">{t.memoryText}</p>
+              <div className="mt-4 space-y-3">
+                {memoryCandidates.length ? (
+                  memoryCandidates.slice(0, 4).map((candidate) => (
+                    <div
+                      key={candidate.id}
+                      className="rounded-xl bg-[#F7F7F8] p-3 text-sm"
+                    >
+                      <p className="font-medium">{candidate.memory_key}</p>
+                      <p className="mt-1 text-gray-600">
+                        {candidate.memory_value}
+                      </p>
+                      <p className="mt-2 text-xs text-gray-500">
+                        {candidate.source} / {candidate.status}
+                      </p>
+                    </div>
+                  ))
+                ) : (
+                  <p className="rounded-xl bg-[#F7F7F8] p-3 text-sm text-gray-500">
+                    {t.memoryEmpty}
+                  </p>
+                )}
+              </div>
+            </section>
+            <section className="rounded-[2rem] border border-gray-200 bg-white p-6">
+              <Volume2 className="h-5 w-5" />
+              <h2 className="mt-3 text-xl font-medium">{t.voice}</h2>
+              <p className="mt-3 text-sm text-gray-500">{t.voiceText}</p>
             </section>
             <section className="rounded-[2rem] border border-gray-200 bg-white p-6">
               <h2 className="text-xl font-medium">{t.export}</h2>

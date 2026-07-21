@@ -2,12 +2,11 @@ import { getStripe } from "@/lib/stripe/server";
 import type { BillingPlan, BillingPriceOption } from "@/lib/billing/types";
 import { getCurrentUser } from "@/lib/auth/user";
 import { NextResponse } from "next/server";
+import { billingPriceId } from "@/lib/billing/plans";
 
 const planPriceIds: Record<BillingPlan, string | undefined> = {
-  starter:
-    process.env.STRIPE_PRICE_STARTER || process.env.STRIPE_PRICE_PERSONAL,
-  pro: process.env.STRIPE_PRICE_PRO,
-  business: process.env.STRIPE_PRICE_BUSINESS,
+  starter: billingPriceId("starter"),
+  business: billingPriceId("business"),
 };
 
 export async function GET() {

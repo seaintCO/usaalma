@@ -1,4 +1,4 @@
-export type BillingPlan = "starter" | "pro" | "business";
+export type BillingPlan = "starter" | "business";
 
 export type BillingSubscription = {
   plan: string;
@@ -7,7 +7,12 @@ export type BillingSubscription = {
   stripeSubscriptionId: string | null;
   priceId: string | null;
   currentPeriodEnd: string | null;
+  currentPeriodStart: string | null;
   cancelAtPeriodEnd: boolean;
+  trialEnd: string | null;
+  paymentFailedAt: string | null;
+  workspaceId: string | null;
+  lastStripeEventId: string | null;
 };
 
 export type BillingPriceOption = {

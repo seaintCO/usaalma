@@ -11,6 +11,7 @@
     "runtime:config:check": "node scripts/check-alma-runtime-config.mjs",
     "milestone6:check": "node scripts/check-alma-milestone6.mjs",
     "milestone7:check": "node scripts/check-alma-milestone7.mjs",
+    "public-billing:check": "node scripts/check-alma-public-billing.mjs",
     "milestone7.2:test": "playwright test --config=playwright.config.ts",
     "milestone7.2:auth": "playwright codegen --channel=msedge --save-storage=.playwright-auth/user.json http://127.0.0.1:3101/login",
     "builder:worker": "jiti workers/builder/index.ts --loop",

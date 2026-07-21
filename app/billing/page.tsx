@@ -7,6 +7,8 @@ import type {
 } from "@/lib/billing/types";
 import AlmaShell from "@/components/alma-shell/AlmaShell";
 import type { AlmaShellLanguage } from "@/components/alma-shell/types";
+import { useAlmaLocale } from "@/lib/i18n/useAlmaLocale";
+import { normalizeBillingPlan } from "@/lib/billing/plans";
 import { DASHBOARD_ROUTE } from "@/lib/platform/workspaceRoutes";
 import {
   ArrowLeft,
@@ -65,10 +67,17 @@ const copy = {
     auth: "Sign in to view billing for your ALMA account.",
     processing: "Opening secure checkout...",
     portal: "Opening secure billing portal...",
+    paymentProblem:
+      "Stripe reported a payment problem. Manage billing to restore access.",
+    included: "Included applications",
+    essentialModules:
+      "Tasks, Planner, Notes, Documents, basic CRM and invoicing, Translator, and Connections",
+    autonomousModules:
+      "Everything in Essential plus ALMA Office, Creator, Studio, voice, Builder, and Approval Center where configured",
     free: "Free",
-    starter: "Starter",
-    pro: "Pro",
-    business: "Business",
+    starter: "Essential",
+    pro: "Autonomous",
+    business: "Autonomous",
     active: "Active",
     trialing: "Trial",
     past_due: "Past due",
@@ -107,10 +116,17 @@ const copy = {
     auth: "Inicia sesion para ver la facturacion de tu cuenta de ALMA.",
     processing: "Abriendo el pago seguro...",
     portal: "Abriendo el portal de facturacion seguro...",
+    paymentProblem:
+      "Stripe reportó un problema de pago. Administra la facturación para restaurar el acceso.",
+    included: "Aplicaciones incluidas",
+    essentialModules:
+      "Tareas, Planificador, Notas, Documentos, CRM y facturación básicos, Traductor y Conexiones",
+    autonomousModules:
+      "Todo lo de Esencial más Oficina ALMA, Creador, Estudio, voz, Constructor y Centro de aprobaciones donde estén configurados",
     free: "Gratis",
-    starter: "Inicial",
-    pro: "Pro",
-    business: "Business",
+    starter: "Esencial",
+    pro: "Autónomo",
+    business: "Autónomo",
     active: "Activa",
     trialing: "Prueba",
     past_due: "Vencida",
@@ -144,7 +160,7 @@ function formatDate(value: string | null, language: Language) {
 }
 
 export default function BillingPage() {
-  const [language, setLanguage] = useState<Language>("en");
+  const { locale: language, setLocale } = useAlmaLocale();
   const [state, setState] = useState<LoadState>("loading");
   const [subscription, setSubscription] = useState<BillingSubscription | null>(
     null,
@@ -154,6 +170,7 @@ export default function BillingPage() {
   const [invoices, setInvoices] = useState<BillingInvoice[]>([]);
   const [action, setAction] = useState<"checkout" | "portal" | null>(null);
   const requestRef = useRef<AbortController | null>(null);
+  const continuationStarted = useRef(false);
 
   const text = copy[language];
   const activeSubscription = subscription
@@ -166,29 +183,21 @@ export default function BillingPage() {
     requestRef.current = controller;
     setState("loading");
     try {
-      const [
-        billingResponse,
-        plansResponse,
-        historyResponse,
-        languageResponse,
-      ] = await Promise.all([
-        fetch("/api/billing/status", {
-          cache: "no-store",
-          signal: controller.signal,
-        }),
-        fetch("/api/billing/plans", {
-          cache: "no-store",
-          signal: controller.signal,
-        }),
-        fetch("/api/billing/history", {
-          cache: "no-store",
-          signal: controller.signal,
-        }),
-        fetch("/api/settings/language", {
-          cache: "no-store",
-          signal: controller.signal,
-        }),
-      ]);
+      const [billingResponse, plansResponse, historyResponse] =
+        await Promise.all([
+          fetch("/api/billing/status", {
+            cache: "no-store",
+            signal: controller.signal,
+          }),
+          fetch("/api/billing/plans", {
+            cache: "no-store",
+            signal: controller.signal,
+          }),
+          fetch("/api/billing/history", {
+            cache: "no-store",
+            signal: controller.signal,
+          }),
+        ]);
       const billingPayload: unknown = await billingResponse.json();
       if (billingResponse.status === 401) {
         if (controller.signal.aborted) return;
@@ -217,10 +226,6 @@ export default function BillingPage() {
       setPlans(plansPayload.ok ? (plansPayload.plans ?? []) : []);
       setPlansConfigured(Boolean(plansPayload.ok && plansPayload.configured));
       setInvoices(historyPayload.ok ? (historyPayload.invoices ?? []) : []);
-      if (languageResponse.ok) {
-        const languagePayload = await languageResponse.json();
-        setLanguage(languagePayload.language === "es" ? "es" : "en");
-      }
       setState("ready");
     } catch {
       if (controller.signal.aborted) return;
@@ -229,7 +234,7 @@ export default function BillingPage() {
   }, []);
 
   function updateLanguage(next: AlmaShellLanguage) {
-    setLanguage(next);
+    void setLocale(next);
   }
 
   useEffect(() => {
@@ -285,6 +290,18 @@ export default function BillingPage() {
       setAction(null);
     }
   }, [action]);
+
+  useEffect(() => {
+    if (state !== "ready" || continuationStarted.current || activeSubscription)
+      return;
+    const plan = normalizeBillingPlan(
+      new URLSearchParams(window.location.search).get("checkout"),
+    );
+    if (!plan) return;
+    continuationStarted.current = true;
+    const timer = window.setTimeout(() => void openCheckout(plan), 0);
+    return () => window.clearTimeout(timer);
+  }, [activeSubscription, openCheckout, state]);
 
   const periodEnd = formatDate(
     subscription?.currentPeriodEnd ?? null,
@@ -365,6 +382,29 @@ export default function BillingPage() {
                     {periodEnd ?? text.noRenewal}
                   </p>
                 </div>
+              </div>
+            ) : null}
+            {state === "ready" &&
+            subscription &&
+            ["past_due", "unpaid"].includes(subscription.status) ? (
+              <p
+                role="alert"
+                className="mt-5 rounded-2xl bg-amber-50 p-4 text-sm text-amber-900"
+              >
+                {text.paymentProblem}
+              </p>
+            ) : null}
+            {state === "ready" && subscription ? (
+              <div className="mt-5 rounded-2xl border border-gray-200 p-5">
+                <p className="text-xs uppercase tracking-[0.2em] text-gray-500">
+                  {text.included}
+                </p>
+                <p className="mt-2 text-sm leading-6 text-gray-600">
+                  {subscription.plan === "business" ||
+                  subscription.plan === "pro"
+                    ? text.autonomousModules
+                    : text.essentialModules}
+                </p>
               </div>
             ) : null}
           </section>

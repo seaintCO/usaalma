@@ -15,7 +15,18 @@ for (const [route, english, spanish] of routes) {
   test(`${route} switches the complete public interface`, async ({ page }) => {
     await page.goto(route, { waitUntil: "domcontentloaded" });
     await expect(page.getByRole("heading", { name: english })).toBeVisible();
-    await page.getByRole("button", { name: "ES", exact: true }).click();
+    const spanishButton = page.getByRole("button", { name: "ES", exact: true });
+    await expect
+      .poll(
+        async () => {
+          if ((await spanishButton.getAttribute("aria-pressed")) === "true")
+            return true;
+          await spanishButton.click();
+          return false;
+        },
+        { timeout: 10_000 },
+      )
+      .toBe(true);
     await expect(page.getByRole("heading", { name: spanish })).toBeVisible();
     await page.reload({ waitUntil: "domcontentloaded" });
     await expect(page.getByRole("heading", { name: spanish })).toBeVisible();

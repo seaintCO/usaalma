@@ -19,19 +19,25 @@ export async function POST() {
     );
   }
 
-  if (!process.env.NEXT_PUBLIC_APP_URL) {
+  if (!process.env.NEXT_PUBLIC_APP_URL || !process.env.STRIPE_SECRET_KEY) {
     return NextResponse.json(
       { error: "billing_not_configured" },
       { status: 503 },
     );
   }
 
-  const stripe = getStripe();
-
-  const session = await stripe.billingPortal.sessions.create({
-    customer: subscription.stripeCustomerId,
-    return_url: `${process.env.NEXT_PUBLIC_APP_URL}/billing`,
-  });
-
-  return NextResponse.json({ url: session.url });
+  try {
+    const appUrl = new URL(process.env.NEXT_PUBLIC_APP_URL).origin;
+    const session = await getStripe().billingPortal.sessions.create({
+      customer: subscription.stripeCustomerId,
+      return_url: `${appUrl}/billing`,
+    });
+    return NextResponse.json({ ok: true, url: session.url });
+  } catch {
+    console.error("BILLING_PORTAL_SESSION_FAILED");
+    return NextResponse.json(
+      { ok: false, error: { code: "portal_unavailable" } },
+      { status: 503 },
+    );
+  }
 }

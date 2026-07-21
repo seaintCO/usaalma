@@ -1,132 +1,156 @@
 import Stripe from "stripe";
 import { NextResponse } from "next/server";
-import { getStripe } from "@/lib/stripe/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getStripe } from "@/lib/stripe/server";
+import {
+  shouldApplyStripeEvent,
+  subscriptionRecord,
+} from "@/lib/billing/webhook";
 
-function getPlanFromPrice(priceId?: string | null) {
-  if (!priceId) return "free";
-  if (
-    priceId === process.env.STRIPE_PRICE_STARTER ||
-    priceId === process.env.STRIPE_PRICE_PERSONAL
-  )
-    return "starter";
-  if (priceId === process.env.STRIPE_PRICE_PRO) return "pro";
-  if (priceId === process.env.STRIPE_PRICE_BUSINESS) return "business";
-  return "starter";
-}
+const subscriptionEvents = new Set([
+  "customer.subscription.created",
+  "customer.subscription.updated",
+  "customer.subscription.deleted",
+]);
 
-async function upsertSubscription(
-  subscription: Stripe.Subscription,
-  fallbackUserId?: string,
-  fallbackPlan?: string,
-) {
-  const supabase = createAdminClient();
-
-  const item = subscription.items?.data?.[0];
-  const priceId = item?.price?.id;
-  const plan =
-    fallbackPlan || subscription.metadata?.plan || getPlanFromPrice(priceId);
-  const userId = subscription.metadata?.userId || fallbackUserId;
-
-  if (!userId) {
-    console.error("WEBHOOK_MISSING_USER_ID", subscription.id);
-    return;
-  }
-
-  const { error } = await supabase.from("subscriptions").upsert(
-    {
-      user_id: userId,
-      stripe_customer_id: subscription.customer?.toString(),
-      stripe_subscription_id: subscription.id,
-      price_id: priceId ?? null,
-      plan,
-      status: subscription.status,
-      current_period_end: item?.current_period_end
-        ? new Date(item.current_period_end * 1000).toISOString()
-        : null,
-      cancel_at_period_end: Boolean(subscription.cancel_at_period_end),
-      updated_at: new Date().toISOString(),
-    },
-    { onConflict: "user_id" },
-  );
-  if (error) throw error;
+function invoiceSubscriptionId(invoice: Stripe.Invoice) {
+  const parent = invoice.parent?.subscription_details?.subscription;
+  return typeof parent === "string" ? parent : (parent?.id ?? null);
 }
 
 export async function POST(req: Request) {
-  const stripe = getStripe();
   const rawBody = await req.text();
   const signature = req.headers.get("stripe-signature");
-
-  if (!signature || !process.env.STRIPE_WEBHOOK_SECRET) {
+  if (
+    !signature ||
+    !process.env.STRIPE_WEBHOOK_SECRET ||
+    !process.env.STRIPE_SECRET_KEY
+  ) {
     return NextResponse.json(
-      { error: "Missing Stripe webhook secret" },
-      { status: 400 },
+      { ok: false, error: { code: "webhook_not_configured" } },
+      { status: 503 },
     );
   }
-
   let event: Stripe.Event;
-
   try {
-    event = stripe.webhooks.constructEvent(
+    event = getStripe().webhooks.constructEvent(
       rawBody,
       signature,
       process.env.STRIPE_WEBHOOK_SECRET,
     );
   } catch {
-    console.error("STRIPE_WEBHOOK_SIGNATURE_ERROR");
     return NextResponse.json(
-      { error: "Invalid Stripe webhook signature" },
+      { ok: false, error: { code: "invalid_signature" } },
       { status: 400 },
     );
   }
 
+  const admin = createAdminClient();
+  const { error: ledgerError } = await admin
+    .from("stripe_webhook_events")
+    .insert({
+      stripe_event_id: event.id,
+      event_type: event.type,
+      event_created: event.created,
+      processing_status: "processing",
+    });
+  if (ledgerError) {
+    if (ledgerError.code === "23505") {
+      const { data: ledger } = await admin
+        .from("stripe_webhook_events")
+        .select("processing_status")
+        .eq("stripe_event_id", event.id)
+        .maybeSingle();
+      if (ledger?.processing_status === "processed") {
+        return NextResponse.json({ ok: true, duplicate: true });
+      }
+      const { error: retryError } = await admin
+        .from("stripe_webhook_events")
+        .update({ processing_status: "processing", processed_at: null })
+        .eq("stripe_event_id", event.id);
+      if (!retryError) {
+        // Continue processing a previously failed or interrupted delivery.
+      } else {
+        return NextResponse.json(
+          { ok: false, error: { code: "ledger_unavailable" } },
+          { status: 503 },
+        );
+      }
+    } else {
+      console.error("STRIPE_LEDGER_WRITE_FAILED", event.type);
+      return NextResponse.json(
+        { ok: false, error: { code: "ledger_unavailable" } },
+        { status: 503 },
+      );
+    }
+  }
+
   try {
+    let subscription: Stripe.Subscription | null = null;
+    let fallback: { userId?: string; workspaceId?: string; plan?: string } = {};
     if (event.type === "checkout.session.completed") {
       const session = event.data.object as Stripe.Checkout.Session;
-      const userId =
-        session.metadata?.userId || session.client_reference_id || undefined;
-      const plan = session.metadata?.plan || "starter";
-
-      if (session.subscription) {
-        const subscription = await stripe.subscriptions.retrieve(
-          session.subscription.toString(),
+      fallback = {
+        userId:
+          session.metadata?.userId || session.client_reference_id || undefined,
+        workspaceId: session.metadata?.workspaceId || undefined,
+        plan: session.metadata?.plan || undefined,
+      };
+      if (session.subscription)
+        subscription = await getStripe().subscriptions.retrieve(
+          String(session.subscription),
         );
-        await upsertSubscription(subscription, userId, plan);
-      }
-    }
-
-    if (
-      event.type === "customer.subscription.created" ||
-      event.type === "customer.subscription.updated" ||
-      event.type === "customer.subscription.deleted"
+    } else if (subscriptionEvents.has(event.type)) {
+      subscription = event.data.object as Stripe.Subscription;
+    } else if (
+      event.type === "invoice.paid" ||
+      event.type === "invoice.payment_failed"
     ) {
-      const subscription = event.data.object as Stripe.Subscription;
-      await upsertSubscription(subscription);
+      const subscriptionId = invoiceSubscriptionId(
+        event.data.object as Stripe.Invoice,
+      );
+      if (subscriptionId)
+        subscription = await getStripe().subscriptions.retrieve(subscriptionId);
     }
 
-    if (event.type === "invoice.payment_failed") {
-      const invoice = event.data.object as Stripe.Invoice;
-      const subscriptionId = (
-        invoice as unknown as { subscription?: string | { id: string } | null }
-      ).subscription;
-      const normalizedSubscriptionId =
-        typeof subscriptionId === "string"
-          ? subscriptionId
-          : subscriptionId?.id;
-
-      if (normalizedSubscriptionId) {
-        const subscription = await stripe.subscriptions.retrieve(
-          normalizedSubscriptionId,
-        );
-        await upsertSubscription(subscription);
+    if (subscription) {
+      const record = subscriptionRecord(subscription, event, fallback);
+      if (!record) throw new Error("subscription_identity_missing");
+      const { data: current } = await admin
+        .from("subscriptions")
+        .select("last_stripe_event_created")
+        .eq("user_id", record.user_id)
+        .maybeSingle();
+      const lastCreated =
+        typeof current?.last_stripe_event_created === "number"
+          ? current.last_stripe_event_created
+          : null;
+      if (shouldApplyStripeEvent(lastCreated, event.created)) {
+        const { error } = await admin
+          .from("subscriptions")
+          .upsert(record, { onConflict: "user_id" });
+        if (error) throw error;
       }
     }
-
-    return NextResponse.json({ received: true });
+    await admin
+      .from("stripe_webhook_events")
+      .update({
+        processing_status: "processed",
+        processed_at: new Date().toISOString(),
+      })
+      .eq("stripe_event_id", event.id);
+    return NextResponse.json({ ok: true, received: true });
   } catch {
-    console.error("STRIPE_WEBHOOK_HANDLER_ERROR", event.type);
+    await admin
+      .from("stripe_webhook_events")
+      .update({
+        processing_status: "failed",
+        processed_at: new Date().toISOString(),
+      })
+      .eq("stripe_event_id", event.id);
+    console.error("STRIPE_WEBHOOK_HANDLER_FAILED", event.type);
     return NextResponse.json(
-      { error: "Webhook handler failed" },
+      { ok: false, error: { code: "webhook_processing_failed" } },
       { status: 500 },
     );
   }

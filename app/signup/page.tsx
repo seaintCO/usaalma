@@ -5,6 +5,7 @@ import { useState } from "react";
 import AuthLocaleToggle from "@/components/auth/AuthLocaleToggle";
 import { authMessages } from "@/lib/i18n/messages";
 import { useAlmaLocale } from "@/lib/i18n/useAlmaLocale";
+import { continuationQuery } from "@/lib/billing/continuation";
 
 export default function SignupPage() {
   const { locale } = useAlmaLocale();
@@ -26,7 +27,8 @@ export default function SignupPage() {
         body: JSON.stringify({ fullName, email, password }),
       });
       if (!response.ok) throw new Error();
-      window.location.assign("/login?created=1");
+      const continuation = continuationQuery(window.location.search);
+      window.location.assign(`/login${continuation || "?created=1"}`);
     } catch {
       setError(text.signupFailed);
       setLoading(false);
@@ -91,7 +93,16 @@ export default function SignupPage() {
         </form>
         <p className="mt-7 text-center text-sm text-[#6B7280]">
           {text.haveAccount}{" "}
-          <Link href="/login" className="font-medium text-black">
+          <Link
+            href="/login"
+            onClick={(event) => {
+              const query = continuationQuery(window.location.search);
+              if (!query) return;
+              event.preventDefault();
+              window.location.assign(`/login${query}`);
+            }}
+            className="font-medium text-black"
+          >
             {text.signIn}
           </Link>
         </p>

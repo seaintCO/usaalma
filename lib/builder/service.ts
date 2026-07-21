@@ -15,6 +15,12 @@ import type {
   BuilderProjectDraftInput,
   BuilderProjectDraftPatch,
 } from "./repository";
+import {
+  releaseUsage,
+  reserveUsage,
+  UsageLimitError,
+} from "@/lib/usage/service";
+import type { UsageReservation } from "@/lib/usage/types";
 
 export class BuilderServiceError extends Error {
   constructor(
@@ -169,6 +175,7 @@ export class BuilderService {
     revisionPrompt?: string | null;
   }) {
     const tenant = await builderContext(input);
+    let usage: UsageReservation | null = null;
     try {
       const project = await BuilderRepository.getProject({
         userId: input.userId,
@@ -207,17 +214,6 @@ export class BuilderService {
           429,
         );
       }
-      const recentBuilds = await BuilderEngineRepository.countRecentBuilds({
-        userId: input.userId,
-        workspaceId: project.workspace_id,
-      });
-      if (recentBuilds >= BUILDER_ENGINE_LIMITS.maxBuildsPerBillingPeriod) {
-        throw new BuilderServiceError(
-          "Builder monthly build limit reached for this account.",
-          "builder_quota_exceeded",
-          429,
-        );
-      }
       await BuilderRepository.appendEvent({
         userId: input.userId,
         workspaceId: project.workspace_id,
@@ -231,12 +227,21 @@ export class BuilderService {
         project,
         status: "requested",
       });
+      usage = await reserveUsage({
+        userId: input.userId,
+        feature: "builder_build",
+        mode: null,
+        model: process.env.ALMA_BUILDER_CODEX_MODEL ?? null,
+        units: { builderJobs: 1 },
+        idempotencyKey: `builder:${session.id}`,
+      });
       const job = await BuilderEngineRepository.createBuildJob({
         userId: input.userId,
         project,
         sessionId: session.id,
         starterKey,
         revisionPrompt: input.revisionPrompt ?? undefined,
+        usageReservationId: usage.id,
       });
       const queuedProject = await BuilderRepository.setActiveSession({
         userId: input.userId,
@@ -254,6 +259,13 @@ export class BuilderService {
         },
       };
     } catch (error) {
+      if (usage) await releaseUsage(usage);
+      if (error instanceof UsageLimitError)
+        throw new BuilderServiceError(
+          error.message,
+          "builder_quota_exceeded",
+          error.status,
+        );
       if (error instanceof BuilderServiceError) throw error;
       mapRepositoryError(error);
     }

@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { requirePaidUser } from "@/lib/api/requirePaidUser";
 import { generateImageTool } from "@/lib/tools/images/generateImageTool";
+import { withUsageRoute } from "@/lib/usage/routeBoundary";
 
-export async function POST(req: Request) {
+async function post(req: Request) {
   const { user, error } = await requirePaidUser("images");
 
   if (error) return error;
@@ -29,3 +30,4 @@ export async function POST(req: Request) {
 
   return NextResponse.json(result, { status: result.success ? 200 : 400 });
 }
+export const POST = withUsageRoute(post);

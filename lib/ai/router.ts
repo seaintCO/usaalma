@@ -5,8 +5,10 @@ import { saveExtractedMemory } from "@/lib/ai/memory/saveMemory";
 import { buildIntegrationContext } from "@/lib/ai/integrations/context";
 import { executeTool, toolDefinitions } from "@/lib/ai/tools/registry";
 import { safeJsonParse } from "@/lib/ai/tools/utils";
+import { modeConfiguration } from "@/lib/usage/modes";
+import { withUsageReservation } from "@/lib/usage/service";
 
-export async function askALMA(data:{ userId:string; message:string }) {
+async function askALMAUnmetered(data: { userId: string; message: string }) {
   if (!process.env.OPENAI_API_KEY) {
     return "ALMA está conectada, pero falta configurar OPENAI_API_KEY en .env.local.";
   }
@@ -50,23 +52,25 @@ Memoria del usuario:
 ${memoryContext || "Sin memoria guardada todavía."}
 `;
 
-  const firstResponse:any = await client.responses.create({
+  const firstResponse: any = await client.responses.create({
     model,
     input: [
       { role: "system", content: systemPrompt },
-      { role: "user", content: data.message }
+      { role: "user", content: data.message },
     ],
     tools: toolDefinitions,
-    tool_choice: "auto"
+    tool_choice: "auto",
   });
 
-  const toolCalls = (firstResponse.output || []).filter((item:any) => item.type === "function_call");
+  const toolCalls = (firstResponse.output || []).filter(
+    (item: any) => item.type === "function_call",
+  );
 
   if (!toolCalls.length) {
     return firstResponse.output_text || "No pude responder.";
   }
 
-  const toolResults:any[] = [];
+  const toolResults: any[] = [];
 
   for (const call of toolCalls) {
     const args = call.arguments ? safeJsonParse(call.arguments) : {};
@@ -75,20 +79,34 @@ ${memoryContext || "Sin memoria guardada todavía."}
     toolResults.push({
       type: "function_call_output",
       call_id: call.call_id,
-      output: JSON.stringify(result)
+      output: JSON.stringify(result),
     });
   }
 
-  const finalResponse:any = await client.responses.create({
+  const finalResponse: any = await client.responses.create({
     model,
     input: [
       { role: "system", content: systemPrompt },
       { role: "user", content: data.message },
       ...toolCalls,
-      ...toolResults
-    ]
+      ...toolResults,
+    ],
   });
 
   return finalResponse.output_text || "Listo.";
 }
 
+export async function askALMA(data: { userId: string; message: string }) {
+  const configured = modeConfiguration("instant");
+  return withUsageReservation(
+    {
+      userId: data.userId,
+      feature: "ai_request",
+      mode: "instant",
+      model: configured.model,
+      units: { requests: 1 },
+      idempotencyKey: `legacy-chat:${crypto.randomUUID()}`,
+    },
+    () => askALMAUnmetered(data),
+  );
+}

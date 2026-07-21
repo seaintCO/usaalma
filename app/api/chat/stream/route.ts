@@ -1,14 +1,13 @@
 import { normalizeChatRunLanguage } from "@/lib/alma/chat/chatExecutionHelpers";
 import { processCanonicalChatRun } from "@/lib/alma/chat/processChatRun";
-import {
-  extractExplicitMemory,
-  extractMemory,
-} from "@/lib/ai/extractors/memoryExtractor";
+import { extractExplicitMemory } from "@/lib/ai/extractors/memoryExtractor";
 import { saveExtractedMemory } from "@/lib/ai/memory/saveMemory";
 import { getCurrentUser } from "@/lib/auth/user";
 import { SubscriptionRepository } from "@/lib/db/repositories/billing/subscription.repository";
 import { ConversationRepository } from "@/lib/db/repositories/conversation.repository";
 import { MessageRepository } from "@/lib/db/repositories/message.repository";
+import { parseClientMode, type SelectableAlmaMode } from "@/lib/usage/modes";
+import { UsageLimitError, usageErrorPayload } from "@/lib/usage/service";
 
 type StreamInput = {
   userId: string;
@@ -16,6 +15,7 @@ type StreamInput = {
   message: string;
   language: "en" | "es" | "auto";
   idempotencyKey?: string | null;
+  mode: SelectableAlmaMode;
 };
 
 function encodeTerminalError(input: {
@@ -41,6 +41,7 @@ function createChatStreamResponse(input: StreamInput) {
           userMessage: input.message,
           language: input.language,
           idempotencyKey: input.idempotencyKey ?? undefined,
+          mode: input.mode,
           onProgress: async (event) => {
             if (event.type === "status") {
               controller.enqueue(encoder.encode(event.message));
@@ -77,6 +78,18 @@ function createChatStreamResponse(input: StreamInput) {
           );
         }
       } catch (error) {
+        if (error instanceof UsageLimitError) {
+          controller.enqueue(
+            encoder.encode(
+              encodeTerminalError({
+                code: error.code,
+                category: "rate_limited",
+                message: JSON.stringify(usageErrorPayload(error).message),
+              }),
+            ),
+          );
+          return;
+        }
         console.error("ALMA_CHAT_PROCESSOR_ERROR", {
           conversationId: input.conversationId,
           idempotencyKey: input.idempotencyKey ?? null,
@@ -118,6 +131,7 @@ export async function POST(req: Request) {
     conversationId?: unknown;
     language?: unknown;
     idempotencyKey?: unknown;
+    mode?: unknown;
   };
   try {
     body = await req.json();
@@ -133,6 +147,9 @@ export async function POST(req: Request) {
     typeof body.idempotencyKey === "string" && body.idempotencyKey.length >= 16
       ? body.idempotencyKey.slice(0, 160)
       : null;
+  const mode = body.mode === undefined ? "instant" : parseClientMode(body.mode);
+  if (!mode)
+    return Response.json({ ok: false, error: "invalid_mode" }, { status: 400 });
 
   if (process.env.NEXT_PUBLIC_DEMO_MODE === "true") {
     const encoder = new TextEncoder();
@@ -195,10 +212,7 @@ export async function POST(req: Request) {
 
   const explicitMemory = extractExplicitMemory(message);
   try {
-    await saveExtractedMemory(
-      user.id,
-      explicitMemory ?? (await extractMemory(message)),
-    );
+    if (explicitMemory) await saveExtractedMemory(user.id, explicitMemory);
   } catch (error) {
     if (explicitMemory) {
       return new Response(
@@ -220,5 +234,6 @@ export async function POST(req: Request) {
     message,
     language,
     idempotencyKey,
+    mode,
   });
 }

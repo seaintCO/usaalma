@@ -24,6 +24,15 @@ import {
   VoiceConfigurationError,
 } from "@/lib/voice/config";
 import { recordVoiceTranscript } from "@/lib/voice/repository";
+import { modeConfiguration } from "@/lib/usage/modes";
+import {
+  releaseUsage,
+  reserveUsage,
+  settleUsage,
+  withUsageReservation,
+} from "@/lib/usage/service";
+import { UsageLimitError } from "@/lib/usage/service";
+import { withUsageRoute } from "@/lib/usage/routeBoundary";
 
 function jsonError(
   code: string,
@@ -52,7 +61,7 @@ function mapProviderError(error: unknown) {
   return jsonError("transcription_provider_failed", 502);
 }
 
-export async function POST(req: Request) {
+async function post(req: Request) {
   const user = await getCurrentUser();
   if (!user) {
     return jsonError("unauthorized", 401);
@@ -64,6 +73,7 @@ export async function POST(req: Request) {
     apiKey = getOpenAIApiKey();
     model = getTranscriptionModel();
   } catch (error) {
+    if (error instanceof UsageLimitError) throw error;
     if (error instanceof VoiceConfigurationError) {
       return jsonError(error.code, 503);
     }
@@ -111,12 +121,32 @@ export async function POST(req: Request) {
       fileInfo.fileName,
       { type: fileInfo.mimeType },
     );
-    const transcription = await client.audio.transcriptions.create({
-      file: normalizedAudio,
+    const estimatedSeconds = Math.max(1, Math.ceil(audio.size / 2_000));
+    const voiceUsage = await reserveUsage({
+      userId: user.id,
+      feature: "voice",
+      mode: null,
       model,
+      units: { voiceSeconds: estimatedSeconds },
+      idempotencyKey: `transcription:${req.headers.get("x-idempotency-key") ?? crypto.randomUUID()}`,
     });
+    let transcription;
+    try {
+      transcription = await client.audio.transcriptions.create({
+        file: normalizedAudio,
+        model,
+        response_format: "verbose_json",
+      });
+      await settleUsage(voiceUsage, {
+        voiceSeconds: Math.max(1, Math.ceil(transcription.duration)),
+      });
+    } catch (error) {
+      await releaseUsage(voiceUsage);
+      throw error;
+    }
     transcript = transcription.text?.trim() ?? "";
   } catch (error) {
+    if (error instanceof UsageLimitError) throw error;
     return mapProviderError(error);
   }
 
@@ -126,13 +156,25 @@ export async function POST(req: Request) {
 
   let translated;
   try {
-    translated = await runCommunicationOperation({
-      operation: "translate_text",
-      text: transcript,
-      sourceLanguage: "auto",
-      targetLanguage: targetLanguage as CommunicationLanguageCode,
-      channel: "translator",
-    });
+    const configured = modeConfiguration("instant");
+    translated = await withUsageReservation(
+      {
+        userId: user.id,
+        feature: "ai_request",
+        mode: "instant",
+        model: configured.model,
+        units: { requests: 1 },
+        idempotencyKey: `transcription-translate:${req.headers.get("x-idempotency-key") ?? crypto.randomUUID()}`,
+      },
+      () =>
+        runCommunicationOperation({
+          operation: "translate_text",
+          text: transcript,
+          sourceLanguage: "auto",
+          targetLanguage: targetLanguage as CommunicationLanguageCode,
+          channel: "translator",
+        }),
+    );
   } catch (error) {
     if (error instanceof CommunicationProviderUnavailableError) {
       return jsonError(error.code, 503);
@@ -168,3 +210,4 @@ export async function POST(req: Request) {
     provider: { transcriptionModel: model },
   });
 }
+export const POST = withUsageRoute(post);

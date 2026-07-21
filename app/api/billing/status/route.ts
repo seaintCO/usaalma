@@ -16,6 +16,7 @@ export async function GET() {
     return NextResponse.json({
       ok: true,
       subscription: subscription ?? {
+        id: null,
         plan: "free",
         status: "inactive",
         stripeCustomerId: null,

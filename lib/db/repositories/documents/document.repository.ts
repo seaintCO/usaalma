@@ -15,10 +15,18 @@ export class DocumentRepository {
     return data ?? [];
   }
 
-  static async create(userId: string, title: string, content: string) {
+  static async create(
+    userId: string,
+    title: string,
+    content: string,
+    options: { embed?: boolean } = {},
+  ) {
     const supabase = await createClient();
 
-    const embedding = await createEmbedding(`${title}\n${content}`);
+    const embedding =
+      options.embed === false
+        ? null
+        : await createEmbedding(userId, `${title}\n${content}`);
 
     const { data, error } = await supabase
       .from("documents")

@@ -27,6 +27,7 @@ import {
   type ChatErrorCategory,
   type ChatLanguage as SharedChatLanguage,
 } from "@/lib/alma/chat/chatErrorHandling";
+import type { SelectableAlmaMode } from "@/lib/usage/modes";
 
 export type ChatLanguage = SharedChatLanguage;
 
@@ -40,6 +41,7 @@ type ChatRetryState = {
   conversationId: string | null;
   runId?: string;
   executionId?: string;
+  mode: SelectableAlmaMode;
 };
 
 export type ChatMessage = {
@@ -334,6 +336,9 @@ export function ChatComposer({
   onChange,
   onSend,
   onFile,
+  mode,
+  onModeChange,
+  modeUsage,
 }: {
   value: string;
   language: ChatLanguage;
@@ -341,6 +346,13 @@ export function ChatComposer({
   onChange: (value: string) => void;
   onSend: () => void;
   onFile: (file: File) => void;
+  mode: SelectableAlmaMode;
+  onModeChange: (mode: SelectableAlmaMode) => void;
+  modeUsage: {
+    used: Record<string, number>;
+    limits: Record<string, number>;
+    reset: string;
+  } | null;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
@@ -349,6 +361,79 @@ export function ChatComposer({
   return (
     <div className="border-t border-[#E5E7EB] bg-white px-3 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 md:px-6">
       <div className="mx-auto w-full max-w-3xl">
+        <div
+          className="mb-2 flex items-center gap-2 overflow-x-auto"
+          role="group"
+          aria-label={language === "es" ? "Modo de ALMA" : "ALMA mode"}
+        >
+          {(["instant", "thinking", "pro"] as const).map((item) => {
+            const labels =
+              language === "es"
+                ? {
+                    instant: "Instantáneo",
+                    thinking: "Razonamiento",
+                    pro: "Pro",
+                  }
+                : { instant: "Instant", thinking: "Thinking", pro: "Pro" };
+            const descriptions =
+              language === "es"
+                ? {
+                    instant: "Rápido y cotidiano",
+                    thinking: "Planificación y análisis",
+                    pro: "Trabajo profesional complejo",
+                  }
+                : {
+                    instant: "Fast everyday help",
+                    thinking: "Planning and analysis",
+                    pro: "Complex professional work",
+                  };
+            const limit = modeUsage?.limits[item] ?? (item === "pro" ? 0 : 1);
+            const locked = limit <= 0 || (modeUsage?.used[item] ?? 0) >= limit;
+            return (
+              <button
+                key={item}
+                type="button"
+                disabled={busy || locked}
+                aria-pressed={mode === item}
+                title={descriptions[item]}
+                onClick={() => onModeChange(item)}
+                className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-medium disabled:cursor-not-allowed disabled:opacity-40 ${mode === item ? "border-black bg-black text-white" : "border-[#E5E7EB] bg-white text-[#6B7280]"}`}
+              >
+                {labels[item]}
+              </button>
+            );
+          })}
+        </div>
+        <p className="mb-2 text-xs text-[#6B7280]" aria-live="polite">
+          {language === "es"
+            ? (
+                {
+                  instant: "Rápido para preguntas, redacción y traducción.",
+                  thinking: "Para planificación, análisis y documentos.",
+                  pro: "Para trabajo profesional complejo y de varios pasos.",
+                } as const
+              )[mode]
+            : (
+                {
+                  instant: "Fast for questions, rewriting, and translation.",
+                  thinking: "For planning, analysis, and documents.",
+                  pro: "For complex, multi-step professional work.",
+                } as const
+              )[mode]}
+          {modeUsage
+            ? ` · ${Math.max(0, (modeUsage.limits[mode] ?? 0) - (modeUsage.used[mode] ?? 0))} ${language === "es" ? "restantes; reinicia" : "remaining; resets"} ${new Date(modeUsage.reset).toLocaleDateString()}`
+            : ""}
+          {modeUsage &&
+          ((modeUsage.limits[mode] ?? 0) <= 0 ||
+            (modeUsage.used[mode] ?? 0) >= (modeUsage.limits[mode] ?? 0)) ? (
+            <a
+              href="/billing"
+              className="ml-1 font-medium text-black underline"
+            >
+              {language === "es" ? "Mejorar plan" : "Upgrade"}
+            </a>
+          ) : null}
+        </p>
         {composerOpen ? (
           <div className="mb-3">
             <BilingualComposer
@@ -489,6 +574,12 @@ export default function ChatWorkspace({
 }: ChatWorkspaceProps) {
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
+  const [mode, setMode] = useState<SelectableAlmaMode>("instant");
+  const [modeUsage, setModeUsage] = useState<{
+    used: Record<string, number>;
+    limits: Record<string, number>;
+    reset: string;
+  } | null>(null);
   const sending = useRef(false);
   const controller = useRef<AbortController | null>(null);
   const pollTimers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
@@ -703,6 +794,7 @@ export default function ChatWorkspace({
       idempotencyKey: submission.idempotencyKey,
       transport: submission.transport,
       conversationId: activeConversationId,
+      mode,
     };
 
     sending.current = true;
@@ -770,6 +862,7 @@ export default function ChatWorkspace({
             conversationId: activeConversationId,
             language: submission.responseLanguage,
             idempotencyKey: submission.idempotencyKey,
+            mode,
           }),
           signal: timed.controller.signal,
           cache: "no-store",
@@ -837,6 +930,7 @@ export default function ChatWorkspace({
           conversationId: activeConversationId,
           language: submission.responseLanguage,
           idempotencyKey: submission.idempotencyKey,
+          mode,
         }),
         signal: timed.controller.signal,
         cache: "no-store",
@@ -993,6 +1087,20 @@ export default function ChatWorkspace({
   }, [initialPrompt]);
 
   useEffect(() => {
+    void fetch("/api/usage", { cache: "no-store" })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((body) => {
+        if (body?.usage?.limits?.modes)
+          setModeUsage({
+            used: body.usage.used ?? {},
+            limits: body.usage.limits.modes,
+            reset: body.usage.period.end,
+          });
+      })
+      .catch(() => undefined);
+  }, []);
+
+  useEffect(() => {
     stopPolling();
   }, [streamEpoch, conversationId]);
 
@@ -1056,6 +1164,9 @@ export default function ChatWorkspace({
         onChange={setInput}
         onSend={send}
         onFile={onAnalyzeFile}
+        mode={mode}
+        onModeChange={setMode}
+        modeUsage={modeUsage}
       />
     </div>
   );

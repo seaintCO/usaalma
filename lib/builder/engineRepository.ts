@@ -1,5 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { releaseUsageById, settleUsageById } from "@/lib/usage/service";
 import { BUILDER_ENGINE_LIMITS } from "./limits";
 import { redactBuilderMetadata, redactBuilderSecrets } from "./redaction";
 import type {
@@ -122,6 +123,7 @@ export class BuilderEngineRepository {
     sessionId: string;
     starterKey: string;
     revisionPrompt?: string;
+    usageReservationId: string;
   }) {
     const idempotencyKey = builderJobIdempotencyKey({
       projectId: input.project.id,
@@ -148,6 +150,7 @@ export class BuilderEngineRepository {
         idempotency_key: idempotencyKey,
         job_type: "build_application",
         status: "queued",
+        usage_reservation_id: input.usageReservationId,
         max_attempts: BUILDER_ENGINE_LIMITS.maxValidationAttempts,
         metadata: redactBuilderMetadata({
           starterKey: input.starterKey,
@@ -195,6 +198,7 @@ export class BuilderEngineRepository {
   }) {
     const terminal = [
       "completed",
+      "preview_ready",
       "retryable_failed",
       "permanently_failed",
       "cancelled",
@@ -218,7 +222,13 @@ export class BuilderEngineRepository {
       .single();
     const mapped = schemaError(error);
     if (mapped) throw mapped;
-    return data as BuilderJob;
+    const job = data as BuilderJob;
+    if (terminal && job.usage_reservation_id) {
+      if (input.status === "completed" || input.status === "preview_ready")
+        await settleUsageById(job.usage_reservation_id, { builderJobs: 1 });
+      else await releaseUsageById(job.usage_reservation_id);
+    }
+    return job;
   }
 
   static async getActiveLeasedJob(jobId: string) {

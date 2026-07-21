@@ -3,12 +3,13 @@ import { askALMA } from "@/lib/ai/router";
 import { getCurrentUser } from "@/lib/auth/user";
 import { ConversationRepository } from "@/lib/db/repositories/conversation.repository";
 import { MessageRepository } from "@/lib/db/repositories/message.repository";
+import { withUsageRoute } from "@/lib/usage/routeBoundary";
 
-export async function POST(req:Request) {
+async function post(req: Request) {
   const user = await getCurrentUser();
 
   if (!user) {
-    return NextResponse.json({ error:"Unauthorized" }, { status:401 });
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const body = await req.json();
@@ -16,7 +17,7 @@ export async function POST(req:Request) {
   let conversationId = body.conversationId;
 
   if (!message) {
-    return NextResponse.json({ error:"Mensaje vacío" }, { status:400 });
+    return NextResponse.json({ error: "Mensaje vacío" }, { status: 400 });
   }
 
   if (!conversationId) {
@@ -28,19 +29,20 @@ export async function POST(req:Request) {
   await MessageRepository.create(conversationId, user.id, "user", message);
 
   const reply = await askALMA({
-    userId:user.id,
-    message
+    userId: user.id,
+    message,
   });
 
   await MessageRepository.create(conversationId, user.id, "assistant", reply);
 
   await ConversationRepository.rename(
     conversationId,
-    message.length > 40 ? message.slice(0, 40) + "..." : message
+    message.length > 40 ? message.slice(0, 40) + "..." : message,
   );
 
   return NextResponse.json({
     reply,
-    conversationId
+    conversationId,
   });
 }
+export const POST = withUsageRoute(post);

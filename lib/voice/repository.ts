@@ -1,4 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import { settleUsageById } from "@/lib/usage/service";
 
 export class VoiceStorageUnavailableError extends Error {
   constructor(message = "Voice storage is unavailable.") {
@@ -32,6 +33,7 @@ export async function createVoiceSessionRecord(input: {
   mode: "alma_voice" | "translator";
   model: string;
   language: string;
+  usageReservationId: string;
 }) {
   try {
     const supabase = admin();
@@ -44,6 +46,7 @@ export async function createVoiceSessionRecord(input: {
         model: input.model,
         preferred_language: input.language,
         status: "active",
+        usage_reservation_id: input.usageReservationId,
       })
       .select("id")
       .single();
@@ -55,6 +58,42 @@ export async function createVoiceSessionRecord(input: {
     }
     throw error;
   }
+}
+
+export async function completeVoiceSessionRecord(input: {
+  userId: string;
+  sessionId: string;
+  maxSeconds?: number;
+}) {
+  const supabase = admin();
+  const { data: session, error } = await supabase
+    .from("voice_sessions")
+    .select("id,status,created_at,usage_reservation_id")
+    .eq("id", input.sessionId)
+    .eq("user_id", input.userId)
+    .maybeSingle();
+  if (error) throw error;
+  if (!session) return null;
+  if (session.status !== "active") return { seconds: 0, duplicate: true };
+  const seconds = Math.max(
+    1,
+    Math.min(
+      input.maxSeconds ?? 900,
+      Math.ceil((Date.now() - new Date(session.created_at).getTime()) / 1000),
+    ),
+  );
+  if (session.usage_reservation_id)
+    await settleUsageById(session.usage_reservation_id, {
+      voiceSeconds: seconds,
+    });
+  const { error: updateError } = await supabase
+    .from("voice_sessions")
+    .update({ status: "completed", ended_at: new Date().toISOString() })
+    .eq("id", session.id)
+    .eq("user_id", input.userId)
+    .eq("status", "active");
+  if (updateError) throw updateError;
+  return { seconds, duplicate: false };
 }
 
 export async function recordVoiceTranscript(input: {

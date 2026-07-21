@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { runCommunicationOperation } from "@/lib/communications/translationService";
+import { modeConfiguration } from "@/lib/usage/modes";
+import { withUsageReservation } from "@/lib/usage/service";
 import {
   createOrUpdateWhatsAppThread,
   insertCommunicationMessage,
@@ -174,13 +176,24 @@ export async function POST(req: Request) {
           message.document?.caption ??
           "";
         const translation = text
-          ? await runCommunicationOperation({
-              operation: "translate_text",
-              text,
-              sourceLanguage: "auto",
-              targetLanguage: "en",
-              channel: "whatsapp",
-            })
+          ? await withUsageReservation(
+              {
+                userId: connection.user_id,
+                feature: "ai_request",
+                mode: "instant",
+                model: modeConfiguration("instant").model,
+                units: { requests: 1 },
+                idempotencyKey: `whatsapp:${message.id}`,
+              },
+              () =>
+                runCommunicationOperation({
+                  operation: "translate_text",
+                  text,
+                  sourceLanguage: "auto",
+                  targetLanguage: "en",
+                  channel: "whatsapp",
+                }),
+            )
           : null;
         const thread = await createOrUpdateWhatsAppThread({
           userId: connection.user_id,

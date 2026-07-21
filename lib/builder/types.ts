@@ -91,6 +91,7 @@ export type BuilderValidationResult = {
 
 export type BuilderJob = {
   id: string;
+  usage_reservation_id?: string | null;
   user_id: string;
   workspace_id: string | null;
   project_id: string;

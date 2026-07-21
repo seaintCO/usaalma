@@ -15,6 +15,7 @@ export default function AlmaVoiceControls({
   const [message, setMessage] = useState("");
   const peer = useRef<RTCPeerConnection | null>(null);
   const stream = useRef<MediaStream | null>(null);
+  const localSessionId = useRef<string | null>(null);
 
   const copy =
     language === "es"
@@ -55,6 +56,10 @@ export default function AlmaVoiceControls({
         setMessage(copy.blocked);
         return;
       }
+      localSessionId.current =
+        typeof payload.localSessionId === "string"
+          ? payload.localSessionId
+          : null;
       if (!navigator.mediaDevices?.getUserMedia || !window.RTCPeerConnection) {
         setState("blocked");
         setMessage(copy.mic);
@@ -89,6 +94,15 @@ export default function AlmaVoiceControls({
     peer.current?.close();
     stream.current = null;
     peer.current = null;
+    if (localSessionId.current) {
+      void fetch("/api/realtime/session/complete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ localSessionId: localSessionId.current }),
+        keepalive: true,
+      });
+      localSessionId.current = null;
+    }
     setState("idle");
   }
 

@@ -6,6 +6,10 @@ import AuthLocaleToggle from "@/components/auth/AuthLocaleToggle";
 import { authMessages } from "@/lib/i18n/messages";
 import { useAlmaLocale } from "@/lib/i18n/useAlmaLocale";
 import { createClient } from "@/lib/supabase/client";
+import {
+  continuationQuery,
+  loginContinuation,
+} from "@/lib/billing/continuation";
 
 export default function LoginPage() {
   const { locale } = useAlmaLocale();
@@ -24,7 +28,7 @@ export default function LoginPage() {
     const result = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
     if (result.error) return setError(text.loginFailed);
-    window.location.assign("/dashboard");
+    window.location.assign(loginContinuation(window.location.search));
   }
 
   return (
@@ -88,7 +92,16 @@ export default function LoginPage() {
           <Link href="/forgot-password" className="hover:text-black">
             {text.forgot}
           </Link>
-          <Link href="/signup" className="hover:text-black">
+          <Link
+            href="/signup"
+            onClick={(event) => {
+              const query = continuationQuery(window.location.search);
+              if (!query) return;
+              event.preventDefault();
+              window.location.assign(`/signup${query}`);
+            }}
+            className="hover:text-black"
+          >
             {text.createAccount}
           </Link>
         </div>

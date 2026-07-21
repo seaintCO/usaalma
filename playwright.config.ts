@@ -35,6 +35,22 @@ export default defineConfig({
     ...(fs.existsSync(authState)
       ? [
           {
+            name: "authenticated-mobile",
+            testMatch: /authenticated\.spec\.ts/,
+            use: {
+              ...devices["Pixel 5"],
+              storageState: authState,
+            },
+          },
+          {
+            name: "authenticated-tablet",
+            testMatch: /authenticated\.spec\.ts/,
+            use: {
+              viewport: { width: 768, height: 1024 },
+              storageState: authState,
+            },
+          },
+          {
             name: "authenticated-desktop",
             testMatch: /authenticated\.spec\.ts/,
             use: {

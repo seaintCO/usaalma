@@ -1,70 +1,78 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth/user";
-import { getStripe } from "@/lib/stripe/server";
+import { billingPriceId, normalizeBillingPlan } from "@/lib/billing/plans";
 import { SubscriptionRepository } from "@/lib/db/repositories/billing/subscription.repository";
+import { getStripe } from "@/lib/stripe/server";
+import { resolveTenantWorkspace } from "@/lib/platform/workspace/tenantResolver";
 
-const PRICE_MAP: Record<string, string | undefined> = {
-  starter: process.env.STRIPE_PRICE_STARTER,
-  pro: process.env.STRIPE_PRICE_PRO,
-  business: process.env.STRIPE_PRICE_BUSINESS,
-  personal:
-    process.env.STRIPE_PRICE_STARTER || process.env.STRIPE_PRICE_PERSONAL,
-};
+function failure(code: string, status: number) {
+  return NextResponse.json({ ok: false, error: { code } }, { status });
+}
 
 export async function POST(req: Request) {
+  const user = await getCurrentUser();
+  if (!user) return failure("authentication_required", 401);
+  const body = await req.json().catch(() => ({}));
+  const plan = normalizeBillingPlan(body.plan);
+  if (!plan) return failure("unsupported_plan", 400);
+  const priceId = billingPriceId(plan);
+  if (
+    !priceId ||
+    !process.env.STRIPE_SECRET_KEY ||
+    !process.env.NEXT_PUBLIC_APP_URL
+  ) {
+    return failure("checkout_not_configured", 503);
+  }
+
   try {
-    const user = await getCurrentUser();
-
-    if (!user) {
-      return NextResponse.json(
-        { error: "Please log in first." },
-        { status: 401 },
-      );
+    const [existing, tenant] = await Promise.all([
+      SubscriptionRepository.get(user.id),
+      resolveTenantWorkspace({
+        userId: user.id,
+        workspaceId: body.workspaceId,
+      }),
+    ]);
+    if (
+      existing &&
+      ["active", "trialing", "past_due", "unpaid"].includes(existing.status)
+    ) {
+      return failure("manage_existing_subscription", 409);
     }
-
-    const body = await req.json().catch(() => ({}));
-    const plan = String(body.plan || "starter").toLowerCase();
-    const priceId = PRICE_MAP[plan];
-
-    if (!priceId) {
-      return NextResponse.json(
-        { error: `Stripe price for ${plan} is not configured.` },
-        { status: 500 },
-      );
-    }
-
-    if (!process.env.NEXT_PUBLIC_APP_URL) {
-      return NextResponse.json(
-        { error: "NEXT_PUBLIC_APP_URL is not configured." },
-        { status: 500 },
-      );
-    }
-
-    const existingSub = await SubscriptionRepository.get(user.id);
-
+    const appUrl = new URL(process.env.NEXT_PUBLIC_APP_URL).origin;
     const stripe = getStripe();
-
-    const session = await stripe.checkout.sessions.create({
-      mode: "subscription",
-      customer: existingSub?.stripeCustomerId || undefined,
-      customer_email: existingSub?.stripeCustomerId
-        ? undefined
-        : (user.email ?? undefined),
-      line_items: [{ price: priceId, quantity: 1 }],
-      allow_promotion_codes: true,
-      client_reference_id: user.id,
-      metadata: { userId: user.id, plan },
-      subscription_data: { metadata: { userId: user.id, plan } },
-      success_url: `${process.env.NEXT_PUBLIC_APP_URL}/billing/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/billing?billing=cancelled`,
-    });
-
-    return NextResponse.json({ url: session.url });
-  } catch {
-    console.error("CHECKOUT_ERROR");
-    return NextResponse.json(
-      { error: "Unable to start checkout. Please try again." },
-      { status: 500 },
+    const session = await stripe.checkout.sessions.create(
+      {
+        mode: "subscription",
+        customer: existing?.stripeCustomerId || undefined,
+        customer_email: existing?.stripeCustomerId
+          ? undefined
+          : (user.email ?? undefined),
+        line_items: [{ price: priceId, quantity: 1 }],
+        allow_promotion_codes: true,
+        client_reference_id: user.id,
+        metadata: {
+          userId: user.id,
+          workspaceId: tenant.workspaceId ?? "",
+          plan,
+        },
+        subscription_data: {
+          metadata: {
+            userId: user.id,
+            workspaceId: tenant.workspaceId ?? "",
+            plan,
+          },
+        },
+        success_url: `${appUrl}/billing/success`,
+        cancel_url: `${appUrl}/billing?billing=cancelled`,
+      },
+      {
+        idempotencyKey: `alma_checkout_${user.id}_${plan}_${new Date().toISOString().slice(0, 10)}`,
+      },
     );
+    if (!session.url) return failure("checkout_unavailable", 503);
+    return NextResponse.json({ ok: true, url: session.url });
+  } catch {
+    console.error("CHECKOUT_SESSION_FAILED");
+    return failure("checkout_unavailable", 503);
   }
 }

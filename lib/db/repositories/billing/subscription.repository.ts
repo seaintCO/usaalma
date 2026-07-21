@@ -29,7 +29,22 @@ export class SubscriptionRepository {
         typeof data.current_period_end === "string"
           ? data.current_period_end
           : null,
+      currentPeriodStart:
+        typeof data.current_period_start === "string"
+          ? data.current_period_start
+          : null,
       cancelAtPeriodEnd: data.cancel_at_period_end === true,
+      trialEnd: typeof data.trial_end === "string" ? data.trial_end : null,
+      paymentFailedAt:
+        typeof data.payment_failed_at === "string"
+          ? data.payment_failed_at
+          : null,
+      workspaceId:
+        typeof data.workspace_id === "string" ? data.workspace_id : null,
+      lastStripeEventId:
+        typeof data.last_stripe_event_id === "string"
+          ? data.last_stripe_event_id
+          : null,
     };
   }
 

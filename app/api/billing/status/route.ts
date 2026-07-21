@@ -22,7 +22,12 @@ export async function GET() {
         stripeSubscriptionId: null,
         priceId: null,
         currentPeriodEnd: null,
+        currentPeriodStart: null,
         cancelAtPeriodEnd: false,
+        trialEnd: null,
+        paymentFailedAt: null,
+        workspaceId: null,
+        lastStripeEventId: null,
       },
     });
   } catch {

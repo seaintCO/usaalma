@@ -4,6 +4,7 @@ import {
   isRuntimeConfigError,
   safeRuntimeConfigErrorBody,
 } from "@/lib/runtime/config";
+import { resolveAlmaMode } from "@/lib/usage/modes";
 
 export async function POST(request: Request) {
   if (
@@ -48,6 +49,7 @@ export async function POST(request: Request) {
     userMessage: message.content,
     idempotencyKey: run.idempotency_key,
     language: "auto",
+    mode: resolveAlmaMode(run.alma_mode),
   });
   // The Edge worker exclusively owns claim-token lifecycle transitions. This
   // endpoint only invokes the canonical processor and reports its result.

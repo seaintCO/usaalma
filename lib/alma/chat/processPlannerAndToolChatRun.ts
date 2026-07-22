@@ -1,6 +1,5 @@
 import "server-only";
 import OpenAI from "openai";
-import { chooseAlmaModel } from "@/lib/alma/modelRouter";
 import { planAlmaAction } from "@/lib/alma/brain";
 import { getAlmaContext } from "@/lib/alma/context";
 import { buildContext } from "@/lib/ai/memory/context";
@@ -15,6 +14,7 @@ import { executeTool, toolDefinitions } from "@/lib/ai/tools/registry";
 import { safeJsonParse } from "@/lib/ai/tools/utils";
 import { MessageRepository } from "@/lib/db/repositories/message.repository";
 import { AgentService } from "@/lib/services/agents/agent.service";
+import { modeConfiguration, type SelectableAlmaMode } from "@/lib/usage/modes";
 import { buildResponseLanguageInstruction } from "./chatExecutionHelpers";
 import {
   completeChatRunTracking,
@@ -32,6 +32,7 @@ export type PlannerToolChatRunInput = {
   userMessage: string;
   language: "en" | "es" | "auto";
   idempotencyKey?: string;
+  mode?: SelectableAlmaMode;
   tracking?: ChatRunTrackingContext;
   onProgress?: ChatRunProgressCallback;
 };
@@ -129,6 +130,7 @@ function plannedReply(
 export async function processPlannerAndToolChatRun(
   input: PlannerToolChatRunInput,
 ): Promise<PlannerToolChatRunResult> {
+  const mode = modeConfiguration(input.mode ?? "instant");
   let almaContext: unknown = null;
   let almaPlan;
   try {
@@ -213,7 +215,8 @@ export async function processPlannerAndToolChatRun(
     try {
       const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
       const result: any = await client.responses.create({
-        model: chooseAlmaModel(input.userMessage, "auto"),
+        model: mode.model,
+        reasoning: { effort: mode.reasoning },
         input: `${buildMarketAnalysisPrompt("Chart / Market", input.userMessage)}\n\n${buildResponseLanguageInstruction(input.userMessage, input.language)}`,
       });
       const reply =
@@ -329,7 +332,8 @@ ${memoryContext || "Sin memoria guardada todavía."}
   let firstResponse: any;
   try {
     firstResponse = await client.responses.create({
-      model: chooseAlmaModel(input.userMessage, "auto"),
+      model: mode.model,
+      reasoning: { effort: mode.reasoning },
       input: [
         { role: "system", content: systemPrompt },
         { role: "user", content: input.userMessage },
@@ -396,7 +400,8 @@ ${memoryContext || "Sin memoria guardada todavía."}
   let fullReply = "";
   try {
     const finalStream = await client.responses.create({
-      model: chooseAlmaModel(input.userMessage, "auto"),
+      model: mode.model,
+      reasoning: { effort: mode.reasoning },
       stream: true,
       input: [
         { role: "system", content: systemPrompt },

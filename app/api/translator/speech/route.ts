@@ -7,6 +7,9 @@ import {
   normalizeVoice,
   VoiceConfigurationError,
 } from "@/lib/voice/config";
+import { withUsageReservation } from "@/lib/usage/service";
+import { UsageLimitError } from "@/lib/usage/service";
+import { withUsageRoute } from "@/lib/usage/routeBoundary";
 
 const MAX_SPEECH_CHARACTERS = 4000;
 
@@ -22,7 +25,7 @@ function providerStatus(error: unknown) {
   return undefined;
 }
 
-export async function POST(req: Request) {
+async function post(req: Request) {
   const user = await getCurrentUser();
   if (!user) {
     return jsonError("unauthorized", 401);
@@ -34,6 +37,7 @@ export async function POST(req: Request) {
     apiKey = getOpenAIApiKey();
     model = getSpeechModel();
   } catch (error) {
+    if (error instanceof UsageLimitError) throw error;
     if (error instanceof VoiceConfigurationError) {
       return jsonError(error.code, 503);
     }
@@ -51,11 +55,24 @@ export async function POST(req: Request) {
 
   const client = new OpenAI({ apiKey });
   try {
-    const response = await client.audio.speech.create({
-      model,
-      voice: normalizeVoice(body.voice),
-      input: text,
-    });
+    const seconds = Math.max(1, Math.ceil(text.length / 15));
+    const response = await withUsageReservation(
+      {
+        userId: user.id,
+        feature: "voice",
+        mode: null,
+        model,
+        units: { voiceSeconds: seconds },
+        idempotencyKey: `speech:${req.headers.get("x-idempotency-key") ?? crypto.randomUUID()}`,
+      },
+      () =>
+        client.audio.speech.create({
+          model,
+          voice: normalizeVoice(body.voice),
+          input: text,
+        }),
+      { voiceSeconds: seconds },
+    );
     return new Response(await response.arrayBuffer(), {
       headers: {
         "Content-Type": "audio/mpeg",
@@ -70,3 +87,4 @@ export async function POST(req: Request) {
     return jsonError("speech_provider_failed", 502);
   }
 }
+export const POST = withUsageRoute(post);

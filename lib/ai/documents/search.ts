@@ -1,8 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { createEmbedding } from "@/lib/ai/embeddings/createEmbedding";
 
-export async function searchDocuments(userId:string, query:string) {
-  const embedding = await createEmbedding(query);
+export async function searchDocuments(userId: string, query: string) {
+  const embedding = await createEmbedding(userId, query);
 
   if (!embedding) return [];
 

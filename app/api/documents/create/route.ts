@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { requirePaidUser } from "@/lib/api/requirePaidUser";
 import { DocumentRepository } from "@/lib/db/repositories/documents/document.repository";
+import { withUsageRoute } from "@/lib/usage/routeBoundary";
 
-export async function POST(req: Request) {
+async function post(req: Request) {
   const { user, error } = await requirePaidUser("documents");
 
   if (error) return error;
@@ -20,3 +21,4 @@ export async function POST(req: Request) {
 
   return NextResponse.json(document);
 }
+export const POST = withUsageRoute(post);

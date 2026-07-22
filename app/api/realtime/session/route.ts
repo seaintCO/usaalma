@@ -11,6 +11,10 @@ import {
   voiceInstructions,
 } from "@/lib/voice/config";
 import { createVoiceSessionRecord } from "@/lib/voice/repository";
+import { releaseUsage, reserveUsage } from "@/lib/usage/service";
+import { withUsageRoute } from "@/lib/usage/routeBoundary";
+
+const MAX_SESSION_SECONDS = 15 * 60;
 
 const sessionAttempts = new Map<string, number[]>();
 
@@ -24,7 +28,7 @@ function rateLimited(userId: string) {
   return recent.length > 8;
 }
 
-export async function POST(req: Request) {
+async function post(req: Request) {
   const user = await getCurrentUser();
   if (!user) {
     return NextResponse.json(
@@ -77,28 +81,43 @@ export async function POST(req: Request) {
   const language =
     body.language === "es" || body.language === "en" ? body.language : "auto";
 
-  const response = await fetch(
-    "https://api.openai.com/v1/realtime/client_secrets",
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        session: {
-          type: "realtime",
-          model,
-          audio: {
-            output: { voice },
-          },
-          instructions: voiceInstructions(),
+  const usage = await reserveUsage({
+    userId: user.id,
+    feature: "voice",
+    mode: null,
+    model,
+    units: { voiceSeconds: MAX_SESSION_SECONDS },
+    idempotencyKey: `realtime:${req.headers.get("x-idempotency-key") ?? crypto.randomUUID()}`,
+  });
+  let response: Response;
+  try {
+    response = await fetch(
+      "https://api.openai.com/v1/realtime/client_secrets",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
         },
-      }),
-    },
-  );
+        body: JSON.stringify({
+          session: {
+            type: "realtime",
+            model,
+            audio: {
+              output: { voice },
+            },
+            instructions: voiceInstructions(),
+          },
+        }),
+      },
+    );
+  } catch (error) {
+    await releaseUsage(usage);
+    throw error;
+  }
 
   if (!response.ok) {
+    await releaseUsage(usage);
     return NextResponse.json(
       { ok: false, error: { code: "realtime_session_failed" } },
       { status: 502 },
@@ -106,18 +125,34 @@ export async function POST(req: Request) {
   }
 
   const payload = (await response.json()) as Record<string, unknown>;
-  const localSessionId = await createVoiceSessionRecord({
-    userId: user.id,
-    workspaceId: tenant.workspaceId,
-    mode,
-    model,
-    language,
-  });
+  let localSessionId: string | null;
+  try {
+    localSessionId = await createVoiceSessionRecord({
+      userId: user.id,
+      workspaceId: tenant.workspaceId,
+      mode,
+      model,
+      language,
+      usageReservationId: usage.id,
+    });
+  } catch (error) {
+    await releaseUsage(usage);
+    throw error;
+  }
+  if (!localSessionId) {
+    await releaseUsage(usage);
+    return NextResponse.json(
+      { ok: false, error: { code: "voice_usage_persistence_failed" } },
+      { status: 503 },
+    );
+  }
   return NextResponse.json({
     ok: true,
     session: payload,
     localSessionId,
+    maxSessionSeconds: MAX_SESSION_SECONDS,
     disclosure:
       "AI voice is synthetic. External actions still require approval.",
   });
 }
+export const POST = withUsageRoute(post);

@@ -1,6 +1,7 @@
 export type BillingPlan = "starter" | "business";
 
 export type BillingSubscription = {
+  id: string | null;
   plan: string;
   status: string;
   stripeCustomerId: string | null;

@@ -42,6 +42,7 @@ type HistoryPayload = {
 const copy = {
   en: {
     back: "Back to dashboard",
+    usage: "View AI usage",
     eyebrow: "Billing",
     title: "Your ALMA subscription",
     description:
@@ -90,6 +91,7 @@ const copy = {
   },
   es: {
     back: "Volver al panel",
+    usage: "Ver uso de IA",
     eyebrow: "Facturacion",
     title: "Tu suscripcion de ALMA",
     description:
@@ -324,6 +326,12 @@ export default function BillingPage() {
           >
             <ArrowLeft className="h-4 w-4" aria-hidden="true" />
             {text.back}
+          </Link>
+          <Link
+            href="/usage"
+            className="text-sm font-medium underline underline-offset-4"
+          >
+            {text.usage}
           </Link>
 
           <section className="mt-8 rounded-[2rem] border border-gray-200 bg-white p-6 shadow-sm md:p-8">

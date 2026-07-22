@@ -2,30 +2,48 @@ import { NextResponse } from "next/server";
 import OpenAI from "openai";
 import { requirePaidUser } from "@/lib/api/requirePaidUser";
 import { createClient } from "@/lib/supabase/server";
+import { modeConfiguration } from "@/lib/usage/modes";
+import { withUsageReservation } from "@/lib/usage/service";
+import { withUsageRoute } from "@/lib/usage/routeBoundary";
 
-export async function POST(req:Request) {
+async function post(req: Request) {
   const { user, error } = await requirePaidUser();
   if (error) return error;
 
   const body = await req.json();
 
   if (!process.env.OPENAI_API_KEY) {
-    return NextResponse.json({ error:"Missing OPENAI_API_KEY" }, { status:400 });
+    return NextResponse.json(
+      { error: "Missing OPENAI_API_KEY" },
+      { status: 400 },
+    );
   }
 
-  const client = new OpenAI({ apiKey:process.env.OPENAI_API_KEY });
+  const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-  const completion = await client.chat.completions.create({
-    model:(await import("@/lib/ai/models")).OPENAI_MODELS.text,
-    response_format:{ type:"json_object" },
-    messages:[
-      {
-        role:"system",
-        content:"You are ALMA Sites, an Aura-style AI website builder. Return JSON only with name, current_copy, current_code, and pages. current_code must be a complete React component using Tailwind classes. No markdown."
-      },
-      {
-        role:"user",
-        content:`Build a premium website.
+  const configured = modeConfiguration("pro");
+  const completion = await withUsageReservation(
+    {
+      userId: user.id,
+      feature: "ai_request",
+      mode: "pro",
+      model: configured.model,
+      units: { requests: 1 },
+      idempotencyKey: `site-generate:${req.headers.get("x-idempotency-key") ?? crypto.randomUUID()}`,
+    },
+    () =>
+      client.chat.completions.create({
+        model: configured.model,
+        response_format: { type: "json_object" },
+        messages: [
+          {
+            role: "system",
+            content:
+              "You are ALMA Sites, an Aura-style AI website builder. Return JSON only with name, current_copy, current_code, and pages. current_code must be a complete React component using Tailwind classes. No markdown.",
+          },
+          {
+            role: "user",
+            content: `Build a premium website.
 
 Business: ${body.name}
 Industry: ${body.industry}
@@ -40,26 +58,33 @@ Include:
 - FAQ
 - CTA
 - Mobile responsive layout
-- Premium SaaS/Apple style`
-      }
-    ]
-  });
+- Premium SaaS/Apple style`,
+          },
+        ],
+      }),
+  );
 
   const parsed = JSON.parse(completion.choices[0]?.message?.content || "{}");
 
   const supabase = await createClient();
 
-  const { data, error:dbError } = await supabase.from("alma_site_projects").insert({
-    user_id:user.id,
-    name:parsed.name || body.name,
-    industry:body.industry,
-    style:body.style,
-    pages:parsed.pages || [],
-    current_copy:parsed.current_copy || "",
-    current_code:parsed.current_code || "",
-  }).select().single();
+  const { data, error: dbError } = await supabase
+    .from("alma_site_projects")
+    .insert({
+      user_id: user.id,
+      name: parsed.name || body.name,
+      industry: body.industry,
+      style: body.style,
+      pages: parsed.pages || [],
+      current_copy: parsed.current_copy || "",
+      current_code: parsed.current_code || "",
+    })
+    .select()
+    .single();
 
-  if (dbError) return NextResponse.json({ error:dbError.message }, { status:400 });
+  if (dbError)
+    return NextResponse.json({ error: dbError.message }, { status: 400 });
 
-  return NextResponse.json({ success:true, project:data });
+  return NextResponse.json({ success: true, project: data });
 }
+export const POST = withUsageRoute(post);

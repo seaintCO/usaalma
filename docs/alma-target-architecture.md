@@ -99,7 +99,7 @@ Target:
 
 ### Usage And Credits
 
-Current image credits exist under `lib/usage/imageCredits.ts`. Target:
+Image credits are enforced by the canonical reservation service in `lib/usage/service.ts`:
 
 - General `usage_events` or `usage_ledger` table.
 - Credit balances by account/workspace and feature.

@@ -15,6 +15,10 @@ import {
   type TranslationDirectionKey,
   type TranslationLanguage,
 } from "@/lib/voice/realtimeTranslation";
+import { releaseUsage, reserveUsage } from "@/lib/usage/service";
+import { withUsageRoute } from "@/lib/usage/routeBoundary";
+
+const MAX_SESSION_SECONDS = 15 * 60;
 
 const sessionAttempts = new Map<string, number[]>();
 const SUPPORTED_LANGUAGES = new Set<TranslationLanguage>(["en", "es"]);
@@ -52,7 +56,7 @@ function directionKey(
   return null;
 }
 
-export async function POST(req: Request) {
+async function post(req: Request) {
   const user = await getCurrentUser();
   if (!user) return jsonError("unauthorized", 401);
   if (rateLimited(user.id)) return jsonError("rate_limited", 429);
@@ -102,39 +106,58 @@ export async function POST(req: Request) {
   }
 
   const direction = TRANSLATION_DIRECTIONS[key];
-  const response = await fetch(
-    "https://api.openai.com/v1/realtime/translations/client_secrets",
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        session: {
-          type: "realtime.translation",
-          model,
-          source_language: direction.sourceLanguage,
-          target_language: direction.targetLanguage,
-          input_audio_transcription: {
-            model: process.env.ALMA_TRANSCRIPTION_MODEL || "gpt-4o-transcribe",
-          },
-          audio: {
-            input: {
-              turn_detection: { type: "server_vad" },
-              noise_reduction: { type: "near_field" },
-            },
-            output: { voice: normalizeVoice(body.voice) },
-          },
-          safety_identifier: hashSafetyIdentifier(user.id, tenant.workspaceId),
-          instructions:
-            "Translate speech faithfully between English and Spanish. Do not add facts, prices, measurements, warranties, or commitments. Use neutral Latin American Spanish and clear US English.",
+  const usage = await reserveUsage({
+    userId: user.id,
+    feature: "voice",
+    mode: null,
+    model,
+    units: { voiceSeconds: MAX_SESSION_SECONDS },
+    idempotencyKey: `realtime-translation:${req.headers.get("x-idempotency-key") ?? crypto.randomUUID()}`,
+  });
+  let response: Response;
+  try {
+    response = await fetch(
+      "https://api.openai.com/v1/realtime/translations/client_secrets",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
         },
-      }),
-    },
-  );
+        body: JSON.stringify({
+          session: {
+            type: "realtime.translation",
+            model,
+            source_language: direction.sourceLanguage,
+            target_language: direction.targetLanguage,
+            input_audio_transcription: {
+              model:
+                process.env.ALMA_TRANSCRIPTION_MODEL || "gpt-4o-transcribe",
+            },
+            audio: {
+              input: {
+                turn_detection: { type: "server_vad" },
+                noise_reduction: { type: "near_field" },
+              },
+              output: { voice: normalizeVoice(body.voice) },
+            },
+            safety_identifier: hashSafetyIdentifier(
+              user.id,
+              tenant.workspaceId,
+            ),
+            instructions:
+              "Translate speech faithfully between English and Spanish. Do not add facts, prices, measurements, warranties, or commitments. Use neutral Latin American Spanish and clear US English.",
+          },
+        }),
+      },
+    );
+  } catch (error) {
+    await releaseUsage(usage);
+    throw error;
+  }
 
   if (!response.ok) {
+    await releaseUsage(usage);
     const status = response.status === 429 ? 429 : 502;
     return jsonError(
       response.status === 429
@@ -155,16 +178,28 @@ export async function POST(req: Request) {
         ? payload.value
         : null;
   if (!clientSecret) {
+    await releaseUsage(usage);
     return jsonError("realtime_translation_secret_invalid", 502);
   }
 
-  const localSessionId = await createVoiceSessionRecord({
-    userId: user.id,
-    workspaceId: tenant.workspaceId,
-    mode: "translator",
-    model,
-    language: direction.targetLanguage,
-  });
+  let localSessionId: string | null;
+  try {
+    localSessionId = await createVoiceSessionRecord({
+      userId: user.id,
+      workspaceId: tenant.workspaceId,
+      mode: "translator",
+      model,
+      language: direction.targetLanguage,
+      usageReservationId: usage.id,
+    });
+  } catch (error) {
+    await releaseUsage(usage);
+    throw error;
+  }
+  if (!localSessionId) {
+    await releaseUsage(usage);
+    return jsonError("voice_usage_persistence_failed", 503);
+  }
 
   return NextResponse.json({
     ok: true,
@@ -172,9 +207,10 @@ export async function POST(req: Request) {
     localSessionId,
     model,
     direction,
-    maxSessionSeconds: 15 * 60,
+    maxSessionSeconds: MAX_SESSION_SECONDS,
     transcriptPersistence: "workspace_memory_preference",
     disclosure:
       "AI voice is synthetic. Raw audio is not stored by ALMA by default.",
   });
 }
+export const POST = withUsageRoute(post);

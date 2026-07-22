@@ -154,6 +154,13 @@ export function useRealtimeTranslationConversation() {
       session.peer.close();
       session.audio.pause();
       session.audio.srcObject = null;
+      if (session.localSessionId)
+        void fetch("/api/realtime/session/complete", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ localSessionId: session.localSessionId }),
+          keepalive: true,
+        });
     });
     sessions.current = {};
     if (timer.current) {

@@ -4,26 +4,43 @@ import { createClient } from "@/lib/supabase/server";
 import { classifyAction } from "@/lib/ai/actions/classifyAction";
 import { AgentService } from "@/lib/services/agents/agent.service";
 import { redactExecutionText } from "@/lib/alma/security/redactExecutionData";
+import { modeConfiguration } from "@/lib/usage/modes";
+import { withUsageReservation } from "@/lib/usage/service";
+import { withUsageRoute } from "@/lib/usage/routeBoundary";
 
-export async function POST(req:Request) {
+async function post(req: Request) {
   const { user, error } = await requirePaidUser();
   if (error) return error;
 
   const { message } = await req.json();
   const supabase = await createClient();
 
-  const routed = await classifyAction(message);
+  const configured = modeConfiguration("instant");
+  const routed = await withUsageReservation(
+    {
+      userId: user.id,
+      feature: "ai_request",
+      mode: "instant",
+      model: configured.model,
+      units: { requests: 1 },
+      idempotencyKey: `action:${req.headers.get("x-idempotency-key") ?? crypto.randomUUID()}`,
+    },
+    () => classifyAction(message),
+  );
 
   let result = "No action needed.";
 
   if (routed.action === "save_memory") {
-    await supabase.from("alma_user_memory").upsert({
-      user_id:user.id,
-      memory_key:routed.payload.memory_key || "note",
-      memory_value:routed.payload.memory_value || message,
-      category:routed.payload.category || "general",
-      updated_at:new Date().toISOString(),
-    }, { onConflict:"user_id,memory_key" });
+    await supabase.from("alma_user_memory").upsert(
+      {
+        user_id: user.id,
+        memory_key: routed.payload.memory_key || "note",
+        memory_value: routed.payload.memory_value || message,
+        category: routed.payload.category || "general",
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "user_id,memory_key" },
+    );
 
     try {
       await AgentService.mirrorMemory(
@@ -31,7 +48,7 @@ export async function POST(req:Request) {
         routed.payload.category || "general",
         routed.payload.memory_key || "note",
         routed.payload.memory_value || message,
-        5
+        5,
       );
     } catch {
       // Legacy action behavior stays available before the migration is applied.
@@ -42,13 +59,14 @@ export async function POST(req:Request) {
 
   if (routed.action === "create_planner_task") {
     await supabase.from("planner_tasks").insert({
-      user_id:user.id,
-      title:routed.payload.title || message,
-      notes:routed.payload.notes || "",
-      task_date:routed.payload.task_date || new Date().toISOString().slice(0,10),
-      task_time:routed.payload.task_time || "",
-      category:routed.payload.category || "General",
-      priority:routed.payload.priority || "Medium",
+      user_id: user.id,
+      title: routed.payload.title || message,
+      notes: routed.payload.notes || "",
+      task_date:
+        routed.payload.task_date || new Date().toISOString().slice(0, 10),
+      task_time: routed.payload.task_time || "",
+      category: routed.payload.category || "General",
+      priority: routed.payload.priority || "Medium",
     });
 
     result = "Added to planner.";
@@ -56,43 +74,47 @@ export async function POST(req:Request) {
 
   if (routed.action === "log_food") {
     await supabase.from("fitness_food_logs").insert({
-      user_id:user.id,
-      food_name:routed.payload.food_name || message,
-      calories:Number(routed.payload.calories || 0),
-      protein:Number(routed.payload.protein || 0),
-      carbs:Number(routed.payload.carbs || 0),
-      fats:Number(routed.payload.fats || 0),
-      meal_type:routed.payload.meal_type || "Meal",
+      user_id: user.id,
+      food_name: routed.payload.food_name || message,
+      calories: Number(routed.payload.calories || 0),
+      protein: Number(routed.payload.protein || 0),
+      carbs: Number(routed.payload.carbs || 0),
+      fats: Number(routed.payload.fats || 0),
+      meal_type: routed.payload.meal_type || "Meal",
     });
 
     result = "Food logged.";
   }
 
   if (routed.action === "save_fitness_goal") {
-    await supabase.from("fitness_goals").upsert({
-      user_id:user.id,
-      daily_calories:Number(routed.payload.daily_calories || 2200),
-      daily_protein:Number(routed.payload.daily_protein || 180),
-      weekly_weight_goal:routed.payload.weekly_weight_goal || "Maintain",
-      water_goal_oz:Number(routed.payload.water_goal_oz || 100),
-      workout_days:Number(routed.payload.workout_days || 5),
-      updated_at:new Date().toISOString(),
-    }, { onConflict:"user_id" });
+    await supabase.from("fitness_goals").upsert(
+      {
+        user_id: user.id,
+        daily_calories: Number(routed.payload.daily_calories || 2200),
+        daily_protein: Number(routed.payload.daily_protein || 180),
+        weekly_weight_goal: routed.payload.weekly_weight_goal || "Maintain",
+        water_goal_oz: Number(routed.payload.water_goal_oz || 100),
+        workout_days: Number(routed.payload.workout_days || 5),
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "user_id" },
+    );
 
     result = "Fitness goals updated.";
   }
 
   await supabase.from("alma_action_logs").insert({
-    user_id:user.id,
-    action_type:routed.action,
-    input:redactExecutionText(message),
-    result:redactExecutionText(result),
-    status:"completed",
+    user_id: user.id,
+    action_type: routed.action,
+    input: redactExecutionText(message),
+    result: redactExecutionText(result),
+    status: "completed",
   });
 
   return NextResponse.json({
-    success:true,
-    action:routed.action,
+    success: true,
+    action: routed.action,
     result,
   });
 }
+export const POST = withUsageRoute(post);

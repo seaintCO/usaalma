@@ -11,6 +11,16 @@ import { MessageRepository } from "@/lib/db/repositories/message.repository";
 import { AgentService } from "@/lib/services/agents/agent.service";
 import { AgentExecutionRepository } from "@/lib/db/repositories/agents/agentExecution.repository";
 import { generateImageTool } from "@/lib/tools/images/generateImageTool";
+import { modeConfiguration } from "@/lib/usage/modes";
+import {
+  openAITokenUsage,
+  releaseUsage,
+  reserveUsage,
+  settleUsage,
+} from "@/lib/usage/service";
+import type { SelectableAlmaMode } from "@/lib/usage/modes";
+import { extractMemory } from "@/lib/ai/extractors/memoryExtractor";
+import { saveExtractedMemory } from "@/lib/ai/memory/saveMemory";
 
 /**
  * Stage 1 contract boundary for the canonical ALMA chat processor.
@@ -125,6 +135,7 @@ export type DurableChatRunInvocation = {
   userMessage: string;
   idempotencyKey: string;
   language: ChatRunLanguage;
+  mode?: SelectableAlmaMode;
   onProgress?: ChatRunProgressCallback;
 };
 
@@ -135,6 +146,7 @@ export type InteractiveChatRunInvocation = {
   userMessage: string;
   idempotencyKey?: string;
   language: ChatRunLanguage;
+  mode?: SelectableAlmaMode;
   onProgress?: ChatRunProgressCallback;
 };
 
@@ -419,6 +431,9 @@ export async function processImageChatRun(
       input.userId,
       imagePrompt,
       imageSize,
+      {
+        idempotencyKey: `chat:${input.idempotencyKey ?? input.conversationId}`,
+      },
     );
     const resultError = (result as { error?: string })?.error;
     const reply =
@@ -599,22 +614,52 @@ export async function processCanonicalChatRun(
       ? await prepareDurableInvocation(input)
       : null;
   if (durable && "ok" in durable) return durable;
+  const selectedMode = input.mode ?? "instant";
+  const modeConfig = modeConfiguration(selectedMode);
+  const usage = await reserveUsage({
+    userId: input.userId,
+    feature: "ai_request",
+    mode: selectedMode,
+    model: modeConfig.model,
+    units: { requests: 1 },
+    idempotencyKey: `chat:${input.idempotencyKey ?? input.conversationId}`,
+  });
+  try {
+    await saveExtractedMemory(
+      input.userId,
+      await extractMemory(input.userMessage),
+    );
+  } catch (error) {
+    console.error("ALMA_MEMORY_EXTRACTION_ERROR", {
+      conversationId: input.conversationId,
+      error:
+        error instanceof Error ? error.message : "memory extraction failed",
+    });
+  }
   const { processPlannerAndToolChatRun } =
     await import("./processPlannerAndToolChatRun");
-  const routed = await processPlannerAndToolChatRun({
-    ...input,
-    tracking: durable && "executionId" in durable ? durable : undefined,
-  });
-  if (routed.handled) return routed.result;
+  let routed;
+  try {
+    routed = await processPlannerAndToolChatRun({
+      ...input,
+      tracking: durable && "executionId" in durable ? durable : undefined,
+    });
+    if (routed.handled) {
+      if (routed.result.ok) await settleUsage(usage, { requests: 1 });
+      else await releaseUsage(usage);
+      return routed.result;
+    }
+  } catch (error) {
+    await releaseUsage(usage);
+    throw error;
+  }
 
   let assistantPersisted = false;
   try {
     const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
     const stream = await client.responses.create({
-      model: (await import("@/lib/alma/modelRouter")).chooseAlmaModel(
-        input.userMessage,
-        "auto",
-      ),
+      model: modeConfig.model,
+      reasoning: { effort: modeConfig.reasoning },
       stream: true,
       input: [
         { role: "system", content: routed.systemPrompt },
@@ -622,6 +667,7 @@ export async function processCanonicalChatRun(
       ],
     });
     let fullReply = "";
+    let providerUsage = {};
     for await (const event of stream as any) {
       if (event.type === "response.output_text.delta") {
         fullReply += event.delta;
@@ -630,6 +676,8 @@ export async function processCanonicalChatRun(
           delta: event.delta,
         });
       }
+      if (event.type === "response.completed")
+        providerUsage = openAITokenUsage(event.response);
     }
 
     const assistantMessage = await MessageRepository.create(
@@ -656,6 +704,7 @@ export async function processCanonicalChatRun(
           : undefined,
       tracking: routed.tracking,
     };
+    await settleUsage(usage, { requests: 1 }, providerUsage);
     await completeChatRunTracking({
       tracked: routed.tracking,
       userId: input.userId,
@@ -670,6 +719,7 @@ export async function processCanonicalChatRun(
     await emitProgress(input.onProgress, { type: "completed", result });
     return result;
   } catch (error) {
+    await releaseUsage(usage);
     console.error("ALMA_CHAT_EXECUTION_ERROR", error);
     const reply =
       input.language === "en"

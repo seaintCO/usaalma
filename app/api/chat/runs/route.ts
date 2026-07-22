@@ -7,12 +7,14 @@ import {
   isRuntimeConfigError,
   safeRuntimeConfigErrorBody,
 } from "@/lib/runtime/config";
+import { parseClientMode } from "@/lib/usage/modes";
 
 type ChatRunRequestBody = {
   message?: unknown;
   conversationId?: unknown;
   idempotencyKey?: unknown;
   language?: unknown;
+  mode?: unknown;
 };
 
 function safeLogError(error: unknown) {
@@ -40,6 +42,9 @@ export async function POST(request: Request) {
     typeof body.idempotencyKey === "string" && body.idempotencyKey.length >= 16
       ? body.idempotencyKey.slice(0, 160)
       : crypto.randomUUID();
+  const mode = body.mode === undefined ? "instant" : parseClientMode(body.mode);
+  if (!mode)
+    return Response.json({ ok: false, error: "invalid_mode" }, { status: 400 });
 
   if (!message) return new Response("Message is required", { status: 400 });
 
@@ -149,6 +154,7 @@ export async function POST(request: Request) {
         user_message_id: userMessage.id,
         idempotency_key: idempotencyKey,
         status: "queued",
+        alma_mode: mode,
       })
       .select()
       .single();

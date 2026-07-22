@@ -14,6 +14,7 @@ export class SubscriptionRepository {
     if (!data) return null;
 
     return {
+      id: typeof data.id === "string" ? data.id : null,
       plan: typeof data.plan === "string" ? data.plan : "free",
       status: typeof data.status === "string" ? data.status : "inactive",
       stripeCustomerId:

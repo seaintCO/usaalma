@@ -1,30 +1,20 @@
 import { rememberEvent } from "@/lib/memory/almaMemory";
-import { checkImageCredits, recordImageUsage } from "@/lib/usage/imageCredits";
 import { trackEvent } from "@/lib/analytics/track";
 import { NextResponse } from "next/server";
 import { requirePaidUser } from "@/lib/api/requirePaidUser";
 import { generateCreativeAsset } from "@/lib/creative/generateCreativeAsset";
 import { buildCreativeTemplatePrompt } from "@/lib/creative/templates/templates";
+import { modeConfiguration } from "@/lib/usage/modes";
+import { UsageLimitError, withUsageReservation } from "@/lib/usage/service";
+import { withUsageRoute } from "@/lib/usage/routeBoundary";
 
-export async function POST(req: Request) {
+async function post(req: Request) {
   const { user, error } = await requirePaidUser("creative_studio");
 
   if (error) return error;
 
   try {
     const body = await req.json();
-
-    const credits = await checkImageCredits(user.id, 1);
-    if (!credits.allowed) {
-      await trackEvent(user.id, "nocturai_credit_blocked", {
-        used: credits.used,
-        limit: credits.limit,
-      });
-      return NextResponse.json(
-        { success: false, message: credits.message, credits },
-        { status: 429 },
-      );
-    }
 
     if (!body.prompt) {
       return NextResponse.json(
@@ -40,23 +30,33 @@ export async function POST(req: Request) {
       ? buildCreativeTemplatePrompt(body.templateKey, body.prompt)
       : body;
 
-    const result = await generateCreativeAsset(user.id, {
-      ...body,
-      ...templateInput,
-      folderId: body.folderId ?? null,
-      brandKitId: body.brandKitId ?? null,
-      campaignId: body.campaignId ?? null,
-      idempotencyKey:
-        typeof body.idempotencyKey === "string"
-          ? body.idempotencyKey
-          : undefined,
-    });
+    const requestKey =
+      typeof body.idempotencyKey === "string"
+        ? body.idempotencyKey
+        : crypto.randomUUID();
+    const configured = modeConfiguration("thinking");
+    const result = await withUsageReservation(
+      {
+        userId: user.id,
+        feature: "ai_request",
+        mode: "thinking",
+        model: configured.model,
+        units: { requests: 1 },
+        idempotencyKey: requestKey,
+      },
+      () =>
+        generateCreativeAsset(user.id, {
+          ...body,
+          ...templateInput,
+          folderId: body.folderId ?? null,
+          brandKitId: body.brandKitId ?? null,
+          campaignId: body.campaignId ?? null,
+          idempotencyKey:
+            typeof body.idempotencyKey === "string" ? requestKey : requestKey,
+        }),
+    );
 
     if (result?.success !== false) {
-      await recordImageUsage(user.id, 1, {
-        source: "creative_generate",
-        templateKey: body.templateKey,
-      });
       await trackEvent(user.id, "nocturai_generated", {
         templateKey: body.templateKey,
         category: body.category,
@@ -73,6 +73,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json(result);
   } catch (error: any) {
+    if (error instanceof UsageLimitError) throw error;
     console.error("CREATIVE_GENERATE_ERROR", {
       message: error?.message,
       stack: error?.stack,
@@ -87,3 +88,4 @@ export async function POST(req: Request) {
     );
   }
 }
+export const POST = withUsageRoute(post);

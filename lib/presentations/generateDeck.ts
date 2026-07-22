@@ -1,6 +1,6 @@
 import { askOpenAI } from "@/lib/ai/openai";
 
-export async function generatePresentationDeck(prompt:string) {
+export async function generatePresentationDeck(userId: string, prompt: string) {
   const system = `
 You are ALMA Presentation Builder.
 Create a futuristic investor-grade presentation.
@@ -28,7 +28,7 @@ Rules:
 - For investor decks, make it capital-focused.
 `;
 
-  const raw = await askOpenAI(`${system}\n\nUser request:\n${prompt}`);
+  const raw = await askOpenAI(userId, `${system}\n\nUser request:\n${prompt}`);
 
   try {
     return JSON.parse(raw);
@@ -42,9 +42,9 @@ Rules:
           subheadline: prompt,
           bullets: ["AI-generated presentation draft"],
           visual: "premium abstract business visual",
-          accent: "cyan"
-        }
-      ]
+          accent: "cyan",
+        },
+      ],
     };
   }
 }

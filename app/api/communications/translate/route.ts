@@ -17,6 +17,10 @@ import {
 import { getCurrentUser } from "@/lib/auth/user";
 import { EntitlementService } from "@/lib/platform/entitlements/service";
 import { resolveTenantWorkspace } from "@/lib/platform/workspace/tenantResolver";
+import { modeConfiguration } from "@/lib/usage/modes";
+import { withUsageReservation } from "@/lib/usage/service";
+import { UsageLimitError } from "@/lib/usage/service";
+import { withUsageRoute } from "@/lib/usage/routeBoundary";
 
 const OPERATIONS = new Set<CommunicationOperation>([
   "detect_language",
@@ -30,7 +34,7 @@ const OPERATIONS = new Set<CommunicationOperation>([
   "prepare_external_message",
 ]);
 
-export async function POST(req: Request) {
+async function post(req: Request) {
   const user = await getCurrentUser();
   if (!user) {
     return NextResponse.json(
@@ -94,17 +98,30 @@ export async function POST(req: Request) {
 
   let result;
   try {
-    result = await runCommunicationOperation({
-      operation,
-      text,
-      sourceLanguage: source,
-      targetLanguage: target,
-      tone,
-      channel: channel as
-        "email" | "whatsapp" | "chat" | "office" | "translator",
-      glossary,
-    });
+    const configured = modeConfiguration("instant");
+    result = await withUsageReservation(
+      {
+        userId: user.id,
+        feature: "ai_request",
+        mode: "instant",
+        model: configured.model,
+        units: { requests: 1 },
+        idempotencyKey: `translation:${req.headers.get("x-idempotency-key") ?? crypto.randomUUID()}`,
+      },
+      () =>
+        runCommunicationOperation({
+          operation,
+          text,
+          sourceLanguage: source,
+          targetLanguage: target,
+          tone,
+          channel: channel as
+            "email" | "whatsapp" | "chat" | "office" | "translator",
+          glossary,
+        }),
+    );
   } catch (error) {
+    if (error instanceof UsageLimitError) throw error;
     if (error instanceof CommunicationProviderUnavailableError) {
       return NextResponse.json(
         { ok: false, error: { code: error.code } },
@@ -141,3 +158,4 @@ export async function POST(req: Request) {
 
   return NextResponse.json({ ok: true, result });
 }
+export const POST = withUsageRoute(post);

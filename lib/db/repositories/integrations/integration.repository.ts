@@ -4,20 +4,14 @@ export class IntegrationRepository {
   static async listConfiguredVoiceProviders(userId: string): Promise<string[]> {
     const supabase = createAdminClient();
     const { data, error } = await supabase
-      .from("workspace_voice_connections")
-      .select(
-        "twilio_account_sid, twilio_phone_number, elevenlabs_api_key, elevenlabs_voice_id",
-      )
+      .from("provider_connections")
+      .select("provider,connection_status")
       .eq("user_id", userId)
-      .maybeSingle();
+      .in("provider", ["elevenlabs", "twilio"])
+      .eq("connection_status", "connected");
 
     if (error) throw error;
-    const providers: string[] = [];
-    if (data?.elevenlabs_api_key && data?.elevenlabs_voice_id)
-      providers.push("elevenlabs");
-    if (data?.twilio_account_sid && data?.twilio_phone_number)
-      providers.push("twilio");
-    return providers;
+    return (data ?? []).map((row) => row.provider);
   }
 
   static async listConnected(userId: string) {

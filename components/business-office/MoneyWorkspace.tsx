@@ -19,6 +19,7 @@ import type {
   BusinessOfficeOverview,
   BusinessTransactionDirection,
 } from "@/lib/business-office/types";
+import BookkeepingWorkspace from "./BookkeepingWorkspace";
 
 type Language = "en" | "es";
 type State = "loading" | "ready" | "auth" | "migration" | "error";
@@ -391,6 +392,7 @@ export default function MoneyWorkspace({ language }: { language: Language }) {
           <p className="p-8 text-center text-sm text-[#667085]">{t.empty}</p>
         )}
       </section>
+      <BookkeepingWorkspace language={language} />
       <p className="mt-5 text-xs leading-5 text-[#667085]">{t.disclaimer}</p>
     </div>
   );

@@ -1151,6 +1151,33 @@ Remaining blockers:
 
 ## Operating Rules For Every Milestone
 
+## Bookkeeping And Voice Agent Launch Completion
+
+Implemented:
+
+- Completed the Money workspace with receipt review, payroll preparation,
+  tax-readiness checklists, real financial reports, invoice aging, and CSV
+  exports.
+- Kept financial calculations deterministic and separated income, expenses,
+  transfers, refunds, and owner activity.
+- Added an additive migration for payroll entries and tenant-scoped voice
+  agent/call/webhook records.
+- Added secure customer-managed ElevenLabs connections, official SDK agent
+  creation, signed browser sessions, and signed post-call webhook ingestion.
+- Connected normalized caller identities and post-call transcripts to CRM
+  contacts and activity.
+- Retired plaintext legacy voice connection and unsigned call webhook routes.
+- Documented the customer-owned ElevenLabs/Twilio commercial and compliance
+  boundary.
+
+External launch verification still required:
+
+- Apply `20260729001000_alma_bookkeeping_voice_agents.sql` to a non-production
+  Supabase project.
+- Run one signed ElevenLabs browser session and one Twilio test call with
+  customer-owned provider credentials.
+- Verify accountant exports with a qualified bookkeeping professional.
+
 - Inspect current implementation first.
 - Report exact files before editing.
 - Use additive migrations only.

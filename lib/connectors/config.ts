@@ -83,6 +83,18 @@ export const CONNECTOR_DEFINITIONS: Record<
     ],
     scopes: ["Contents read/write", "Metadata read"],
   },
+  elevenlabs: {
+    name: "ElevenLabs Voice Agents",
+    operational: true,
+    env: ["APP_ENCRYPTION_KEY"],
+    scopes: ["agents:write", "conversations:read"],
+  },
+  twilio: {
+    name: "Twilio Phone Number",
+    operational: true,
+    env: ["APP_ENCRYPTION_KEY"],
+    scopes: ["phone_numbers:read", "calls:write"],
+  },
 };
 
 export function hasServerSupabaseSecret() {

@@ -116,7 +116,7 @@ function actionForItem(
     return {
       kind: "open",
       label: copy.requiresSetup,
-      href: "/voice-connections",
+      href: "/voice-agents",
     };
   }
   return null;

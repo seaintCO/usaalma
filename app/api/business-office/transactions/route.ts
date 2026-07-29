@@ -18,6 +18,46 @@ const TYPES = new Set<BusinessTransactionType>([
   "tax",
 ]);
 
+export async function GET(request: Request) {
+  const user = await getCurrentUser();
+  if (!user) {
+    return NextResponse.json(
+      { ok: false, error: { code: "unauthorized" } },
+      { status: 401 },
+    );
+  }
+  const url = new URL(request.url);
+  const from = url.searchParams.get("from");
+  const through = url.searchParams.get("through");
+  const reviewStatus = url.searchParams.get("reviewStatus");
+  const supabase = await createClient();
+  let query = supabase
+    .from("business_transactions")
+    .select(
+      "id,transaction_date,description,merchant,amount,direction,transaction_type,category,review_status,notes",
+    )
+    .eq("user_id", user.id)
+    .order("transaction_date", { ascending: false })
+    .limit(500);
+  if (from) query = query.gte("transaction_date", from.slice(0, 10));
+  if (through) query = query.lte("transaction_date", through.slice(0, 10));
+  if (
+    reviewStatus === "needs_review" ||
+    reviewStatus === "reviewed" ||
+    reviewStatus === "excluded"
+  ) {
+    query = query.eq("review_status", reviewStatus);
+  }
+  const { data, error } = await query;
+  if (error) {
+    return NextResponse.json(
+      { ok: false, error: { code: "transactions_unavailable" } },
+      { status: 503 },
+    );
+  }
+  return NextResponse.json({ ok: true, transactions: data ?? [] });
+}
+
 export async function POST(request: Request) {
   const user = await getCurrentUser();
   if (!user) {

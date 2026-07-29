@@ -34,6 +34,7 @@ const SHELL_WORKSPACE_RELEASES: AlmaWorkspaceReleaseOverrides = {
   money: "active",
   automations: "active",
   knowledge: "active",
+  business_launch: "active",
   reports: "active",
   approvals: "active",
   files: "beta",

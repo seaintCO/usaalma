@@ -13,6 +13,8 @@
     "milestone7:check": "node scripts/check-alma-milestone7.mjs",
     "public-billing:check": "node scripts/check-alma-public-billing.mjs",
     "business-office:check": "node scripts/check-alma-business-office-refocus.mjs",
+    "launch-office:check": "node scripts/check-alma-bookkeeping-voice.mjs",
+    "business-launch:check": "node scripts/check-alma-business-launch.mjs",
     "usage:check": "jiti scripts/check-alma-usage.ts",
     "milestone7.2:test": "node scripts/run-playwright.mjs",
     "milestone7.2:auth": "playwright codegen --channel=msedge --save-storage=.playwright-auth/user.json http://127.0.0.1:3101/login",
@@ -33,6 +35,8 @@
     "builder:e2e:live": "node scripts/run-alma-builder-live-e2e.mjs"
   },
   "dependencies": {
+    "@elevenlabs/elevenlabs-js": "^2.59.0",
+    "@elevenlabs/react": "^1.11.0",
     "@openai/codex-sdk": "^0.144.6",
     "@supabase/ssr": "^0.12.0",
     "@supabase/supabase-js": "^2.108.2",

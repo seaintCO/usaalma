@@ -7,6 +7,8 @@ export const CONNECTOR_PROVIDERS = [
   "stripe_connect",
   "whatsapp_business",
   "github_app",
+  "elevenlabs",
+  "twilio",
 ] as const;
 
 export type ConnectorProvider = (typeof CONNECTOR_PROVIDERS)[number];

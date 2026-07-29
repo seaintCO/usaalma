@@ -135,11 +135,12 @@ export const ALMA_MODULE_REGISTRY = [
   },
   {
     key: "voice",
-    name: "Realtime Voice",
+    name: "Voice Agents",
     group: "free_core",
     category: "Communication",
     description:
-      "Talk with ALMA using a secure server-created realtime voice session.",
+      "Create a secure customer-managed voice agent, hold browser conversations, and attach signed call transcripts to CRM.",
+    route: WORKSPACE_ROUTES.voice_agents,
     releaseStatus: "beta",
     requiredPlan: "business",
     entitlementKey: "voice",
@@ -148,8 +149,9 @@ export const ALMA_MODULE_REGISTRY = [
     defaultRisk: "external",
     approvalPolicy: "approval_required",
     limitations: [
+      "A customer-owned ElevenLabs account is required; phone calling usually also requires a customer-owned Twilio number.",
       "External, financial, destructive, or state-changing voice requests still require approval.",
-      "No raw audio is stored by default.",
+      "ALMA stores transcripts only after a signed provider webhook; raw audio is not copied by default.",
     ],
   },
   {
@@ -233,6 +235,31 @@ export const ALMA_MODULE_REGISTRY = [
     ],
     defaultRisk: "internal",
     approvalPolicy: "automatic",
+  },
+  {
+    key: "business_launch",
+    name: "Business Launch",
+    group: "office",
+    category: "Business",
+    description:
+      "Organize entity formation, official filing steps, launch readiness, and recurring compliance.",
+    route: WORKSPACE_ROUTES.business_launch,
+    releaseStatus: "active",
+    requiredPlan: "starter",
+    entitlementKey: "business_launch",
+    installKey: "business_launch",
+    capabilities: [
+      "business_launch.plan",
+      "business_launch.checklist",
+      "business_launch.compliance",
+    ],
+    defaultRisk: "internal",
+    approvalPolicy: "automatic",
+    limitations: [
+      "ALMA provides organizational information and official links, not legal, tax, or accounting advice.",
+      "Government filings and payments remain on official portals unless a separately verified filing provider is connected.",
+      "ALMA does not store SSNs, full EINs, identity documents, government passwords, or payment cards.",
+    ],
   },
   {
     key: "reports",
@@ -502,6 +529,7 @@ const ACTIVE_BUSINESS_OFFICE_MODULES = new Set([
   "work",
   "money",
   "knowledge",
+  "business_launch",
   "reports",
   "office",
   "crm",

@@ -2,7 +2,8 @@
 
 ALMA operates a business: customers, conversations, tasks, appointments,
 estimates, invoices, payments, transactions, receipts, reports, documents,
-rules, approvals, and an optional AI business assistant.
+rules, approvals, guided business-launch organization, and an optional AI
+business assistant.
 
 Creator, Business, and Creator + Business onboarding use the same tenant-safe
 data model with different labels and defaults.
@@ -15,3 +16,8 @@ trading, fitness, and takeoff routes remain archived behind
 
 Financial output is bookkeeping preparation and must be reviewed by the owner
 or their professional.
+
+Business Launch provides official links, a formation checklist, confirmation
+tracking, and a compliance calendar. It does not select a legal structure for
+the customer, submit government forms, serve as registered agent, or declare an
+entity formed before the government confirms it.

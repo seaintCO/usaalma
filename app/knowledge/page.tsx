@@ -1,7 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { BookOpen, FileText, NotebookPen, PackageSearch } from "lucide-react";
+import {
+  BookOpen,
+  Building2,
+  FileText,
+  NotebookPen,
+  PackageSearch,
+} from "lucide-react";
 import AlmaShell from "@/components/alma-shell/AlmaShell";
 import { useAlmaLocale } from "@/lib/i18n/useAlmaLocale";
 
@@ -17,6 +23,9 @@ const copy = {
     docsBody: "Private files, agreements, policies, and reference material.",
     notes: "Notes",
     notesBody: "Owned context and decisions that should stay close.",
+    launch: "Business Launch",
+    launchBody:
+      "Build a formation checklist, open official filing sites, and track compliance without storing sensitive identity data.",
     open: "Open",
     caution:
       "Only approved knowledge should be used for customer-facing claims, estimates, or financial work.",
@@ -32,6 +41,9 @@ const copy = {
     docsBody: "Archivos privados, acuerdos, políticas y referencias.",
     notes: "Notas",
     notesBody: "Contexto y decisiones propias que deben permanecer cerca.",
+    launch: "Lanzamiento del negocio",
+    launchBody:
+      "Crea una lista de formación, abre sitios oficiales y controla el cumplimiento sin guardar datos sensibles de identidad.",
     open: "Abrir",
     caution:
       "Solo el conocimiento aprobado debe usarse en mensajes, estimados o trabajo financiero.",
@@ -56,6 +68,12 @@ export default function KnowledgePage() {
     },
     { title: t.docs, body: t.docsBody, href: "/documents", icon: FileText },
     { title: t.notes, body: t.notesBody, href: "/notes", icon: NotebookPen },
+    {
+      title: t.launch,
+      body: t.launchBody,
+      href: "/business-launch",
+      icon: Building2,
+    },
   ];
   return (
     <AlmaShell

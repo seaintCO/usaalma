@@ -99,6 +99,9 @@ row-level security. It has not been applied to any remote database.
 - Reports hub
 - Automations hub
 - Knowledge hub
+- Bilingual Business Launch organizer with official filing links, a 14-step
+  formation checklist, confirmation tracking, sensitive-data guard, printable
+  packet, and recurring compliance calendar
 - Existing Tasks, Planner, Notes, Documents, Estimates, Invoices, Approvals,
   communications, AI modes, and usage-control foundations
 - Production build with 247 generated routes/pages
@@ -135,6 +138,20 @@ row-level security. It has not been applied to any remote database.
 - Full payroll processing
 - Tax filing
 - CPA, legal, banking, or regulated-professional claims
+- Automatic government entity filing or registered-agent service
+
+## 6a. Business Launch
+
+Additive migration:
+
+`supabase/migrations/20260729002000_alma_business_launch_center.sql`
+
+The `/business-launch` workspace is tenant-scoped and owner-only for shared
+workspaces. It stores launch progress, status references, the last four EIN
+digits, and user-confirmed compliance deadlines. It never stores SSNs, full
+EINs, identity documents, government credentials, or payment-card details.
+Actual filings and government fee payments remain on linked official portals.
+ALMA does not provide legal, tax, or accounting advice.
 
 ## 7. AI entitlement and cost control
 
@@ -239,4 +256,3 @@ documented in `.env.example` and the connector documentation.
 
 Do not claim a provider is connected until its live/test OAuth and lifecycle
 tests have succeeded.
-

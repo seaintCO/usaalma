@@ -243,6 +243,97 @@ export class ConnectorRepository {
     return connection.id as string;
   }
 
+  static async saveApiKeyConnection(input: {
+    userId: string;
+    workspaceId: string;
+    provider: "elevenlabs" | "twilio";
+    apiKey: string;
+    secondarySecret?: string | null;
+    providerAccountId: string;
+    providerAccountName?: string | null;
+    scopes?: string[];
+    metadata?: Record<string, unknown>;
+  }) {
+    assertServerConfigured(input.provider);
+    const supabase = admin();
+    const now = new Date().toISOString();
+    const scopes = input.scopes ?? CONNECTOR_DEFINITIONS[input.provider].scopes;
+    const { data: connection, error } = await supabase
+      .from("provider_connections")
+      .upsert(
+        {
+          user_id: input.userId,
+          workspace_id: input.workspaceId,
+          provider: input.provider,
+          provider_account_id: input.providerAccountId,
+          provider_account_email: null,
+          provider_account_name: input.providerAccountName ?? null,
+          connection_status: "connected",
+          granted_scopes: scopes,
+          access_token_expires_at: null,
+          has_refresh_token: Boolean(input.secondarySecret),
+          connected_by_user_id: input.userId,
+          connected_at: now,
+          disconnected_at: null,
+          revoked_at: null,
+          last_error_code: null,
+          last_error_message: null,
+          provider_metadata: {
+            ...(input.metadata ?? {}),
+            authenticationType: "customer_api_key",
+          },
+        },
+        { onConflict: "workspace_id,provider" },
+      )
+      .select("id")
+      .single();
+    if (error) throw error;
+    const { error: secretError } = await supabase
+      .from("provider_connection_secrets")
+      .upsert(
+        {
+          connection_id: connection.id,
+          user_id: input.userId,
+          workspace_id: input.workspaceId,
+          provider: input.provider,
+          encrypted_access_token: encryptSecret(input.apiKey),
+          encrypted_refresh_token: input.secondarySecret
+            ? encryptSecret(input.secondarySecret)
+            : null,
+          scope: scopes.join(" "),
+          expires_at: null,
+          provider_metadata: {
+            encrypted: true,
+            secondarySecretPurpose:
+              input.provider === "elevenlabs" ? "webhook_hmac" : null,
+          },
+          token_version: 1,
+        },
+        { onConflict: "connection_id" },
+      );
+    if (secretError) throw secretError;
+    return connection.id as string;
+  }
+
+  static async getConnectedProviderConnection(input: {
+    userId: string;
+    workspaceId: string;
+    provider: ConnectorProvider;
+  }) {
+    assertServerConfigured(input.provider);
+    const supabase = admin();
+    const { data, error } = await supabase
+      .from("provider_connections")
+      .select("*")
+      .eq("user_id", input.userId)
+      .eq("workspace_id", input.workspaceId)
+      .eq("provider", input.provider)
+      .eq("connection_status", "connected")
+      .maybeSingle();
+    if (error) throw error;
+    return (data as ProviderConnectionRow | null) ?? null;
+  }
+
   static async saveQuickBooksAuthority(input: {
     userId: string;
     workspaceId: string;

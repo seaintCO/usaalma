@@ -76,6 +76,29 @@ export async function POST(request: Request) {
       { status: 403 },
     );
   }
+  if (process.env.ALMA_VOICE_SETUP_REQUIRED === "true") {
+    const { data: setupOrder, error: setupError } = await createAdminClient()
+      .from("voice_agent_setup_orders")
+      .select("id,status")
+      .eq("user_id", user.id)
+      .eq("workspace_id", context.workspaceId)
+      .in("status", [
+        "paid",
+        "call_booked",
+        "in_setup",
+        "ready_to_connect",
+        "completed",
+      ])
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (setupError || !setupOrder) {
+      return NextResponse.json(
+        { ok: false, error: { code: "managed_voice_setup_required" } },
+        { status: 402 },
+      );
+    }
+  }
   const connection = await ConnectorRepository.getConnectedProviderConnection({
     userId: user.id,
     workspaceId: context.workspaceId,

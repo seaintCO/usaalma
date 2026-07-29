@@ -90,6 +90,38 @@ export async function POST(req: Request) {
     let fallback: { userId?: string; workspaceId?: string; plan?: string } = {};
     if (event.type === "checkout.session.completed") {
       const session = event.data.object as Stripe.Checkout.Session;
+      if (session.metadata?.purchase === "voice_agent_setup") {
+        const orderId = session.metadata.orderId;
+        const userId =
+          session.metadata.userId || session.client_reference_id || null;
+        if (!orderId || !userId || session.payment_status !== "paid") {
+          throw new Error("voice_setup_payment_identity_missing");
+        }
+        const { error: setupError } = await admin
+          .from("voice_agent_setup_orders")
+          .update({
+            status: "paid",
+            stripe_payment_intent_id:
+              typeof session.payment_intent === "string"
+                ? session.payment_intent
+                : (session.payment_intent?.id ?? null),
+            metadata: {
+              checkout_session_id: session.id,
+              payment_status: session.payment_status,
+            },
+          })
+          .eq("id", orderId)
+          .eq("user_id", userId);
+        if (setupError) throw setupError;
+        await admin
+          .from("stripe_webhook_events")
+          .update({
+            processing_status: "processed",
+            processed_at: new Date().toISOString(),
+          })
+          .eq("stripe_event_id", event.id);
+        return NextResponse.json({ ok: true, received: true });
+      }
       fallback = {
         userId:
           session.metadata?.userId || session.client_reference_id || undefined,

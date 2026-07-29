@@ -6,6 +6,7 @@ import {
   Download,
   ExternalLink,
   Loader2,
+  Mail,
   Plus,
   RefreshCw,
   Trash2,
@@ -83,6 +84,10 @@ const copy = {
     paymentCancelled: "Payment was cancelled. The invoice was not changed.",
     paymentFailed:
       "The payment could not be confirmed. Review the provider activity before retrying.",
+    emailInvoice: "Email PDF for approval",
+    emailQueued: "Invoice email is waiting in Approvals.",
+    emailError:
+      "The invoice email could not be prepared. Add a customer email and connect Gmail or Outlook.",
   },
   es: {
     title: "Facturación",
@@ -121,6 +126,10 @@ const copy = {
     paymentCancelled: "El pago fue cancelado. La factura no cambió.",
     paymentFailed:
       "No se pudo confirmar el pago. Revisa la actividad del proveedor antes de reintentar.",
+    emailInvoice: "Enviar PDF para aprobación",
+    emailQueued: "El correo de la factura está esperando en Aprobaciones.",
+    emailError:
+      "No se pudo preparar el correo. Agrega el email del cliente y conecta Gmail u Outlook.",
   },
 };
 const newLine = (): Line => ({
@@ -144,6 +153,8 @@ export default function InvoicingPage() {
     [paymentProviders, setPaymentProviders] = useState<PaymentProvider[]>([]),
     [paymentBusy, setPaymentBusy] = useState<PaymentProvider | null>(null),
     [paymentError, setPaymentError] = useState(""),
+    [deliveryBusy, setDeliveryBusy] = useState(false),
+    [deliveryMessage, setDeliveryMessage] = useState(""),
     [paymentReturn, setPaymentReturn] = useState<
       "success" | "cancelled" | "failed" | ""
     >("");
@@ -333,6 +344,27 @@ export default function InvoicingPage() {
     if (r.ok) {
       await load();
       await open((await r.json()).id);
+    }
+  };
+  const prepareDelivery = async () => {
+    if (!selected) return;
+    setDeliveryBusy(true);
+    setDeliveryMessage("");
+    try {
+      const response = await fetch(`/api/invoices/${selected.id}/delivery`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          to: selected.client_email,
+          provider: "gmail",
+        }),
+      });
+      if (!response.ok) throw new Error("invoice_delivery_failed");
+      setDeliveryMessage(t.emailQueued);
+    } catch {
+      setDeliveryMessage(t.emailError);
+    } finally {
+      setDeliveryBusy(false);
     }
   };
   return (
@@ -577,10 +609,16 @@ export default function InvoicingPage() {
                     {selected.status === "draft" && (
                       <>
                         <button
-                          onClick={() => void lifecycle("sent")}
-                          className="rounded-full border px-4 py-2 text-sm"
+                          onClick={() => void prepareDelivery()}
+                          disabled={deliveryBusy || !selected.client_email}
+                          className="inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm disabled:opacity-50"
                         >
-                          {t.send}
+                          {deliveryBusy ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Mail className="h-4 w-4" />
+                          )}
+                          {t.emailInvoice}
                         </button>
                         <button
                           onClick={() => void remove()}
@@ -614,6 +652,18 @@ export default function InvoicingPage() {
                       {t.download}
                     </a>
                   </div>
+                  {deliveryMessage ? (
+                    <p className="mt-3 text-sm text-[#667085]">
+                      {deliveryMessage}{" "}
+                      {deliveryMessage === t.emailQueued ? (
+                        <a href="/approvals" className="underline">
+                          {lang === "es"
+                            ? "Abrir Aprobaciones"
+                            : "Open Approvals"}
+                        </a>
+                      ) : null}
+                    </p>
+                  ) : null}
                   <section className="mt-6 rounded-2xl border border-[#DDE4EE] bg-gradient-to-br from-[#F6FAFF] via-white to-[#F4F0FF] p-4">
                     <div className="flex items-start gap-3">
                       <div className="rounded-xl bg-[#111827] p-2 text-white">

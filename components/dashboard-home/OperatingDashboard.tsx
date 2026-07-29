@@ -12,6 +12,7 @@ import {
   ReceiptText,
   Send,
   ShieldCheck,
+  PhoneCall,
   Users,
 } from "lucide-react";
 import Link from "next/link";
@@ -73,6 +74,10 @@ const copy = {
       "Apply the Business Office migration to activate financial metrics.",
     disclaimer:
       "Financial totals use posted records and never classify transfers or owner contributions as operating income.",
+    voiceAgent: "AI voice agent",
+    voiceAgentBody:
+      "Set up a receptionist or assistant that can log signed call transcripts in ALMA CRM.",
+    configureVoice: "Configure voice agent",
   },
   es: {
     greeting: "Buenos días.",
@@ -107,6 +112,10 @@ const copy = {
       "Aplica la migración de Oficina Empresarial para activar métricas financieras.",
     disclaimer:
       "Los totales financieros usan registros publicados y nunca cuentan transferencias ni aportes del dueño como ingresos operativos.",
+    voiceAgent: "Agente de voz con IA",
+    voiceAgentBody:
+      "Configura un recepcionista o asistente que guarde transcripciones firmadas en el CRM.",
+    configureVoice: "Configurar agente de voz",
   },
 } as const;
 
@@ -412,28 +421,44 @@ export default function OperatingDashboard({
           </section>
         </div>
 
-        <section className="mt-6 rounded-[24px] border border-[#E4E7EC] bg-white p-5">
-          <div className="flex items-center justify-between">
-            <h2 className="font-medium">{t.activity}</h2>
-            <span className="text-xs text-[#667085]">
-              {t.quickbooks}:{" "}
-              {office?.quickBooks.status === "connected"
-                ? t.connected
-                : t.disconnected}
-            </span>
-          </div>
-          {summary.activity.length ? (
-            <div className="mt-4 divide-y divide-[#EAECF0]">
-              {summary.activity.slice(0, 6).map((activity) => (
-                <div key={activity.id} className="py-3 text-sm">
-                  {activity.summary || activity.id}
-                </div>
-              ))}
+        <div className="mt-6 grid gap-5 xl:grid-cols-[1.3fr_0.7fr]">
+          <section className="rounded-[24px] border border-[#E4E7EC] bg-white p-5">
+            <div className="flex items-center justify-between">
+              <h2 className="font-medium">{t.activity}</h2>
+              <span className="text-xs text-[#667085]">
+                {t.quickbooks}:{" "}
+                {office?.quickBooks.status === "connected"
+                  ? t.connected
+                  : t.disconnected}
+              </span>
             </div>
-          ) : (
-            <p className="mt-5 text-sm text-[#667085]">{t.noActivity}</p>
-          )}
-        </section>
+            {summary.activity.length ? (
+              <div className="mt-4 divide-y divide-[#EAECF0]">
+                {summary.activity.slice(0, 6).map((activity) => (
+                  <div key={activity.id} className="py-3 text-sm">
+                    {activity.summary || activity.id}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="mt-5 text-sm text-[#667085]">{t.noActivity}</p>
+            )}
+          </section>
+          <section className="overflow-hidden rounded-[24px] border border-slate-800 bg-[#080B12] p-5 text-white">
+            <PhoneCall className="h-5 w-5 text-cyan-300" />
+            <h2 className="mt-6 font-medium">{t.voiceAgent}</h2>
+            <p className="mt-2 text-sm leading-6 text-slate-300">
+              {t.voiceAgentBody}
+            </p>
+            <Link
+              href="/voice-agents"
+              className="mt-5 inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-medium text-black"
+            >
+              {t.configureVoice}
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          </section>
+        </div>
         <p className="mt-5 text-xs leading-5 text-[#667085]">{t.disclaimer}</p>
       </div>
     </div>

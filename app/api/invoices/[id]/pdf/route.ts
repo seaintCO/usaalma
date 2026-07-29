@@ -1,1 +1,27 @@
-import{jsPDF}from"jspdf";import{getCurrentUser}from"@/lib/auth/user";import{createClient}from"@/lib/supabase/server";export async function GET(_r:Request,c:{params:Promise<{id:string}>}){const u=await getCurrentUser();if(!u)return new Response("Unauthorized",{status:401});const s=await createClient(),id=(await c.params).id;const{data:i}=await s.from("invoices").select("*,invoice_line_items(*)").eq("id",id).eq("user_id",u.id).maybeSingle();if(!i)return new Response("Not found",{status:404});const p=new jsPDF();p.text(`Invoice ${i.invoice_number}`,20,20);p.text(`Client: ${i.client_name}`,20,30);let y=45;for(const x of i.invoice_line_items??[]){p.text(`${x.description}  ${x.quantity} x ${x.unit_price} = ${x.line_total}`,20,y);y+=8}p.text(`Total: ${i.total} ${i.currency}`,20,y+10);return new Response(p.output("arraybuffer"),{headers:{"content-type":"application/pdf","content-disposition":`attachment; filename="${i.invoice_number||"invoice"}.pdf"`}})}
+import { getCurrentUser } from "@/lib/auth/user";
+import { createInvoicePdf } from "@/lib/invoices/pdf";
+import { createClient } from "@/lib/supabase/server";
+
+export async function GET(
+  _request: Request,
+  context: { params: Promise<{ id: string }> },
+) {
+  const user = await getCurrentUser();
+  if (!user) return new Response("Unauthorized", { status: 401 });
+  const supabase = await createClient();
+  const { id } = await context.params;
+  const { data: invoice } = await supabase
+    .from("invoices")
+    .select("*,invoice_line_items(*)")
+    .eq("id", id)
+    .eq("user_id", user.id)
+    .maybeSingle();
+  if (!invoice) return new Response("Not found", { status: 404 });
+  const file = createInvoicePdf(invoice);
+  return new Response(new Uint8Array(file.bytes), {
+    headers: {
+      "content-type": "application/pdf",
+      "content-disposition": `attachment; filename="${file.fileName}"`,
+    },
+  });
+}

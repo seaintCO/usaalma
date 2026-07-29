@@ -9,6 +9,8 @@ import {
   Loader2,
   Phone,
   Plus,
+  CalendarDays,
+  CreditCard,
   ShieldCheck,
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
@@ -61,6 +63,15 @@ const copy = {
     error: "The voice agent service is unavailable.",
     disclosure:
       "You are responsible for call-recording, consent, telemarketing, and AI-disclosure laws in every jurisdiction where you operate.",
+    managedTitle: "Managed setup with ALMA",
+    managedBody:
+      "Book a setup call and pay a $299 one-time setup fee. We help configure your customer-owned ElevenLabs agent, call flow, CRM transcript webhook, disclosures, and handoff. ElevenLabs and phone usage remain billed to you by the providers.",
+    paySetup: "Pay $299 setup fee",
+    bookCall: "Book setup call",
+    setupPaid: "Setup fee paid",
+    setupBooked: "Setup call booked",
+    setupComplete: "Voice agent setup completed",
+    diy: "Prefer DIY? You can connect your own key below at no ALMA setup charge.",
   },
   es: {
     subtitle:
@@ -101,6 +112,15 @@ const copy = {
     error: "El servicio de agentes de voz no está disponible.",
     disclosure:
       "Eres responsable de las leyes de grabación, consentimiento, telemercadeo y divulgación de IA en cada jurisdicción.",
+    managedTitle: "Configuración administrada por ALMA",
+    managedBody:
+      "Agenda una llamada y paga una tarifa única de $299. Te ayudamos a configurar tu agente de ElevenLabs, flujo de llamadas, transcripciones al CRM, avisos y transferencia. ElevenLabs y la telefonía te cobran su uso directamente.",
+    paySetup: "Pagar $299 de configuración",
+    bookCall: "Agendar llamada",
+    setupPaid: "Configuración pagada",
+    setupBooked: "Llamada agendada",
+    setupComplete: "Configuración de voz completada",
+    diy: "¿Prefieres hacerlo tú? Conecta tu propia clave abajo sin pagar configuración a ALMA.",
   },
 } as const;
 
@@ -122,6 +142,13 @@ export default function VoiceAgentWorkspace({
     webhookSecret: "",
   });
   const [showConnectionForm, setShowConnectionForm] = useState(false);
+  const [setupBusy, setSetupBusy] = useState(false);
+  const [managedSetup, setManagedSetup] = useState<{
+    id: string;
+    status: string;
+    booking_url?: string | null;
+  } | null>(null);
+  const [bookingUrl, setBookingUrl] = useState<string | null>(null);
   const webhookUrl = "/api/voice-agents/webhooks/elevenlabs";
   const [agent, setAgent] = useState({
     name: "",
@@ -150,6 +177,16 @@ export default function VoiceAgentWorkspace({
       );
       setAgents(agentsPayload.agents ?? []);
       setCalls(agentsPayload.calls ?? []);
+      const setupResponse = await fetch("/api/voice-agents/setup", {
+        cache: "no-store",
+      });
+      if (setupResponse.ok) {
+        const setupPayload = await setupResponse.json();
+        setManagedSetup(setupPayload.order ?? null);
+        setBookingUrl(
+          setupPayload.order?.booking_url ?? setupPayload.bookingUrl ?? null,
+        );
+      }
     } catch {
       setFailed(true);
     } finally {
@@ -200,6 +237,35 @@ export default function VoiceAgentWorkspace({
     }
   }
 
+  async function purchaseSetup() {
+    setSetupBusy(true);
+    try {
+      const response = await fetch("/api/voice-agents/setup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: "{}",
+      });
+      const payload = await response.json();
+      if (!response.ok || !payload.url) throw new Error("checkout_failed");
+      window.location.assign(payload.url);
+    } finally {
+      setSetupBusy(false);
+    }
+  }
+
+  async function markBooked() {
+    if (!managedSetup || !bookingUrl) return;
+    window.open(bookingUrl, "_blank", "noopener,noreferrer");
+    if (managedSetup.status === "paid") {
+      await fetch("/api/voice-agents/setup", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "booked", orderId: managedSetup.id }),
+      });
+      await load();
+    }
+  }
+
   if (loading) {
     return (
       <p className="p-10 text-center text-sm text-[#667085]">
@@ -221,6 +287,57 @@ export default function VoiceAgentWorkspace({
           {t.error}
         </p>
       ) : null}
+
+      <section className="mt-6 overflow-hidden rounded-[24px] border border-slate-800 bg-[#080B12] p-6 text-white">
+        <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+          <div className="max-w-3xl">
+            <div className="flex items-center gap-3">
+              <Bot className="h-5 w-5 text-cyan-300" />
+              <h2 className="text-lg font-medium">{t.managedTitle}</h2>
+            </div>
+            <p className="mt-3 text-sm leading-6 text-slate-300">
+              {t.managedBody}
+            </p>
+            <p className="mt-2 text-xs text-slate-400">{t.diy}</p>
+          </div>
+          <div className="flex shrink-0 flex-wrap gap-2">
+            {!managedSetup ||
+            ["cancelled", "refunded"].includes(managedSetup.status) ? (
+              <button
+                type="button"
+                disabled={setupBusy}
+                onClick={() => void purchaseSetup()}
+                className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-medium text-black disabled:opacity-50"
+              >
+                {setupBusy ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <CreditCard className="h-4 w-4" />
+                )}
+                {t.paySetup}
+              </button>
+            ) : bookingUrl &&
+              ["paid", "call_booked", "in_setup"].includes(
+                managedSetup.status,
+              ) ? (
+              <button
+                type="button"
+                onClick={() => void markBooked()}
+                className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-medium text-black"
+              >
+                <CalendarDays className="h-4 w-4" />
+                {managedSetup.status === "paid" ? t.bookCall : t.setupBooked}
+              </button>
+            ) : (
+              <span className="rounded-full border border-emerald-400/30 bg-emerald-400/10 px-4 py-2 text-sm text-emerald-200">
+                {managedSetup.status === "completed"
+                  ? t.setupComplete
+                  : t.setupPaid}
+              </span>
+            )}
+          </div>
+        </div>
+      </section>
 
       <section className="mt-6 rounded-[24px] border border-[#E4E7EC] bg-white p-6">
         <div className="flex items-center gap-3">

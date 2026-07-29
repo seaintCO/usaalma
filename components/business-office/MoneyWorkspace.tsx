@@ -79,6 +79,16 @@ const copy = {
     connectPayments: "Connect payments",
     manageInvoices: "Manage invoices",
     monthNet: "Current net",
+    budgets: "Budgets and alerts",
+    budgetHelp:
+      "Set a monthly total or category budget. ALMA compares it with posted expenses.",
+    budgetCategory: "Category or “all”",
+    budgetAmount: "Monthly limit",
+    saveBudget: "Save budget",
+    budgetEmpty: "No budget has been set for this month.",
+    budgetUnavailable: "Apply the managed-office migration to enable budgets.",
+    spent: "spent",
+    remaining: "remaining",
   },
   es: {
     subtitle:
@@ -130,6 +140,17 @@ const copy = {
     connectPayments: "Conectar pagos",
     manageInvoices: "Administrar facturas",
     monthNet: "Neto actual",
+    budgets: "Presupuestos y alertas",
+    budgetHelp:
+      "Define un presupuesto total o por categoría. ALMA lo compara con gastos registrados.",
+    budgetCategory: "Categoría o “all”",
+    budgetAmount: "Límite mensual",
+    saveBudget: "Guardar presupuesto",
+    budgetEmpty: "No hay presupuesto para este mes.",
+    budgetUnavailable:
+      "Aplica la migración de oficina administrada para activar presupuestos.",
+    spent: "gastado",
+    remaining: "restante",
   },
 } as const;
 
@@ -146,6 +167,24 @@ export default function MoneyWorkspace({ language }: { language: Language }) {
   const [state, setState] = useState<State>("loading");
   const [overview, setOverview] = useState<BusinessOfficeOverview | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const [budgets, setBudgets] = useState<
+    Array<{
+      id: string;
+      category: string;
+      amount: number;
+      actual: number;
+      remaining: number;
+      percent: number;
+      alert: boolean;
+      overBudget: boolean;
+    }>
+  >([]);
+  const [budgetUnavailable, setBudgetUnavailable] = useState(false);
+  const [budgetSaving, setBudgetSaving] = useState(false);
+  const [budgetForm, setBudgetForm] = useState({
+    category: "all",
+    amount: "",
+  });
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
     direction: "expense" as BusinessTransactionDirection,
@@ -181,6 +220,23 @@ export default function MoneyWorkspace({ language }: { language: Language }) {
   useEffect(() => {
     void load();
   }, [load]);
+
+  const loadBudgets = useCallback(async () => {
+    const response = await fetch("/api/business-office/budgets", {
+      cache: "no-store",
+    });
+    const payload = await response.json().catch(() => null);
+    if (response.ok) {
+      setBudgets(payload?.items ?? []);
+      setBudgetUnavailable(false);
+    } else if (payload?.error?.code === "business_budget_schema_unavailable") {
+      setBudgetUnavailable(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadBudgets();
+  }, [loadBudgets]);
 
   async function createTransaction() {
     if (!form.description.trim() || !Number.isFinite(Number(form.amount)))
@@ -218,6 +274,28 @@ export default function MoneyWorkspace({ language }: { language: Language }) {
       body: JSON.stringify({ reviewStatus: "reviewed" }),
     });
     if (response.ok) await load();
+  }
+
+  async function saveBudget() {
+    const amount = Number(budgetForm.amount);
+    if (!Number.isFinite(amount) || amount < 0) return;
+    setBudgetSaving(true);
+    try {
+      const response = await fetch("/api/business-office/budgets", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          category: budgetForm.category.trim() || "all",
+          amount,
+          alertThresholdPercent: 90,
+        }),
+      });
+      if (!response.ok) throw new Error("budget_save_failed");
+      setBudgetForm({ category: "all", amount: "" });
+      await loadBudgets();
+    } finally {
+      setBudgetSaving(false);
+    }
   }
 
   const cards = useMemo(
@@ -405,6 +483,104 @@ export default function MoneyWorkspace({ language }: { language: Language }) {
           </div>
         </section>
       </div>
+
+      <section className="mt-4 rounded-[24px] border border-[#E4E7EC] bg-white p-5">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <div className="flex items-center gap-2">
+              <WalletCards className="h-4 w-4 text-cyan-700" />
+              <h2 className="font-medium">{t.budgets}</h2>
+            </div>
+            <p className="mt-1 text-xs text-[#667085]">{t.budgetHelp}</p>
+          </div>
+          <div className="grid gap-2 sm:grid-cols-[minmax(150px,1fr)_140px_auto]">
+            <input
+              value={budgetForm.category}
+              onChange={(event) =>
+                setBudgetForm((current) => ({
+                  ...current,
+                  category: event.target.value,
+                }))
+              }
+              placeholder={t.budgetCategory}
+              className="rounded-xl border border-[#D0D5DD] px-3 py-2 text-sm"
+            />
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={budgetForm.amount}
+              onChange={(event) =>
+                setBudgetForm((current) => ({
+                  ...current,
+                  amount: event.target.value,
+                }))
+              }
+              placeholder={t.budgetAmount}
+              className="rounded-xl border border-[#D0D5DD] px-3 py-2 text-sm"
+            />
+            <button
+              type="button"
+              disabled={budgetSaving || budgetUnavailable}
+              onClick={() => void saveBudget()}
+              className="rounded-xl bg-black px-4 py-2 text-sm text-white disabled:opacity-50"
+            >
+              {t.saveBudget}
+            </button>
+          </div>
+        </div>
+        {budgetUnavailable ? (
+          <p className="mt-4 rounded-xl bg-amber-50 p-3 text-sm text-amber-900">
+            {t.budgetUnavailable}
+          </p>
+        ) : budgets.length ? (
+          <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {budgets.map((budget) => (
+              <div
+                key={budget.id}
+                className={`rounded-2xl border p-4 ${
+                  budget.overBudget
+                    ? "border-rose-200 bg-rose-50"
+                    : budget.alert
+                      ? "border-amber-200 bg-amber-50"
+                      : "border-[#E4E7EC] bg-[#F9FAFB]"
+                }`}
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <p className="font-medium">
+                    {budget.category === "all"
+                      ? language === "es"
+                        ? "Total mensual"
+                        : "Monthly total"
+                      : budget.category}
+                  </p>
+                  <span className="text-xs text-[#667085]">
+                    {budget.percent}%
+                  </span>
+                </div>
+                <div className="mt-3 h-2 overflow-hidden rounded-full bg-white">
+                  <div
+                    className={`h-full rounded-full ${
+                      budget.overBudget
+                        ? "bg-rose-500"
+                        : budget.alert
+                          ? "bg-amber-400"
+                          : "bg-cyan-500"
+                    }`}
+                    style={{ width: `${Math.min(100, budget.percent)}%` }}
+                  />
+                </div>
+                <p className="mt-3 text-xs text-[#667085]">
+                  {money(budget.actual, language)} {t.spent} ·{" "}
+                  {money(Math.max(0, budget.remaining), language)} {t.remaining}
+                </p>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="mt-5 text-sm text-[#667085]">{t.budgetEmpty}</p>
+        )}
+      </section>
 
       {showForm ? (
         <section className="mt-5 rounded-[24px] border border-[#D0D5DD] bg-white p-5">

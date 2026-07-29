@@ -131,6 +131,11 @@ function buildMime(input: {
   subject: string;
   text: string;
   html?: string | null;
+  attachments?: Array<{
+    fileName: string;
+    mimeType: string;
+    contentBase64: string;
+  }>;
 }) {
   const headers = [
     `To: ${input.to}`,
@@ -138,7 +143,7 @@ function buildMime(input: {
     ...(input.bcc?.length ? [`Bcc: ${input.bcc.join(", ")}`] : []),
     `Subject: ${input.subject}`,
   ];
-  if (input.html) {
+  if (!input.attachments?.length && input.html) {
     return [
       ...headers,
       "MIME-Version: 1.0",
@@ -146,6 +151,41 @@ function buildMime(input: {
       "",
       input.html,
     ].join("\r\n");
+  }
+  if (input.attachments?.length) {
+    const boundary = `alma-${crypto.randomUUID()}`;
+    const body = input.html ?? input.text;
+    const contentType = input.html ? "text/html" : "text/plain";
+    const parts = [
+      ...headers,
+      "MIME-Version: 1.0",
+      `Content-Type: multipart/mixed; boundary="${boundary}"`,
+      "",
+      `--${boundary}`,
+      `Content-Type: ${contentType}; charset=utf-8`,
+      "Content-Transfer-Encoding: 8bit",
+      "",
+      body,
+    ];
+    for (const attachment of input.attachments) {
+      const fileName = attachment.fileName
+        .replace(/[\r\n"]/g, "_")
+        .slice(0, 180);
+      const encoded = attachment.contentBase64
+        .replace(/\s+/g, "")
+        .match(/.{1,76}/g)
+        ?.join("\r\n");
+      parts.push(
+        `--${boundary}`,
+        `Content-Type: ${attachment.mimeType}; name="${fileName}"`,
+        "Content-Transfer-Encoding: base64",
+        `Content-Disposition: attachment; filename="${fileName}"`,
+        "",
+        encoded ?? "",
+      );
+    }
+    parts.push(`--${boundary}--`, "");
+    return parts.join("\r\n");
   }
   return [
     ...headers,
@@ -163,6 +203,11 @@ export async function sendGmailMessage(input: {
   subject: string;
   text: string;
   html?: string | null;
+  attachments?: Array<{
+    fileName: string;
+    mimeType: string;
+    contentBase64: string;
+  }>;
 }) {
   const raw = base64Url(buildMime(input));
   const response = await fetch(

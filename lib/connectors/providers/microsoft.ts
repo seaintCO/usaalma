@@ -134,6 +134,11 @@ export async function sendOutlookMessage(input: {
   subject: string;
   text: string;
   html?: string | null;
+  attachments?: Array<{
+    fileName: string;
+    mimeType: string;
+    contentBase64: string;
+  }>;
 }) {
   const recipient = (address: string) => ({ emailAddress: { address } });
   const response = await fetch("https://graph.microsoft.com/v1.0/me/sendMail", {
@@ -152,6 +157,13 @@ export async function sendOutlookMessage(input: {
         toRecipients: [recipient(input.to)],
         ccRecipients: input.cc?.map(recipient) ?? [],
         bccRecipients: input.bcc?.map(recipient) ?? [],
+        attachments:
+          input.attachments?.map((attachment) => ({
+            "@odata.type": "#microsoft.graph.fileAttachment",
+            name: attachment.fileName.replace(/[\r\n"]/g, "_").slice(0, 180),
+            contentType: attachment.mimeType,
+            contentBytes: attachment.contentBase64,
+          })) ?? [],
       },
       saveToSentItems: true,
     }),

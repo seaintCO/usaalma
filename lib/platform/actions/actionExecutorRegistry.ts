@@ -8,6 +8,8 @@ import {
   updateWhatsAppDelivery,
 } from "@/lib/communications/inboxRepository";
 import { BuilderRepository } from "@/lib/builder/repository";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { createInvoicePdf } from "@/lib/invoices/pdf";
 
 export type ActionExecutionResult = {
   success: boolean;
@@ -378,6 +380,179 @@ const EXECUTORS: Record<string, Executor> = {
           estimateNumber,
           deliveryProvider,
           providerMessageId: sendResult.providerMessageId,
+          deliveredAt,
+        },
+      };
+    },
+  },
+  "office.invoice.deliver": {
+    key: "office.invoice.deliver",
+    editable: true,
+    validate(payload) {
+      return {
+        invoiceId: readRequiredString(payload, "invoiceId", 80),
+        invoiceNumber: readRequiredString(payload, "invoiceNumber", 80),
+        recipient: readRequiredString(payload, "recipient", 320),
+        subject: readRequiredString(payload, "subject", 240),
+        message: readRequiredString(payload, "message", 10000),
+        deliveryProvider:
+          payload.deliveryProvider === "outlook" ? "outlook" : "gmail",
+      };
+    },
+    async execute(userId, payload, approval) {
+      const invoiceId = readRequiredString(payload, "invoiceId", 80);
+      const recipient = readRequiredString(payload, "recipient", 320);
+      const subject = readRequiredString(payload, "subject", 240);
+      const message = readRequiredString(payload, "message", 10000);
+      const deliveryProvider =
+        payload.deliveryProvider === "outlook" ? "outlook" : "gmail";
+      const admin = createAdminClient();
+      const { data: invoice } = await admin
+        .from("invoices")
+        .select("*,invoice_line_items(*)")
+        .eq("id", invoiceId)
+        .eq("user_id", userId)
+        .maybeSingle();
+      if (!invoice || invoice.status === "cancelled") {
+        return {
+          success: false,
+          message: "Invoice is not sendable. No email was sent.",
+        };
+      }
+      const workspaceId =
+        approval.workspace_id ||
+        (await ConnectorRepository.resolveDefaultWorkspaceId(userId));
+      if (!workspaceId) {
+        return {
+          success: false,
+          message: "Create or select a workspace before sending invoices.",
+        };
+      }
+      const { data: priorDelivery } = await admin
+        .from("email_delivery_records")
+        .select("provider_message_id,sent_at")
+        .eq("user_id", userId)
+        .eq("invoice_id", invoiceId)
+        .eq("status", "sent")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (priorDelivery?.provider_message_id) {
+        return {
+          success: true,
+          message: "Invoice was already emailed.",
+          result: {
+            invoiceId,
+            providerMessageId: priorDelivery.provider_message_id,
+            deliveredAt: priorDelivery.sent_at,
+          },
+        };
+      }
+      const connection = await ConnectorRepository.getConnectedEmailConnection({
+        userId,
+        workspaceId,
+        provider: deliveryProvider,
+      });
+      if (!connection) {
+        return {
+          success: false,
+          message: "Connect Gmail or Outlook before sending invoices.",
+        };
+      }
+      const { data: delivery, error: deliveryError } = await admin
+        .from("email_delivery_records")
+        .upsert(
+          {
+            user_id: userId,
+            workspace_id: workspaceId,
+            approval_id: approval.id,
+            invoice_id: invoiceId,
+            connection_id: connection.id,
+            provider: deliveryProvider,
+            recipient,
+            subject,
+            status: "pending",
+          },
+          { onConflict: "approval_id" },
+        )
+        .select("id,status,provider_message_id")
+        .single();
+      if (deliveryError || !delivery) {
+        return {
+          success: false,
+          message: "Invoice delivery could not be prepared.",
+        };
+      }
+      if (delivery.status === "sent" && delivery.provider_message_id) {
+        return {
+          success: true,
+          message: "Invoice was already emailed.",
+          result: {
+            invoiceId,
+            providerMessageId: delivery.provider_message_id,
+          },
+        };
+      }
+      const pdf = createInvoicePdf(invoice);
+      const result = await sendConnectedEmail({
+        userId,
+        workspaceId,
+        provider: deliveryProvider,
+        to: recipient,
+        subject,
+        text: message,
+        attachments: [
+          {
+            fileName: pdf.fileName,
+            mimeType: "application/pdf",
+            contentBase64: pdf.bytes.toString("base64"),
+          },
+        ],
+      });
+      if (!result.ok || !result.providerMessageId) {
+        await admin
+          .from("email_delivery_records")
+          .update({
+            status:
+              result.error?.code === "email_connection_required"
+                ? "blocked"
+                : "failed",
+            error_code: result.error?.code ?? "invoice_email_failed",
+            error_message:
+              result.error?.message ?? "Invoice email could not be sent.",
+          })
+          .eq("id", delivery.id);
+        return {
+          success: false,
+          message: result.error?.message ?? "Invoice email could not be sent.",
+        };
+      }
+      const deliveredAt = result.deliveredAt ?? new Date().toISOString();
+      await admin
+        .from("email_delivery_records")
+        .update({
+          status: "sent",
+          provider_message_id: result.providerMessageId,
+          sent_at: deliveredAt,
+          error_code: null,
+          error_message: null,
+        })
+        .eq("id", delivery.id);
+      if (invoice.status === "draft") {
+        await admin
+          .from("invoices")
+          .update({ status: "sent", sent_at: deliveredAt })
+          .eq("id", invoiceId)
+          .eq("user_id", userId)
+          .eq("status", "draft");
+      }
+      return {
+        success: true,
+        message: "Invoice PDF emailed.",
+        result: {
+          invoiceId,
+          deliveryProvider,
+          providerMessageId: result.providerMessageId,
           deliveredAt,
         },
       };

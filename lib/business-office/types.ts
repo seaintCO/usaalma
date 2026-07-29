@@ -156,6 +156,23 @@ export type BusinessOfficeOverview = {
     companyName: string | null;
     lastSuccessfulSyncAt: string | null;
   };
+  insights: {
+    cashFlow: Array<{
+      month: string;
+      income: number;
+      expenses: number;
+      net: number;
+    }>;
+    expensesByCategory: Array<{
+      category: string;
+      amount: number;
+    }>;
+    invoicePipeline: Array<{
+      status: string;
+      count: number;
+      amount: number;
+    }>;
+  };
   transactions: BusinessTransaction[];
   appointments: BusinessAppointment[];
 };

@@ -179,7 +179,7 @@ export class ConnectorRepository {
   static async saveOAuthConnection(input: {
     userId: string;
     workspaceId: string;
-    provider: OAuthConnectorProvider;
+    provider: OAuthConnectorProvider | "stripe_connect";
     accessToken: string;
     refreshToken: string | null;
     expiresAt: string | null;
@@ -306,6 +306,76 @@ export class ConnectorRepository {
             encrypted: true,
             secondarySecretPurpose:
               input.provider === "elevenlabs" ? "webhook_hmac" : null,
+          },
+          token_version: 1,
+        },
+        { onConflict: "connection_id" },
+      );
+    if (secretError) throw secretError;
+    return connection.id as string;
+  }
+
+  static async saveMerchantCredentialConnection(input: {
+    userId: string;
+    workspaceId: string;
+    provider: "paypal_business";
+    clientId: string;
+    clientSecret: string;
+    providerAccountId: string;
+    providerAccountName?: string | null;
+    environment: "sandbox" | "live";
+  }) {
+    assertServerConfigured(input.provider);
+    const supabase = admin();
+    const now = new Date().toISOString();
+    const scopes = CONNECTOR_DEFINITIONS[input.provider].scopes;
+    const { data: connection, error } = await supabase
+      .from("provider_connections")
+      .upsert(
+        {
+          user_id: input.userId,
+          workspace_id: input.workspaceId,
+          provider: input.provider,
+          provider_account_id: input.providerAccountId,
+          provider_account_email: null,
+          provider_account_name: input.providerAccountName ?? "PayPal Business",
+          connection_status: "connected",
+          granted_scopes: scopes,
+          access_token_expires_at: null,
+          has_refresh_token: true,
+          connected_by_user_id: input.userId,
+          connected_at: now,
+          disconnected_at: null,
+          revoked_at: null,
+          last_error_code: null,
+          last_error_message: null,
+          provider_metadata: {
+            authenticationType: "customer_rest_app",
+            environment: input.environment,
+          },
+        },
+        { onConflict: "workspace_id,provider" },
+      )
+      .select("id")
+      .single();
+    if (error) throw error;
+    const { error: secretError } = await supabase
+      .from("provider_connection_secrets")
+      .upsert(
+        {
+          connection_id: connection.id,
+          user_id: input.userId,
+          workspace_id: input.workspaceId,
+          provider: input.provider,
+          encrypted_access_token: encryptSecret(input.clientId),
+          encrypted_refresh_token: encryptSecret(input.clientSecret),
+          scope: scopes.join(" "),
+          expires_at: null,
+          provider_metadata: {
+            encrypted: true,
+            primarySecretPurpose: "client_id",
+            secondarySecretPurpose: "client_secret",
+            environment: input.environment,
           },
           token_version: 1,
         },

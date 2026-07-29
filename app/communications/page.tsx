@@ -152,10 +152,10 @@ export default function CommunicationsPage() {
           ) : null}
 
           {state === "ready" ? (
-            <section className="grid gap-4 lg:grid-cols-[minmax(0,340px)_minmax(0,1fr)]">
-              <div className="min-w-0 space-y-2">
-                {threads.length ? (
-                  threads.map((thread) => (
+            threads.length ? (
+              <section className="grid gap-4 lg:grid-cols-[minmax(0,340px)_minmax(0,1fr)]">
+                <div className="min-w-0 space-y-2">
+                  {threads.map((thread) => (
                     <button
                       key={thread.id}
                       type="button"
@@ -182,67 +182,81 @@ export default function CommunicationsPage() {
                         {thread.unread_count} unread / {thread.delivery_state}
                       </p>
                     </button>
-                  ))
-                ) : (
-                  <StateCard text={copy.empty} />
-                )}
-              </div>
+                  ))}
+                </div>
 
-              <article className="min-w-0 rounded-2xl border border-[#E5E7EB] bg-white p-4">
-                {selected ? (
-                  <>
-                    <div className="mb-4 flex items-center gap-2">
-                      <MessageCircle className="h-4 w-4" />
-                      <h2 className="truncate text-lg font-semibold">
-                        {selected.customer_display_name ??
-                          selected.contact_address}
-                      </h2>
-                    </div>
-                    <BilingualComposer
-                      channel="whatsapp"
-                      initialText={draft}
-                      language={language}
-                      onUse={(value) => setDraft(value)}
-                    />
-                    <label className="mt-4 block">
-                      <span className="mb-1 block text-xs font-medium text-[#6B7280]">
-                        {copy.reply}
-                      </span>
-                      <textarea
-                        value={draft}
-                        rows={5}
-                        onChange={(event) => setDraft(event.target.value)}
-                        className="w-full rounded-xl border border-[#E5E7EB] bg-[#F7F7F8] px-3 py-3 text-sm outline-none focus:border-black"
+                <article className="min-w-0 rounded-2xl border border-[#E5E7EB] bg-white p-4">
+                  {selected ? (
+                    <>
+                      <div className="mb-4 flex items-center gap-2">
+                        <MessageCircle className="h-4 w-4" />
+                        <h2 className="truncate text-lg font-semibold">
+                          {selected.customer_display_name ??
+                            selected.contact_address}
+                        </h2>
+                      </div>
+                      <BilingualComposer
+                        channel="whatsapp"
+                        initialText={draft}
+                        language={language}
+                        onUse={(value) => setDraft(value)}
                       />
-                    </label>
-                    <button
-                      type="button"
-                      onClick={() => void prepareWhatsApp()}
-                      disabled={
-                        !draft.trim() || selected.channel !== "whatsapp"
-                      }
-                      className="mt-3 inline-flex min-h-10 items-center gap-2 rounded-xl bg-black px-3 text-sm font-medium text-white disabled:bg-[#9CA3AF]"
-                    >
-                      <Send className="h-4 w-4" />
-                      {copy.prepare}
-                    </button>
-                    {message ? (
-                      <p className="mt-3 text-sm text-[#6B7280]">{message}</p>
-                    ) : null}
-                  </>
-                ) : (
-                  <div>
-                    <StateCard text={copy.empty} />
-                    <a
-                      href="/api/connectors/whatsapp/start?returnTo=%2Fcommunications"
-                      className="mt-3 inline-flex min-h-10 items-center rounded-xl bg-black px-3 text-sm font-medium text-white"
-                    >
-                      {copy.connect}
-                    </a>
-                  </div>
-                )}
-              </article>
-            </section>
+                      <label className="mt-4 block">
+                        <span className="mb-1 block text-xs font-medium text-[#6B7280]">
+                          {copy.reply}
+                        </span>
+                        <textarea
+                          value={draft}
+                          rows={5}
+                          onChange={(event) => setDraft(event.target.value)}
+                          className="w-full rounded-xl border border-[#E5E7EB] bg-[#F7F7F8] px-3 py-3 text-sm outline-none focus:border-black"
+                        />
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => void prepareWhatsApp()}
+                        disabled={
+                          !draft.trim() || selected.channel !== "whatsapp"
+                        }
+                        className="mt-3 inline-flex min-h-10 items-center gap-2 rounded-xl bg-black px-3 text-sm font-medium text-white disabled:bg-[#9CA3AF]"
+                      >
+                        <Send className="h-4 w-4" />
+                        {copy.prepare}
+                      </button>
+                      {message ? (
+                        <p className="mt-3 text-sm text-[#6B7280]">{message}</p>
+                      ) : null}
+                    </>
+                  ) : null}
+                </article>
+              </section>
+            ) : (
+              <section className="relative overflow-hidden rounded-[24px] border border-[#E5E7EB] bg-gradient-to-br from-white via-white to-cyan-50 p-6">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-black text-white">
+                  <Inbox className="h-5 w-5" />
+                </div>
+                <h2 className="mt-6 text-xl font-semibold">{copy.empty}</h2>
+                <p className="mt-2 max-w-xl text-sm leading-6 text-[#6B7280]">
+                  {copy.subtitle}
+                </p>
+                <div className="mt-5 flex flex-wrap gap-2">
+                  <a
+                    href="/api/connectors/whatsapp/start?returnTo=%2Fcommunications"
+                    className="inline-flex min-h-10 items-center rounded-xl bg-black px-4 text-sm font-medium text-white"
+                  >
+                    {copy.connect}
+                  </a>
+                  <a
+                    href="/connections"
+                    className="inline-flex min-h-10 items-center rounded-xl border border-[#D0D5DD] bg-white px-4 text-sm font-medium"
+                  >
+                    {language === "es"
+                      ? "Ver todas las conexiones"
+                      : "View all connections"}
+                  </a>
+                </div>
+              </section>
+            )
           ) : null}
         </div>
       </div>

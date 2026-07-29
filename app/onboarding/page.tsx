@@ -34,7 +34,7 @@ type Readiness = {
   };
   money: { status: SetupStatus };
   connections: Record<
-    "gmail" | "outlook" | "quickbooks" | "stripe" | "voice",
+    "gmail" | "outlook" | "quickbooks" | "stripe" | "paypal" | "voice",
     SetupStatus
   >;
 };
@@ -58,7 +58,10 @@ const copy = {
     saveContinue: "Save and continue",
     saving: "Saving...",
     saveError:
-      "ALMA could not save this step. Your account owner may still need to activate the Business Office database.",
+      "ALMA could not save this step. Your information is still on this screen—try again.",
+    readinessError:
+      "ALMA could not refresh setup status. Check your connection and try again.",
+    retryReadiness: "Refresh setup",
     moneyTitle: "Your financial office",
     moneyBody:
       "Track income, expenses, receipts, estimates, invoices, payroll preparation, and accountant-ready reports.",
@@ -82,6 +85,8 @@ const copy = {
     quickbooksBody: "Connect accounting data with a review-first sync.",
     stripe: "Stripe",
     stripeBody: "Accept and track customer payments.",
+    paypal: "PayPal",
+    paypalBody: "Accept PayPal payments and reconcile paid invoices.",
     connected: "Connected",
     connect: "Connect",
     ownerSetup: "Owner setup needed",
@@ -121,7 +126,10 @@ const copy = {
     saveContinue: "Guardar y continuar",
     saving: "Guardando...",
     saveError:
-      "ALMA no pudo guardar este paso. El propietario quizá todavía deba activar la base de datos de Oficina Empresarial.",
+      "ALMA no pudo guardar este paso. Tu información sigue en esta pantalla; inténtalo de nuevo.",
+    readinessError:
+      "ALMA no pudo actualizar el estado. Revisa tu conexión e inténtalo de nuevo.",
+    retryReadiness: "Actualizar configuración",
     moneyTitle: "Tu oficina financiera",
     moneyBody:
       "Controla ingresos, gastos, recibos, estimados, facturas, preparación de nómina y reportes para tu contador.",
@@ -146,6 +154,8 @@ const copy = {
       "Conecta datos contables con sincronización revisada primero.",
     stripe: "Stripe",
     stripeBody: "Acepta y controla pagos de clientes.",
+    paypal: "PayPal",
+    paypalBody: "Acepta pagos de PayPal y concilia facturas pagadas.",
     connected: "Conectado",
     connect: "Conectar",
     ownerSetup: "Requiere configuración del propietario",
@@ -183,6 +193,7 @@ const emptyReadiness: Readiness = {
     outlook: "owner_action_required",
     quickbooks: "owner_action_required",
     stripe: "owner_action_required",
+    paypal: "action_required",
     voice: "owner_action_required",
   },
 };
@@ -199,9 +210,11 @@ export default function OnboardingPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [readinessError, setReadinessError] = useState("");
   const [notice, setNotice] = useState("");
 
   const refresh = useCallback(async () => {
+    setReadinessError("");
     try {
       const response = await fetch("/api/setup/readiness", {
         cache: "no-store",
@@ -221,11 +234,11 @@ export default function OnboardingPage() {
         setIndustry(payload.setup.profile.industry);
       }
     } catch {
-      setError(t.saveError);
+      setReadinessError(t.readinessError);
     } finally {
       setLoading(false);
     }
-  }, [router, t.saveError]);
+  }, [router, t.readinessError]);
 
   useEffect(() => {
     void refresh().then(() => {
@@ -309,7 +322,7 @@ export default function OnboardingPage() {
   }
 
   function connector(
-    key: "gmail" | "outlook" | "quickbooks" | "stripe",
+    key: "gmail" | "outlook" | "quickbooks" | "stripe" | "paypal",
     label: string,
     body: string,
     icon: typeof Mail,
@@ -319,7 +332,9 @@ export default function OnboardingPage() {
     const href =
       key === "stripe"
         ? "/api/oauth/stripe/start?returnTo=%2Fonboarding"
-        : `/api/connectors/oauth/${key}/start?returnTo=%2Fonboarding`;
+        : key === "paypal"
+          ? "/connections?setup=paypal"
+          : `/api/connectors/oauth/${key}/start?returnTo=%2Fonboarding`;
     return (
       <article
         key={key}
@@ -413,6 +428,21 @@ export default function OnboardingPage() {
           >
             {error}
           </p>
+        ) : null}
+        {readinessError ? (
+          <div
+            role="alert"
+            className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900"
+          >
+            <span>{readinessError}</span>
+            <button
+              type="button"
+              onClick={() => void refresh()}
+              className="rounded-full bg-black px-4 py-2 text-white"
+            >
+              {t.retryReadiness}
+            </button>
+          </div>
         ) : null}
 
         {step === 0 ? (
@@ -540,6 +570,7 @@ export default function OnboardingPage() {
                 Landmark,
               )}
               {connector("stripe", t.stripe, t.stripeBody, CircleDollarSign)}
+              {connector("paypal", t.paypal, t.paypalBody, CircleDollarSign)}
             </div>
             <StepActions
               back={t.back}

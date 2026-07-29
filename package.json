@@ -16,6 +16,7 @@
     "launch-office:check": "node scripts/check-alma-bookkeeping-voice.mjs",
     "business-launch:check": "node scripts/check-alma-business-launch.mjs",
     "onboarding:check": "node scripts/check-alma-onboarding-readiness.mjs",
+    "office-payments:check": "node scripts/check-alma-office-payments.mjs",
     "usage:check": "jiti scripts/check-alma-usage.ts",
     "milestone7.2:test": "node scripts/run-playwright.mjs",
     "milestone7.2:auth": "playwright codegen --channel=msedge --save-storage=.playwright-auth/user.json http://127.0.0.1:3101/login",

@@ -13,9 +13,11 @@ $repositoryRoot = Split-Path -Parent $PSScriptRoot
 Set-Location $repositoryRoot
 
 $requiredMigrations = @(
+    "supabase/migrations/20260721001000_alma_ai_usage_control.sql",
     "supabase/migrations/20260728001000_alma_business_office_refocus.sql",
     "supabase/migrations/20260729001000_alma_bookkeeping_voice_agents.sql",
-    "supabase/migrations/20260729002000_alma_business_launch_center.sql"
+    "supabase/migrations/20260729002000_alma_business_launch_center.sql",
+    "supabase/migrations/20260729003000_alma_office_payment_links.sql"
 )
 
 foreach ($migration in $requiredMigrations) {
@@ -58,4 +60,4 @@ if ($LASTEXITCODE -ne 0) { throw "Business Launch check failed." }
 
 Write-Host ""
 Write-Host "ALMA database activation completed." -ForegroundColor Green
-Write-Host "Redeploy the current application revision, then test /onboarding and /money."
+Write-Host "Redeploy the current application revision, then test /onboarding, /money, /office, /connections, and /invoicing."

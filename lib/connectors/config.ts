@@ -53,9 +53,15 @@ export const CONNECTOR_DEFINITIONS: Record<
   },
   stripe_connect: {
     name: "Stripe Connect",
-    operational: false,
-    env: [],
-    scopes: [],
+    operational: true,
+    env: ["STRIPE_CLIENT_ID", "STRIPE_SECRET_KEY", "APP_ENCRYPTION_KEY"],
+    scopes: ["read_write"],
+  },
+  paypal_business: {
+    name: "PayPal Business",
+    operational: true,
+    env: ["APP_ENCRYPTION_KEY"],
+    scopes: ["payments:create", "payments:read"],
   },
   whatsapp_business: {
     name: "WhatsApp Business",

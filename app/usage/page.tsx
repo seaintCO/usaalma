@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { AlertCircle, RefreshCw } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
 import AlmaShell from "@/components/alma-shell/AlmaShell";
 import { useAlmaLocale } from "@/lib/i18n/useAlmaLocale";
 
@@ -33,16 +34,37 @@ export default function UsagePage() {
   const { locale } = useAlmaLocale();
   const es = locale === "es";
   const [usage, setUsage] = useState<Summary | null>(null);
-  const [error, setError] = useState(false);
-  useEffect(() => {
-    void fetch("/api/usage", { cache: "no-store" })
-      .then(async (response) => {
-        if (!response.ok) throw new Error("usage");
-        return response.json();
-      })
-      .then((body) => setUsage(body.usage))
-      .catch(() => setError(true));
+  const [error, setError] = useState<"unavailable" | "unauthorized" | null>(
+    null,
+  );
+  const [loading, setLoading] = useState(true);
+
+  const loadUsage = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch("/api/usage", { cache: "no-store" });
+      const body = await response.json().catch(() => null);
+      if (response.status === 401) {
+        setError("unauthorized");
+        return;
+      }
+      if (!response.ok || !body?.usage) {
+        setError("unavailable");
+        return;
+      }
+      setUsage(body.usage);
+    } catch {
+      setError("unavailable");
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => void loadUsage(), 0);
+    return () => window.clearTimeout(timer);
+  }, [loadUsage]);
   const rows = usage?.limits
     ? ([
         [
@@ -96,9 +118,13 @@ export default function UsagePage() {
             <p className="mt-2 text-sm text-[#6B7280]">
               {usage
                 ? `${new Date(usage.period.start).toLocaleDateString()} – ${new Date(usage.period.end).toLocaleDateString()}`
-                : es
-                  ? "Cargando período de facturación…"
-                  : "Loading billing period…"}
+                : loading
+                  ? es
+                    ? "Cargando período de facturación…"
+                    : "Loading billing period…"
+                  : es
+                    ? "El período aparecerá cuando el seguimiento esté listo."
+                    : "Your period will appear when usage tracking is ready."}
             </p>
           </div>
           <Link
@@ -109,14 +135,68 @@ export default function UsagePage() {
           </Link>
         </div>
         {error ? (
-          <p
+          <section
             role="alert"
-            className="mt-8 rounded-2xl border border-red-200 bg-red-50 p-4"
+            className="mt-8 rounded-3xl border border-amber-200 bg-gradient-to-br from-amber-50 to-white p-5"
           >
-            {es
-              ? "El uso no está disponible temporalmente."
-              : "Usage is temporarily unavailable."}
-          </p>
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-amber-100 text-amber-800">
+                <AlertCircle className="h-5 w-5" />
+              </div>
+              <div>
+                <h2 className="font-semibold">
+                  {error === "unauthorized"
+                    ? es
+                      ? "Inicia sesión para ver el uso"
+                      : "Sign in to view usage"
+                    : es
+                      ? "El seguimiento de uso necesita atención"
+                      : "Usage tracking needs attention"}
+                </h2>
+                <p className="mt-1 max-w-xl text-sm leading-6 text-[#6B7280]">
+                  {error === "unauthorized"
+                    ? es
+                      ? "Tu información de uso es privada y requiere una sesión activa."
+                      : "Your usage information is private and requires an active session."
+                    : es
+                      ? "ALMA no ejecutará solicitudes de IA sin poder medirlas correctamente. Reintenta después de activar la migración de control de uso."
+                      : "ALMA will not run AI requests unless they can be measured correctly. Retry after the usage-control migration is active."}
+                </p>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {error === "unauthorized" ? (
+                    <Link
+                      href="/login?next=/usage"
+                      className="rounded-full bg-black px-4 py-2 text-sm font-medium text-white"
+                    >
+                      {es ? "Iniciar sesión" : "Sign in"}
+                    </Link>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled={loading}
+                      onClick={() => void loadUsage()}
+                      className="inline-flex items-center gap-2 rounded-full bg-black px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+                    >
+                      <RefreshCw className="h-4 w-4" />
+                      {loading
+                        ? es
+                          ? "Comprobando…"
+                          : "Checking…"
+                        : es
+                          ? "Reintentar"
+                          : "Retry"}
+                    </button>
+                  )}
+                  <Link
+                    href="/billing"
+                    className="rounded-full border border-[#D8DCE2] bg-white px-4 py-2 text-sm font-medium"
+                  >
+                    {es ? "Ver plan" : "View plan"}
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </section>
         ) : null}
         {usage ? (
           <>

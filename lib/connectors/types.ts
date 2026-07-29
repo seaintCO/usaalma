@@ -5,6 +5,7 @@ export const CONNECTOR_PROVIDERS = [
   "outlook",
   "quickbooks",
   "stripe_connect",
+  "paypal_business",
   "whatsapp_business",
   "github_app",
   "elevenlabs",
@@ -14,6 +15,7 @@ export const CONNECTOR_PROVIDERS = [
 export type ConnectorProvider = (typeof CONNECTOR_PROVIDERS)[number];
 export type EmailConnectorProvider = (typeof EMAIL_CONNECTOR_PROVIDERS)[number];
 export type OAuthConnectorProvider = EmailConnectorProvider | "quickbooks";
+export type PaymentConnectorProvider = "stripe_connect" | "paypal_business";
 
 export type ConnectorStatus =
   | "not_connected"

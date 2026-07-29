@@ -16,6 +16,36 @@ function monthBounds() {
   };
 }
 
+function trendBounds() {
+  const now = new Date();
+  const from = new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 5, 1),
+  );
+  return {
+    from: from.toISOString().slice(0, 10),
+    through: now.toISOString().slice(0, 10),
+  };
+}
+
+function monthKey(value: string) {
+  return value.slice(0, 7);
+}
+
+function sixMonthSeries() {
+  const now = new Date();
+  return Array.from({ length: 6 }, (_, index) => {
+    const date = new Date(
+      Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 5 + index, 1),
+    );
+    return {
+      month: date.toISOString().slice(0, 7),
+      income: 0,
+      expenses: 0,
+      net: 0,
+    };
+  });
+}
+
 function amount(value: unknown) {
   const numeric = Number(value ?? 0);
   return Number.isFinite(numeric) ? numeric : 0;
@@ -32,6 +62,7 @@ export async function GET() {
 
   const supabase = await createClient();
   const period = monthBounds();
+  const trendPeriod = trendBounds();
   const todayStart = new Date(`${period.through}T00:00:00.000Z`).toISOString();
   const todayEnd = new Date(`${period.through}T23:59:59.999Z`).toISOString();
 
@@ -51,10 +82,10 @@ export async function GET() {
         "id,transaction_date,description,merchant,amount,direction,transaction_type,category,review_status,notes",
       )
       .eq("user_id", user.id)
-      .gte("transaction_date", period.from)
-      .lte("transaction_date", period.through)
+      .gte("transaction_date", trendPeriod.from)
+      .lte("transaction_date", trendPeriod.through)
       .order("transaction_date", { ascending: false })
-      .limit(100),
+      .limit(1000),
     supabase
       .from("business_appointments")
       .select("id,title,starts_at,ends_at,status,location,notes")
@@ -64,7 +95,7 @@ export async function GET() {
       .limit(25),
     supabase
       .from("invoices")
-      .select("id,status,total,due_date,paid_at")
+      .select("id,status,total,due_date,paid_at,created_at")
       .eq("user_id", user.id),
     supabase
       .from("opportunities")
@@ -121,7 +152,12 @@ export async function GET() {
     );
   }
 
-  const transactionRows = (transactions.data ?? []) as BusinessTransaction[];
+  const allTransactionRows = (transactions.data ?? []) as BusinessTransaction[];
+  const transactionRows = allTransactionRows.filter(
+    (row) =>
+      row.transaction_date >= period.from &&
+      row.transaction_date <= period.through,
+  );
   const invoiceRows = invoices.data ?? [];
   const postedIncome = transactionRows
     .filter(
@@ -172,6 +208,56 @@ export async function GET() {
   ).length;
   const completed = amount(taxChecklist.data?.completed_items);
   const total = Math.max(1, amount(taxChecklist.data?.total_items) || 8);
+  const cashFlow = sixMonthSeries().map((point) => {
+    const rows = allTransactionRows.filter(
+      (row) => monthKey(row.transaction_date) === point.month,
+    );
+    const income = rows
+      .filter(
+        (row) =>
+          row.direction === "income" &&
+          !["transfer", "owner_contribution", "loan"].includes(
+            row.transaction_type,
+          ),
+      )
+      .reduce((sum, row) => sum + amount(row.amount), 0);
+    const periodExpenses = rows
+      .filter(
+        (row) =>
+          row.direction === "expense" &&
+          !["transfer", "owner_draw"].includes(row.transaction_type),
+      )
+      .reduce((sum, row) => sum + amount(row.amount), 0);
+    return {
+      month: point.month,
+      income,
+      expenses: periodExpenses,
+      net: income - periodExpenses,
+    };
+  });
+  const expenseCategories = new Map<string, number>();
+  transactionRows
+    .filter(
+      (row) =>
+        row.direction === "expense" &&
+        !["transfer", "owner_draw"].includes(row.transaction_type),
+    )
+    .forEach((row) => {
+      const category = row.category?.trim() || "Uncategorized";
+      expenseCategories.set(
+        category,
+        (expenseCategories.get(category) ?? 0) + amount(row.amount),
+      );
+    });
+  const invoiceStatuses = ["draft", "sent", "viewed", "overdue", "paid"];
+  const invoicePipeline = invoiceStatuses.map((status) => {
+    const rows = invoiceRows.filter((row) => row.status === status);
+    return {
+      status,
+      count: rows.length,
+      amount: rows.reduce((sum, row) => sum + amount(row.total), 0),
+    };
+  });
 
   const overview: BusinessOfficeOverview = {
     period,
@@ -207,6 +293,17 @@ export async function GET() {
           : "disconnected",
       companyName: quickBooks.data?.company_name ?? null,
       lastSuccessfulSyncAt: quickBooks.data?.last_successful_sync_at ?? null,
+    },
+    insights: {
+      cashFlow,
+      expensesByCategory: [...expenseCategories.entries()]
+        .map(([category, categoryAmount]) => ({
+          category,
+          amount: categoryAmount,
+        }))
+        .sort((left, right) => right.amount - left.amount)
+        .slice(0, 6),
+      invoicePipeline,
     },
     transactions: transactionRows,
     appointments: (appointments.data ?? []) as BusinessAppointment[],

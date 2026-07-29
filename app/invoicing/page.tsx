@@ -1,6 +1,15 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
-import { Download, Plus, RefreshCw, Trash2 } from "lucide-react";
+import {
+  Copy,
+  CreditCard,
+  Download,
+  ExternalLink,
+  Loader2,
+  Plus,
+  RefreshCw,
+  Trash2,
+} from "lucide-react";
 import AlmaShell from "@/components/alma-shell/AlmaShell";
 import { useAlmaLocale } from "@/lib/i18n/useAlmaLocale";
 import { DASHBOARD_ROUTE } from "@/lib/platform/workspaceRoutes";
@@ -27,6 +36,16 @@ type Line = {
   unit_price: number;
   line_total: number;
 };
+type PaymentProvider = "stripe_connect" | "paypal_business";
+type PaymentLink = {
+  id: string;
+  provider: PaymentProvider;
+  provider_checkout_url: string;
+  status: string;
+  amount: number;
+  currency: string;
+  paid_at?: string | null;
+};
 const copy = {
   en: {
     title: "Invoicing",
@@ -49,6 +68,21 @@ const copy = {
     deleteLine: "Delete line",
     loading: "Loading invoices…",
     error: "Invoices could not be loaded.",
+    paymentLinks: "Customer payment links",
+    paymentBody:
+      "Connect your own Stripe or PayPal account. Paid links update this invoice and Money automatically.",
+    createStripe: "Create Stripe link",
+    createPayPal: "Create PayPal link",
+    connectPayments: "Connect Stripe or PayPal",
+    copyLink: "Copy link",
+    openLink: "Open",
+    paymentCreating: "Creating secure link…",
+    paymentError: "The payment link could not be created.",
+    paymentSuccess:
+      "Payment completed. ALMA is reconciling the invoice and Money records.",
+    paymentCancelled: "Payment was cancelled. The invoice was not changed.",
+    paymentFailed:
+      "The payment could not be confirmed. Review the provider activity before retrying.",
   },
   es: {
     title: "Facturación",
@@ -72,6 +106,21 @@ const copy = {
     deleteLine: "Eliminar concepto",
     loading: "Cargando facturas…",
     error: "No se pudieron cargar las facturas.",
+    paymentLinks: "Enlaces de pago para clientes",
+    paymentBody:
+      "Conecta tu propia cuenta de Stripe o PayPal. Los pagos actualizan la factura y Dinero automáticamente.",
+    createStripe: "Crear enlace de Stripe",
+    createPayPal: "Crear enlace de PayPal",
+    connectPayments: "Conectar Stripe o PayPal",
+    copyLink: "Copiar enlace",
+    openLink: "Abrir",
+    paymentCreating: "Creando enlace seguro…",
+    paymentError: "No se pudo crear el enlace de pago.",
+    paymentSuccess:
+      "Pago completado. ALMA está conciliando la factura y los registros de Dinero.",
+    paymentCancelled: "El pago fue cancelado. La factura no cambió.",
+    paymentFailed:
+      "No se pudo confirmar el pago. Revisa la actividad del proveedor antes de reintentar.",
   },
 };
 const newLine = (): Line => ({
@@ -90,7 +139,14 @@ export default function InvoicingPage() {
     [query, setQuery] = useState(""),
     [status, setStatus] = useState(""),
     [loading, setLoading] = useState(true),
-    [error, setError] = useState("");
+    [error, setError] = useState(""),
+    [paymentLinks, setPaymentLinks] = useState<PaymentLink[]>([]),
+    [paymentProviders, setPaymentProviders] = useState<PaymentProvider[]>([]),
+    [paymentBusy, setPaymentBusy] = useState<PaymentProvider | null>(null),
+    [paymentError, setPaymentError] = useState(""),
+    [paymentReturn, setPaymentReturn] = useState<
+      "success" | "cancelled" | "failed" | ""
+    >("");
   const load = useCallback(async () => {
     setLoading(true);
     try {
@@ -111,12 +167,77 @@ export default function InvoicingPage() {
   useEffect(() => {
     void load();
   }, [load]);
+  useEffect(() => {
+    void fetch("/api/connections", { cache: "no-store" })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((payload) => {
+        const providers = (payload?.connections ?? [])
+          .filter(
+            (connection: { provider?: string; status?: string }) =>
+              (connection.provider === "stripe_connect" ||
+                connection.provider === "paypal_business") &&
+              connection.status === "connected",
+          )
+          .map(
+            (connection: { provider: PaymentProvider }) => connection.provider,
+          );
+        setPaymentProviders(providers);
+      });
+  }, []);
+  useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      const result = new URL(window.location.href).searchParams.get("payment");
+      if (
+        result === "success" ||
+        result === "cancelled" ||
+        result === "failed"
+      ) {
+        setPaymentReturn(result);
+        if (result === "success") void load();
+      }
+    }, 0);
+    return () => window.clearTimeout(timeout);
+  }, [load]);
+  const loadPaymentLinks = async (invoiceId: string) => {
+    const response = await fetch(`/api/invoices/${invoiceId}/payment-link`, {
+      cache: "no-store",
+    });
+    if (response.ok) {
+      const payload = await response.json();
+      setPaymentLinks(payload.links ?? []);
+    } else {
+      setPaymentLinks([]);
+    }
+  };
   const open = async (id: string) => {
     const r = await fetch(`/api/invoices/${id}`);
     if (!r.ok) return;
     const invoice = await r.json();
     setSelected(invoice);
     setLines(invoice.invoice_line_items ?? []);
+    setPaymentError("");
+    await loadPaymentLinks(id);
+  };
+  const createPaymentLink = async (provider: PaymentProvider) => {
+    if (!selected) return;
+    setPaymentBusy(provider);
+    setPaymentError("");
+    try {
+      const response = await fetch(
+        `/api/invoices/${selected.id}/payment-link`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ provider }),
+        },
+      );
+      if (!response.ok) throw new Error("payment_link_failed");
+      await loadPaymentLinks(selected.id);
+    } catch {
+      setPaymentError(t.paymentError);
+    } finally {
+      setPaymentBusy(null);
+    }
   };
   const create = async () => {
     const r = await fetch("/api/invoices/draft", {
@@ -239,6 +360,24 @@ export default function InvoicingPage() {
               {t.new}
             </button>
           </div>
+          {paymentReturn ? (
+            <div
+              role="status"
+              className={`mt-5 rounded-2xl border px-4 py-3 text-sm ${
+                paymentReturn === "success"
+                  ? "border-emerald-200 bg-emerald-50 text-emerald-900"
+                  : paymentReturn === "cancelled"
+                    ? "border-amber-200 bg-amber-50 text-amber-900"
+                    : "border-rose-200 bg-rose-50 text-rose-900"
+              }`}
+            >
+              {paymentReturn === "success"
+                ? t.paymentSuccess
+                : paymentReturn === "cancelled"
+                  ? t.paymentCancelled
+                  : t.paymentFailed}
+            </div>
+          ) : null}
           <div className="mt-6 grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(360px,1.1fr)]">
             <section className="rounded-2xl border border-[#E5E7EB] bg-white p-4">
               <div className="flex gap-2">
@@ -475,6 +614,117 @@ export default function InvoicingPage() {
                       {t.download}
                     </a>
                   </div>
+                  <section className="mt-6 rounded-2xl border border-[#DDE4EE] bg-gradient-to-br from-[#F6FAFF] via-white to-[#F4F0FF] p-4">
+                    <div className="flex items-start gap-3">
+                      <div className="rounded-xl bg-[#111827] p-2 text-white">
+                        <CreditCard className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold">{t.paymentLinks}</h3>
+                        <p className="mt-1 text-sm leading-6 text-[#667085]">
+                          {t.paymentBody}
+                        </p>
+                      </div>
+                    </div>
+                    {paymentProviders.length === 0 ? (
+                      <a
+                        href="/connections?setup=payments"
+                        className="mt-4 inline-flex rounded-xl bg-black px-4 py-2 text-sm text-white"
+                      >
+                        {t.connectPayments}
+                      </a>
+                    ) : (
+                      <div className="mt-4 flex flex-wrap gap-2">
+                        {paymentProviders.includes("stripe_connect") ? (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              void createPaymentLink("stripe_connect")
+                            }
+                            disabled={Boolean(paymentBusy)}
+                            className="inline-flex items-center gap-2 rounded-xl bg-[#635BFF] px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
+                          >
+                            {paymentBusy === "stripe_connect" ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : null}
+                            {t.createStripe}
+                          </button>
+                        ) : null}
+                        {paymentProviders.includes("paypal_business") ? (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              void createPaymentLink("paypal_business")
+                            }
+                            disabled={Boolean(paymentBusy)}
+                            className="inline-flex items-center gap-2 rounded-xl bg-[#0070BA] px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
+                          >
+                            {paymentBusy === "paypal_business" ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : null}
+                            {t.createPayPal}
+                          </button>
+                        ) : null}
+                      </div>
+                    )}
+                    {paymentBusy ? (
+                      <p className="mt-3 text-xs text-[#667085]">
+                        {t.paymentCreating}
+                      </p>
+                    ) : null}
+                    {paymentError ? (
+                      <p className="mt-3 text-sm text-red-600">
+                        {paymentError}
+                      </p>
+                    ) : null}
+                    {paymentLinks.length ? (
+                      <div className="mt-4 space-y-2">
+                        {paymentLinks.map((link) => (
+                          <div
+                            key={link.id}
+                            className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-white bg-white/80 p-3 shadow-sm"
+                          >
+                            <div>
+                              <p className="text-sm font-medium">
+                                {link.provider === "stripe_connect"
+                                  ? "Stripe"
+                                  : "PayPal"}{" "}
+                                · {link.status}
+                              </p>
+                              <p className="text-xs text-[#667085]">
+                                {Number(link.amount).toFixed(2)} {link.currency}
+                              </p>
+                            </div>
+                            {link.provider_checkout_url ? (
+                              <div className="flex gap-2">
+                                <button
+                                  type="button"
+                                  aria-label={t.copyLink}
+                                  onClick={() =>
+                                    void navigator.clipboard.writeText(
+                                      link.provider_checkout_url,
+                                    )
+                                  }
+                                  className="rounded-lg border p-2"
+                                >
+                                  <Copy className="h-4 w-4" />
+                                </button>
+                                <a
+                                  href={link.provider_checkout_url}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  aria-label={t.openLink}
+                                  className="rounded-lg border p-2"
+                                >
+                                  <ExternalLink className="h-4 w-4" />
+                                </a>
+                              </div>
+                            ) : null}
+                          </div>
+                        ))}
+                      </div>
+                    ) : null}
+                  </section>
                 </>
               )}
             </section>

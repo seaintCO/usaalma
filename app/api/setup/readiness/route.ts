@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth/user";
 import { ConnectorRepository } from "@/lib/connectors/repository";
-import { OAuthRepository } from "@/lib/db/repositories/oauth/oauth.repository";
 import { createClient } from "@/lib/supabase/server";
 
 type SetupStatus = "ready" | "action_required" | "owner_action_required";
@@ -40,7 +39,6 @@ export async function GET() {
     moneyResult,
     voiceSchemaResult,
     connectorResult,
-    stripeResult,
   ] = await Promise.allSettled([
     supabase
       .from("business_profiles")
@@ -66,7 +64,6 @@ export async function GET() {
       .select("id", { count: "exact", head: true })
       .eq("user_id", user.id),
     ConnectorRepository.listSummaries(user.id),
-    OAuthRepository.getStripeConnectConnection(user.id),
   ]);
 
   const profileResponse =
@@ -79,8 +76,6 @@ export async function GET() {
     voiceSchemaResult.status === "fulfilled" ? voiceSchemaResult.value : null;
   const connections =
     connectorResult.status === "fulfilled" ? connectorResult.value : [];
-  const stripe =
-    stripeResult.status === "fulfilled" ? stripeResult.value : null;
   const byProvider = new Map(
     connections.map((connection) => [connection.provider, connection]),
   );
@@ -118,15 +113,8 @@ export async function GET() {
         gmail: statusForConnection(byProvider.get("gmail")),
         outlook: statusForConnection(byProvider.get("outlook")),
         quickbooks: statusForConnection(byProvider.get("quickbooks")),
-        stripe:
-          stripe?.connected && stripe.connection_status === "connected"
-            ? ("ready" as const)
-            : process.env.STRIPE_CLIENT_ID &&
-                process.env.STRIPE_SECRET_KEY &&
-                process.env.APP_ENCRYPTION_KEY &&
-                process.env.SUPABASE_SERVICE_ROLE_KEY
-              ? ("action_required" as const)
-              : ("owner_action_required" as const),
+        stripe: statusForConnection(byProvider.get("stripe_connect")),
+        paypal: statusForConnection(byProvider.get("paypal_business")),
         voice: voiceSchemaReady
           ? statusForConnection(byProvider.get("elevenlabs"))
           : ("owner_action_required" as const),

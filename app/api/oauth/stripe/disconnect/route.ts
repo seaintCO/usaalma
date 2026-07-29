@@ -1,5 +1,6 @@
 import { getCurrentUser } from "@/lib/auth/user";
 import { OAuthRepository } from "@/lib/db/repositories/oauth/oauth.repository";
+import { ConnectorRepository } from "@/lib/connectors/repository";
 import { NextResponse } from "next/server";
 
 export async function POST() {
@@ -36,6 +37,10 @@ export async function POST() {
       }
     }
     await OAuthRepository.disconnectStripeConnect(user.id);
+    await ConnectorRepository.disconnectProvider({
+      userId: user.id,
+      provider: "stripe_connect",
+    });
     return NextResponse.json({ ok: true, disconnected: true });
   } catch {
     return NextResponse.json(

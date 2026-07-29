@@ -1,5 +1,6 @@
 import { getCurrentUser } from "@/lib/auth/user";
 import { OAuthRepository } from "@/lib/db/repositories/oauth/oauth.repository";
+import { ConnectorRepository } from "@/lib/connectors/repository";
 import {
   STRIPE_CONNECT_OAUTH_STATE_COOKIE,
   stripeConnectOAuthCookieOptions,
@@ -81,6 +82,33 @@ export async function GET(req: Request) {
         account.settings?.dashboard?.display_name ??
         null,
       liveMode: typeof tokens.livemode === "boolean" ? tokens.livemode : null,
+    });
+    const workspaceId = await ConnectorRepository.resolveDefaultWorkspaceId(
+      user.id,
+    );
+    if (!workspaceId) {
+      return redirect(
+        req,
+        `${oauthState.returnPath}?stripe=workspace_required`,
+      );
+    }
+    await ConnectorRepository.saveOAuthConnection({
+      userId: user.id,
+      workspaceId,
+      provider: "stripe_connect",
+      accessToken: tokens.access_token,
+      refreshToken: tokens.refresh_token ?? null,
+      expiresAt: null,
+      scopes: (tokens.scope ?? "read_write").split(/\s+/).filter(Boolean),
+      providerAccountId: accountId,
+      providerAccountEmail: account.email ?? "",
+      providerAccountName:
+        account.business_profile?.name ??
+        account.settings?.dashboard?.display_name ??
+        null,
+      metadata: {
+        liveMode: typeof tokens.livemode === "boolean" ? tokens.livemode : null,
+      },
     });
     return redirect(req, `${oauthState.returnPath}?stripe=connected`);
   } catch {

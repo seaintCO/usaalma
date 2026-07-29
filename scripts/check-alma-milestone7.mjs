@@ -32,7 +32,7 @@ const moduleIds = [...registry.matchAll(/^    key: "([^"]+)"/gm)].map(
   (match) => match[1],
 );
 assert(
-  moduleIds.length === 26 && new Set(moduleIds).size === 26,
+  moduleIds.length === 27 && new Set(moduleIds).size === 27,
   "Canonical module registry coverage changed.",
 );
 const matrix = read("docs/alma-functional-app-matrix.md");

@@ -15,8 +15,12 @@ const { shouldApplyStripeEvent } = jiti("../lib/billing/webhook.ts");
 assert.equal(normalizeBillingPlan("essential"), "starter");
 assert.equal(normalizeBillingPlan("autonomous"), "business");
 assert.equal(normalizeBillingPlan("enterprise"), null);
-assert.equal(publicPlanName("starter"), "essential");
-assert.equal(publicPlanName("business"), "autonomous");
+assert.equal(publicPlanName("starter"), "office");
+assert.equal(publicPlanName("business"), "ai");
+assert.deepEqual(checkoutContinuation("?plan=office&next=/billing"), {
+  plan: "starter",
+  next: "/billing",
+});
 assert.deepEqual(checkoutContinuation("?plan=essential&next=/billing"), {
   plan: "starter",
   next: "/billing",
@@ -35,11 +39,11 @@ assert.equal(shouldApplyStripeEvent(null, 1), true);
 
 const home = read("components/marketing/PublicAlmaSandbox.tsx");
 for (const workflow of [
-  "office",
-  "communications",
-  "planner",
-  "creator",
-  "builder",
+  "customers",
+  "inbox",
+  "work",
+  "money",
+  "alma",
 ])
   assert.match(home, new RegExp(`\\b${workflow}:`));
 for (const forbidden of [
@@ -111,7 +115,7 @@ for (const moduleKey of [
     registry,
     new RegExp(`key: "${moduleKey}"[\\s\\S]*?requiredPlan: "starter"`),
   );
-for (const moduleKey of ["office", "creative_studio", "builder", "voice"])
+for (const moduleKey of ["creative_studio", "builder", "voice"])
   assert.match(
     registry,
     new RegExp(`key: "${moduleKey}"[\\s\\S]*?requiredPlan: "business"`),

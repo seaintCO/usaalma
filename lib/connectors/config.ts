@@ -1,4 +1,8 @@
-import type { ConnectorProvider, EmailConnectorProvider } from "./types";
+import type {
+  ConnectorProvider,
+  EmailConnectorProvider,
+  OAuthConnectorProvider,
+} from "./types";
 
 export const CONNECTOR_DEFINITIONS: Record<
   ConnectorProvider,
@@ -39,9 +43,13 @@ export const CONNECTOR_DEFINITIONS: Record<
   },
   quickbooks: {
     name: "QuickBooks",
-    operational: false,
-    env: [],
-    scopes: [],
+    operational: true,
+    env: [
+      "QUICKBOOKS_CLIENT_ID",
+      "QUICKBOOKS_CLIENT_SECRET",
+      "APP_ENCRYPTION_KEY",
+    ],
+    scopes: ["com.intuit.quickbooks.accounting"],
   },
   stripe_connect: {
     name: "Stripe Connect",
@@ -91,7 +99,7 @@ export function getAppBaseUrl() {
   return "http://localhost:3000";
 }
 
-export function getConnectorCallbackUrl(provider: EmailConnectorProvider) {
+export function getConnectorCallbackUrl(provider: OAuthConnectorProvider) {
   return `${getAppBaseUrl()}/api/connectors/oauth/${provider}/callback`;
 }
 
@@ -116,4 +124,10 @@ export function isEmailConnectorProvider(
   provider: string,
 ): provider is EmailConnectorProvider {
   return provider === "gmail" || provider === "outlook";
+}
+
+export function isOAuthConnectorProvider(
+  provider: string,
+): provider is OAuthConnectorProvider {
+  return isEmailConnectorProvider(provider) || provider === "quickbooks";
 }

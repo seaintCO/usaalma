@@ -1,6 +1,6 @@
 import crypto from "crypto";
 import { requireEnv } from "@/lib/config/env";
-import type { EmailConnectorProvider } from "./types";
+import type { OAuthConnectorProvider } from "./types";
 
 const STATE_TTL_MS = 10 * 60 * 1000;
 
@@ -10,7 +10,7 @@ type ConnectorOAuthState = {
   state: string;
   userId: string;
   workspaceId: string;
-  provider: EmailConnectorProvider;
+  provider: OAuthConnectorProvider;
   returnPath: "/connections" | "/office" | "/marketplace";
   expiresAt: number;
   verifier: string;
@@ -74,7 +74,7 @@ export function cleanReturnPath(value: string | null) {
 export function createConnectorOAuthState(input: {
   userId: string;
   workspaceId: string;
-  provider: EmailConnectorProvider;
+  provider: OAuthConnectorProvider;
   returnPath: "/connections" | "/office" | "/marketplace";
 }) {
   const verifier = crypto.randomBytes(48).toString("base64url");
@@ -102,7 +102,7 @@ export function verifyConnectorOAuthState(input: {
   cookieValue: string | undefined;
   state: string | null;
   userId: string;
-  provider: EmailConnectorProvider;
+  provider: OAuthConnectorProvider;
 }) {
   if (!input.cookieValue || !input.state) return null;
   const payload = decode(input.cookieValue);

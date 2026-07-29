@@ -1,6 +1,13 @@
 export const DASHBOARD_ROUTE = "/dashboard";
 
 export const WORKSPACE_ROUTES = {
+  customers: "/customers",
+  inbox: "/inbox",
+  work: "/work",
+  money: "/money",
+  automations: "/automations",
+  knowledge: "/knowledge",
+  reports: "/reports",
   approvals: "/approvals",
   files: "/files",
   apps: "/dashboard/apps",

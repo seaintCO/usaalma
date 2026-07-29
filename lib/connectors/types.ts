@@ -11,6 +11,7 @@ export const CONNECTOR_PROVIDERS = [
 
 export type ConnectorProvider = (typeof CONNECTOR_PROVIDERS)[number];
 export type EmailConnectorProvider = (typeof EMAIL_CONNECTOR_PROVIDERS)[number];
+export type OAuthConnectorProvider = EmailConnectorProvider | "quickbooks";
 
 export type ConnectorStatus =
   | "not_connected"

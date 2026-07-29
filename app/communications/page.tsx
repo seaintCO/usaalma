@@ -115,7 +115,7 @@ export default function CommunicationsPage() {
   }
 
   return (
-    <AlmaShell language={language} activeWorkspace="apps" title={copy.title}>
+    <AlmaShell language={language} activeWorkspace="inbox" title={copy.title}>
       <div className="min-h-full px-4 pb-24 pt-6 text-[#111111] md:px-8 md:pb-10 md:pt-10">
         <div className="mx-auto max-w-6xl">
           <header className="mb-6">

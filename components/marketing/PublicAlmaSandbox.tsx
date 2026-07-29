@@ -1,150 +1,144 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowRight,
+  Bot,
+  BriefcaseBusiness,
   Check,
-  CircleDot,
-  FileCode2,
+  CircleDollarSign,
+  Inbox,
   Languages,
-  MessageSquareText,
-  RotateCcw,
+  Play,
+  RefreshCw,
   ShieldCheck,
-  Sparkles,
+  Users,
 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { useAlmaLocale } from "@/lib/i18n/useAlmaLocale";
 
-type WorkflowKey =
-  "office" | "communications" | "planner" | "creator" | "builder";
-type DemoState = "ready" | "planning" | "complete";
+type WorkflowKey = "customers" | "inbox" | "work" | "money" | "alma";
+type DemoState = "ready" | "working" | "complete";
 
 const workflows = {
-  office: {
-    icon: ShieldCheck,
+  customers: {
+    icon: Users,
     en: {
-      name: "ALMA Office",
-      prompt: "Prepare an estimate for a kitchen remodel.",
-      event: "Draft assembled — approval required before delivery",
+      name: "Customers",
+      prompt: "Show the leads that need a follow-up today.",
+      result: "3 leads need attention",
       rows: [
-        "Customer: Rivera Home",
-        "Cabinet installation · 18 hours",
-        "Estimate draft · $4,860",
-        "Delivery is waiting for your approval",
+        "Rivera Home · estimate viewed · follow up today",
+        "Luna Bakery · new website inquiry · assign owner",
+        "Martinez HVAC · no reply for 4 days · draft reminder",
       ],
     },
     es: {
-      name: "Oficina ALMA",
-      prompt: "Prepara un presupuesto para remodelar una cocina.",
-      event: "Borrador preparado — requiere aprobación antes de entregarse",
+      name: "Clientes",
+      prompt: "Muestra los prospectos que necesitan seguimiento hoy.",
+      result: "3 prospectos requieren atención",
       rows: [
-        "Cliente: Hogar Rivera",
-        "Instalación de gabinetes · 18 horas",
-        "Borrador del presupuesto · $4,860",
-        "La entrega espera tu aprobación",
+        "Hogar Rivera · estimado visto · seguimiento hoy",
+        "Panadería Luna · consulta nueva · asignar responsable",
+        "Martinez HVAC · 4 días sin respuesta · preparar recordatorio",
       ],
     },
   },
-  communications: {
-    icon: MessageSquareText,
+  inbox: {
+    icon: Inbox,
     en: {
-      name: "Communications",
-      prompt:
-        "Correct this message, translate it to Spanish, and prepare it for WhatsApp.",
-      event: "Channel preview ready — nothing was sent",
+      name: "Inbox",
+      prompt: "Prepare replies for the messages waiting on me.",
+      result: "2 reply drafts prepared",
       rows: [
-        "Grammar corrected",
-        "Spanish translation prepared",
-        "WhatsApp preview formatted",
-        "Send requires your approval and a connection",
+        "Email · availability request · English reply drafted",
+        "WhatsApp · estimate question · Spanish reply drafted",
+        "Protected action · nothing will be sent without approval",
       ],
     },
     es: {
-      name: "Comunicaciones",
-      prompt:
-        "Corrige este mensaje, tradúcelo al español y prepáralo para WhatsApp.",
-      event: "Vista previa lista — no se envió nada",
+      name: "Bandeja",
+      prompt: "Prepara respuestas para los mensajes que esperan por mí.",
+      result: "2 respuestas preparadas",
       rows: [
-        "Gramática corregida",
-        "Traducción al español preparada",
-        "Vista previa de WhatsApp formateada",
-        "Enviar requiere tu aprobación y una conexión",
+        "Correo · solicitud de disponibilidad · respuesta en inglés",
+        "WhatsApp · pregunta de estimado · respuesta en español",
+        "Acción protegida · nada se enviará sin aprobación",
       ],
     },
   },
-  planner: {
-    icon: CircleDot,
+  work: {
+    icon: BriefcaseBusiness,
     en: {
-      name: "Planner",
-      prompt: "Plan tomorrow around three customer appointments.",
-      event: "Proposed schedule ready for confirmation",
+      name: "Work",
+      prompt: "Organize today around appointments and overdue tasks.",
+      result: "Today is organized",
       rows: [
-        "8:30 · Review priorities",
-        "10:00 · Customer appointment",
-        "13:00 · Customer appointment",
-        "16:00 · Customer appointment + follow-ups",
+        "8:30 · review overdue invoices",
+        "10:00 · customer appointment · Rivera Home",
+        "13:30 · estimate follow-up block",
+        "16:00 · payroll preparation review",
       ],
     },
     es: {
-      name: "Planificador",
-      prompt: "Planifica mañana alrededor de tres citas con clientes.",
-      event: "Horario propuesto listo para confirmación",
+      name: "Trabajo",
+      prompt: "Organiza hoy alrededor de citas y tareas vencidas.",
+      result: "El día está organizado",
       rows: [
-        "8:30 · Revisar prioridades",
-        "10:00 · Cita con cliente",
-        "13:00 · Cita con cliente",
-        "16:00 · Cita y seguimientos",
+        "8:30 · revisar facturas vencidas",
+        "10:00 · cita con cliente · Hogar Rivera",
+        "13:30 · bloque de seguimiento de estimados",
+        "16:00 · revisión de preparación de nómina",
       ],
     },
   },
-  creator: {
-    icon: Sparkles,
+  money: {
+    icon: CircleDollarSign,
     en: {
-      name: "Creator",
-      prompt:
-        "Create a short bilingual video script for my construction company.",
-      event: "Bilingual draft created locally for this demo",
+      name: "Money",
+      prompt: "Explain this month's cash flow without counting transfers.",
+      result: "Bookkeeping preparation summary",
       rows: [
-        "Hook: Built right. Built to last.",
-        "EN: See the craft behind every detail.",
-        "ES: Conoce el oficio detrás de cada detalle.",
-        "CTA: Request your project consultation",
+        "Posted operating income · $18,420",
+        "Operating expenses · $11,280",
+        "Estimated operating profit · $7,140",
+        "4 transactions and 2 receipts need review",
       ],
     },
     es: {
-      name: "Creador",
-      prompt: "Crea un guion bilingüe corto para mi empresa de construcción.",
-      event: "Borrador bilingüe creado localmente para esta demo",
+      name: "Dinero",
+      prompt: "Explica el flujo de caja del mes sin contar transferencias.",
+      result: "Resumen de preparación contable",
       rows: [
-        "Gancho: Bien hecho. Hecho para durar.",
-        "EN: See the craft behind every detail.",
-        "ES: Conoce el oficio detrás de cada detalle.",
-        "CTA: Solicita una consulta para tu proyecto",
+        "Ingresos operativos registrados · $18,420",
+        "Gastos operativos · $11,280",
+        "Ganancia operativa estimada · $7,140",
+        "4 transacciones y 2 recibos requieren revisión",
       ],
     },
   },
-  builder: {
-    icon: FileCode2,
+  alma: {
+    icon: Bot,
     en: {
-      name: "Builder",
-      prompt: "Build a landing page for a local service business.",
-      event: "Preview simulation ready — no code ran or deployed",
+      name: "ALMA",
+      prompt: "Give me the morning business briefing.",
+      result: "Morning briefing prepared",
       rows: [
-        "Plan · Define conversion path",
-        "Files · page.tsx and styles.css",
-        "Validation · responsive and accessible",
-        "Preview ready · deployment not performed",
+        "3 leads need a response",
+        "2 appointments are scheduled today",
+        "1 invoice is overdue",
+        "1 protected action is waiting for approval",
       ],
     },
     es: {
-      name: "Constructor",
-      prompt: "Crea una página de inicio para un negocio local de servicios.",
-      event: "Simulación lista — no se ejecutó ni publicó código",
+      name: "ALMA",
+      prompt: "Dame el resumen empresarial de la mañana.",
+      result: "Resumen de la mañana preparado",
       rows: [
-        "Plan · Definir ruta de conversión",
-        "Archivos · page.tsx y styles.css",
-        "Validación · adaptable y accesible",
-        "Vista previa lista · no se realizó despliegue",
+        "3 prospectos necesitan respuesta",
+        "2 citas están programadas hoy",
+        "1 factura está vencida",
+        "1 acción protegida espera aprobación",
       ],
     },
   },
@@ -152,218 +146,216 @@ const workflows = {
 
 const copy = {
   en: {
-    nav: ["Experience", "Applications", "Control", "Pricing"],
+    nav: ["Experience", "What it manages", "Control", "Pricing"],
     login: "Log in",
     create: "Create account",
-    demo: "Interactive demo",
-    safe: "Deterministic product demonstration — no provider calls or external actions",
+    eyebrow: "AUTONOMOUS BUSINESS OFFICE",
+    title: "Run the business. Keep the control.",
+    subtitle:
+      "Manage customers, conversations, money, tasks, invoices, documents, and daily operations—with AI only when you choose it.",
+    primary: "Create my ALMA",
+    pricing: "View pricing",
+    demoLabel: "Interactive product sandbox",
+    demoSafe:
+      "This public demo is deterministic. It makes no provider calls, changes no records, and sends nothing.",
     command: "Command ALMA",
-    run: "Run demonstration",
-    replay: "Replay demo",
-    clear: "Clear demo",
-    another: "Try another workflow",
-    ready: "Ready for a command",
-    planning: "ALMA is organizing the demonstration…",
-    result: "Demonstration result",
-    activity: "Activity",
-    approval: "Human control stays in the loop",
-    approvalBody:
-      "ALMA prepares work, explains what will happen, and stops at protected actions until you approve.",
-    bilingual: "Bilingual by design",
+    run: "Run demo",
+    replay: "Replay",
+    ready: "Ready for a business request",
+    working: "ALMA is organizing the workspace…",
+    result: "Result",
+    activity: "Business activity",
+    attention: "Requires attention",
+    attentionItems: [
+      "3 customer replies",
+      "1 overdue invoice",
+      "4 transactions to review",
+    ],
+    promise: "One office. Four jobs.",
+    promiseBody:
+      "Talk to customers. Manage the work. Track the money. Let ALMA assist or automate only what you authorize.",
+    customers: "Talk to customers",
+    customersBody:
+      "Contacts, companies, leads, pipeline, a unified inbox, saved replies, follow-ups, and human takeover.",
+    operations: "Manage the work",
+    operationsBody:
+      "Tasks, appointments, estimates, invoices, documents, approvals, and recurring rules.",
+    money: "Track the money",
+    moneyBody:
+      "Income, expenses, receipts, payments, reports, payroll preparation, tax readiness, and QuickBooks.",
+    assist: "Let ALMA assist",
+    assistBody:
+      "A metered business assistant grounded in your workspace with permissions, usage limits, and audit history.",
+    control: "Autonomy without surrendering control.",
+    controlBody:
+      "Manual, Draft, Assisted, and Autonomous modes let you decide exactly what ALMA may do. Messages, financial changes, exports, and destructive actions remain protected.",
+    bilingual: "English and Spanish, everywhere.",
     bilingualBody:
-      "Switch the entire experience instantly. Your choice persists across navigation and refresh.",
-    apps: "One operating system. Focused applications.",
-    appsBody:
-      "Organize business records, communication, schedules, creative work, and software projects from one coherent workspace.",
-    pricing: "Choose how ALMA works with you",
-    essential: "Essential",
-    autonomous: "Autonomous",
-    month: "/ month",
-    essentialBody:
-      "Business organization and core tools without heavy autonomous AI usage.",
-    autonomousBody:
-      "Advanced automation, creation, voice, Builder, and approval-led workflows where configured.",
-    buy: "Buy now",
-    included: "Included",
-    final: "Experience the workflow. Keep control of the outcome.",
+      "The workspace, customer records, documents, billing, errors, and assistant respect the language you choose.",
+    priceTitle: "Choose your office",
+    office: "ALMA Office",
+    ai: "ALMA AI",
+    perMonth: "/month",
+    buy: "Start",
+    officeBody: "A complete business operating system without generative AI.",
+    aiBody:
+      "The complete office plus measured AI assistance and approval-controlled autonomy.",
+    officeItems: [
+      "CRM, Inbox, Work, Money, Reports",
+      "Estimates, invoices, receipts, and payments",
+      "Payroll and tax preparation",
+      "Rule-based automations",
+    ],
+    aiItems: [
+      "Everything in ALMA Office",
+      "Business assistant and drafting",
+      "Extraction, summaries, and suggestions",
+      "Usage limits and approval controls",
+    ],
+    disclaimer:
+      "ALMA prepares business and bookkeeping records. It is not a bank, payroll processor, tax filing service, law firm, or licensed accountant.",
+    final: "Your business should feel organized before the day starts.",
     finalBody:
-      "Start with the safe sandbox, then create your account when you are ready for a real workspace.",
-    privacy: "Privacy",
-    terms: "Terms",
-    contact: "Contact",
-    status: "Status",
-    footer: "ALMA is a product by SEAINT.",
-    essentialItems: [
-      "Tasks, Planner, Notes, and Documents",
-      "Basic CRM and invoicing",
-      "Translator and Connections",
-      "Provider-free organization workflows",
-    ],
-    autonomousItems: [
-      "Everything in Essential",
-      "ALMA Office and Approval Center",
-      "Creator, Studio, voice, and Builder",
-      "AI-assisted workflows where configured",
-    ],
+      "Start with the sandbox. Create a real workspace when you are ready.",
   },
   es: {
-    nav: ["Experiencia", "Aplicaciones", "Control", "Precios"],
+    nav: ["Experiencia", "Qué administra", "Control", "Precios"],
     login: "Iniciar sesión",
     create: "Crear cuenta",
-    demo: "Demo interactiva",
-    safe: "Demostración determinista — sin proveedores ni acciones externas",
+    eyebrow: "OFICINA EMPRESARIAL AUTÓNOMA",
+    title: "Opera el negocio. Conserva el control.",
+    subtitle:
+      "Administra clientes, conversaciones, dinero, tareas, facturas, documentos y operaciones diarias, con IA solo cuando tú la eliges.",
+    primary: "Crear mi ALMA",
+    pricing: "Ver precios",
+    demoLabel: "Sandbox interactivo del producto",
+    demoSafe:
+      "Esta demo pública es determinista. No llama proveedores, no cambia registros y no envía nada.",
     command: "Indica qué debe hacer ALMA",
-    run: "Ejecutar demostración",
-    replay: "Repetir demo",
-    clear: "Limpiar demo",
-    another: "Probar otro flujo",
-    ready: "Lista para recibir una instrucción",
-    planning: "ALMA está organizando la demostración…",
-    result: "Resultado de la demostración",
-    activity: "Actividad",
-    approval: "El control humano permanece",
-    approvalBody:
-      "ALMA prepara el trabajo, explica qué ocurrirá y se detiene ante acciones protegidas hasta que las apruebes.",
-    bilingual: "Bilingüe desde el diseño",
+    run: "Ejecutar demo",
+    replay: "Repetir",
+    ready: "Lista para una solicitud empresarial",
+    working: "ALMA está organizando el espacio…",
+    result: "Resultado",
+    activity: "Actividad empresarial",
+    attention: "Requiere atención",
+    attentionItems: [
+      "3 respuestas a clientes",
+      "1 factura vencida",
+      "4 transacciones por revisar",
+    ],
+    promise: "Una oficina. Cuatro trabajos.",
+    promiseBody:
+      "Habla con clientes. Administra el trabajo. Controla el dinero. Permite que ALMA asista o automatice solo lo que autorizas.",
+    customers: "Habla con clientes",
+    customersBody:
+      "Contactos, empresas, prospectos, pipeline, bandeja unificada, respuestas, seguimientos y control humano.",
+    operations: "Administra el trabajo",
+    operationsBody:
+      "Tareas, citas, estimados, facturas, documentos, aprobaciones y reglas recurrentes.",
+    money: "Controla el dinero",
+    moneyBody:
+      "Ingresos, gastos, recibos, pagos, reportes, preparación de nómina, impuestos y QuickBooks.",
+    assist: "Deja que ALMA asista",
+    assistBody:
+      "Un asistente empresarial medido, basado en tu espacio, con permisos, límites y auditoría.",
+    control: "Autonomía sin entregar el control.",
+    controlBody:
+      "Los modos Manual, Borrador, Asistido y Autónomo determinan exactamente qué puede hacer ALMA. Mensajes, cambios financieros, exportaciones y eliminaciones permanecen protegidos.",
+    bilingual: "Inglés y español, en todas partes.",
     bilingualBody:
-      "Cambia toda la experiencia al instante. Tu selección persiste al navegar y actualizar.",
-    apps: "Un sistema operativo. Aplicaciones enfocadas.",
-    appsBody:
-      "Organiza registros, comunicación, horarios, creatividad y proyectos de software desde un espacio coherente.",
-    pricing: "Elige cómo trabaja ALMA contigo",
-    essential: "Esencial",
-    autonomous: "Autónomo",
-    month: "/ mes",
-    essentialBody:
-      "Organización empresarial y herramientas centrales sin uso intensivo de IA autónoma.",
-    autonomousBody:
-      "Automatización avanzada, creación, voz, Constructor y flujos con aprobación donde estén configurados.",
-    buy: "Comprar",
-    included: "Incluido",
-    final: "Experimenta el flujo. Conserva el control.",
+      "El espacio, clientes, documentos, facturación, errores y asistente respetan el idioma elegido.",
+    priceTitle: "Elige tu oficina",
+    office: "ALMA Office",
+    ai: "ALMA AI",
+    perMonth: "/mes",
+    buy: "Comenzar",
+    officeBody: "Un sistema operativo empresarial completo sin IA generativa.",
+    aiBody:
+      "La oficina completa más asistencia medida y autonomía con aprobación.",
+    officeItems: [
+      "CRM, Bandeja, Trabajo, Dinero y Reportes",
+      "Estimados, facturas, recibos y pagos",
+      "Preparación de nómina e impuestos",
+      "Automatizaciones por reglas",
+    ],
+    aiItems: [
+      "Todo en ALMA Office",
+      "Asistente empresarial y redacción",
+      "Extracción, resúmenes y sugerencias",
+      "Límites de uso y aprobaciones",
+    ],
+    disclaimer:
+      "ALMA prepara registros empresariales y contables. No es banco, procesador de nómina, servicio fiscal, bufete ni contador profesional.",
+    final: "Tu negocio debe sentirse organizado antes de comenzar el día.",
     finalBody:
-      "Comienza con la demo segura y crea tu cuenta cuando estés listo para un espacio real.",
-    privacy: "Privacidad",
-    terms: "Términos",
-    contact: "Contacto",
-    status: "Estado",
-    footer: "ALMA es un producto de SEAINT.",
-    essentialItems: [
-      "Tareas, Planificador, Notas y Documentos",
-      "CRM y facturación básicos",
-      "Traductor y Conexiones",
-      "Organización sin proveedores",
-    ],
-    autonomousItems: [
-      "Todo lo incluido en Esencial",
-      "Oficina ALMA y Centro de aprobaciones",
-      "Creador, Estudio, voz y Constructor",
-      "Flujos con IA donde estén configurados",
-    ],
+      "Comienza con el sandbox. Crea un espacio real cuando estés listo.",
   },
 } as const;
 
 export default function PublicAlmaSandbox() {
   const { locale, setLocale } = useAlmaLocale();
   const t = copy[locale];
-  const [workflow, setWorkflow] = useState<WorkflowKey>("office");
+  const [workflow, setWorkflow] = useState<WorkflowKey>("alma");
   const [state, setState] = useState<DemoState>("ready");
-  const [command, setCommand] = useState<string>(
-    workflows.office[locale].prompt,
-  );
+  const [command, setCommand] = useState<string>(workflows.alma[locale].prompt);
   const timer = useRef<number | null>(null);
+  const keys = Object.keys(workflows) as WorkflowKey[];
   const current = workflows[workflow][locale];
-  const workflowKeys = Object.keys(workflows) as WorkflowKey[];
-  const progress = state === "complete" ? 100 : state === "planning" ? 58 : 8;
-  const status =
-    state === "ready"
-      ? t.ready
-      : state === "planning"
-        ? t.planning
-        : current.event;
+
   useEffect(() => {
+    // Keep the deterministic demo command aligned to its selected workflow.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setCommand(workflows[workflow][locale].prompt);
     setState("ready");
   }, [locale, workflow]);
-  const choose = (key: WorkflowKey) => {
-    if (timer.current) window.clearTimeout(timer.current);
-    setWorkflow(key);
-    setCommand(workflows[key][locale].prompt);
-    setState("ready");
-  };
-  const run = () => {
-    if (!command.trim() || state === "planning") return;
-    setState("planning");
-    timer.current = window.setTimeout(() => setState("complete"), 650);
-  };
-  const reset = () => {
-    if (timer.current) window.clearTimeout(timer.current);
-    setState("ready");
-    setCommand(current.prompt);
-  };
-  const next = () =>
-    choose(
-      workflowKeys[(workflowKeys.indexOf(workflow) + 1) % workflowKeys.length],
-    );
-  const planCards = useMemo(
-    () => [
-      {
-        key: "starter",
-        name: t.essential,
-        price: "$99",
-        body: t.essentialBody,
-        items: t.essentialItems,
-      },
-      {
-        key: "business",
-        name: t.autonomous,
-        price: "$399",
-        body: t.autonomousBody,
-        items: t.autonomousItems,
-      },
-    ],
-    [t],
+
+  useEffect(
+    () => () => {
+      if (timer.current) window.clearTimeout(timer.current);
+    },
+    [],
   );
 
+  function run() {
+    if (!command.trim() || state === "working") return;
+    setState("working");
+    timer.current = window.setTimeout(() => setState("complete"), 650);
+  }
+
+  function choose(key: WorkflowKey) {
+    if (timer.current) window.clearTimeout(timer.current);
+    setWorkflow(key);
+  }
+
   return (
-    <main className="min-h-screen bg-white text-[#111111]">
-      <header className="sticky top-0 z-50 border-b border-[#E5E7EB] bg-white/95 backdrop-blur">
-        <div className="mx-auto flex h-16 max-w-[1500px] items-center justify-between px-4 md:px-8">
+    <main className="min-h-screen bg-white text-[#111]">
+      <header className="sticky top-0 z-50 border-b border-[#E4E7EC] bg-white/95 backdrop-blur">
+        <div className="mx-auto flex h-16 max-w-[1440px] items-center justify-between px-4 md:px-8">
           <Link href="/" className="font-medium tracking-tight">
-            ALMA{" "}
-            <span className="ml-2 text-[10px] font-normal text-[#6B7280]">
+            ALMA
+            <span className="ml-2 text-[10px] font-normal text-[#667085]">
               BY SEAINT
             </span>
           </Link>
-          <nav className="hidden gap-7 text-sm text-[#6B7280] lg:flex">
-            {["experience", "applications", "control", "pricing"].map(
-              (id, i) => (
-                <a key={id} href={`#${id}`} className="hover:text-black">
-                  {t.nav[i]}
-                </a>
-              ),
-            )}
+          <nav className="hidden items-center gap-7 text-sm text-[#667085] lg:flex">
+            {["experience", "office", "control", "pricing"].map((id, index) => (
+              <a key={id} href={`#${id}`} className="hover:text-black">
+                {t.nav[index]}
+              </a>
+            ))}
           </nav>
           <div className="flex items-center gap-2">
-            <div
-              className="flex rounded-full border p-1"
-              aria-label={locale === "es" ? "Idioma" : "Language"}
+            <button
+              type="button"
+              onClick={() => void setLocale(locale === "en" ? "es" : "en")}
+              className="rounded-full border border-[#D0D5DD] px-3 py-2 text-xs"
             >
-              {(["en", "es"] as const).map((item) => (
-                <button
-                  key={item}
-                  type="button"
-                  aria-pressed={locale === item}
-                  onClick={() => void setLocale(item)}
-                  className={`rounded-full px-2.5 py-1 text-xs ${locale === item ? "bg-black text-white" : "text-[#6B7280]"}`}
-                >
-                  {item.toUpperCase()}
-                </button>
-              ))}
-            </div>
+              {locale === "en" ? "ES" : "EN"}
+            </button>
             <Link
               href="/login"
-              className="hidden rounded-full border px-4 py-2 text-sm sm:block"
+              className="hidden rounded-full border border-[#D0D5DD] px-4 py-2 text-sm sm:block"
             >
               {t.login}
             </Link>
@@ -376,34 +368,49 @@ export default function PublicAlmaSandbox() {
           </div>
         </div>
       </header>
-      <section
-        id="experience"
-        className="mx-auto max-w-[1500px] px-3 py-5 md:px-6 md:py-8"
-      >
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-2 px-2">
-          <div>
-            <span className="rounded-full bg-[#EEF8F1] px-3 py-1 text-xs text-[#166534]">
-              {t.demo}
-            </span>
-            <p className="mt-2 text-xs text-[#6B7280]">{t.safe}</p>
+
+      <section className="mx-auto grid max-w-[1440px] items-center gap-10 px-5 py-16 md:px-8 md:py-24 xl:grid-cols-[0.85fr_1.15fr]">
+        <div>
+          <p className="text-xs font-medium tracking-[0.25em] text-[#667085]">
+            {t.eyebrow}
+          </p>
+          <h1 className="mt-5 max-w-2xl text-5xl font-medium leading-[0.96] tracking-[-0.055em] md:text-7xl">
+            {t.title}
+          </h1>
+          <p className="mt-6 max-w-xl text-lg leading-8 text-[#667085]">
+            {t.subtitle}
+          </p>
+          <div className="mt-8 flex flex-wrap gap-3">
+            <Link
+              href="/signup"
+              className="rounded-full bg-black px-6 py-3 text-sm font-medium text-white"
+            >
+              {t.primary}
+            </Link>
+            <Link
+              href="/pricing"
+              className="rounded-full border border-[#D0D5DD] px-6 py-3 text-sm font-medium"
+            >
+              {t.pricing}
+            </Link>
           </div>
-          <Link
-            href="/signup?plan=starter&next=/billing"
-            className="inline-flex items-center gap-2 rounded-full bg-black px-5 py-2.5 text-sm text-white"
-          >
-            {t.buy}
-            <ArrowRight className="h-4 w-4" />
-          </Link>
         </div>
-        <div className="overflow-hidden rounded-[1.75rem] border border-[#D1D5DB] bg-[#F7F7F8] shadow-2xl shadow-black/10">
-          <div className="grid min-h-[650px] lg:grid-cols-[220px_1fr]">
-            <aside className="border-b border-[#E5E7EB] bg-white p-3 lg:border-b-0 lg:border-r lg:p-4">
-              <div className="mb-4 hidden px-3 pt-2 lg:block">
-                <p className="text-lg font-medium">ALMA</p>
-                <p className="text-xs text-[#6B7280]">Operating workspace</p>
-              </div>
-              <div className="flex gap-2 overflow-x-auto lg:block">
-                {workflowKeys.map((key) => {
+
+        <div
+          id="experience"
+          className="overflow-hidden rounded-[28px] border border-[#D0D5DD] bg-[#F7F7F8] shadow-2xl shadow-black/10"
+        >
+          <div className="flex items-center justify-between border-b border-[#E4E7EC] bg-white p-4">
+            <div>
+              <p className="text-sm font-medium">{t.demoLabel}</p>
+              <p className="mt-1 text-xs text-[#667085]">{t.demoSafe}</p>
+            </div>
+            <span className="h-2.5 w-2.5 rounded-full bg-[#62D4B3]" />
+          </div>
+          <div className="grid min-h-[580px] md:grid-cols-[180px_1fr]">
+            <aside className="border-b border-[#E4E7EC] bg-white p-3 md:border-b-0 md:border-r">
+              <div className="flex gap-2 overflow-x-auto md:block">
+                {keys.map((key) => {
                   const Icon = workflows[key].icon;
                   return (
                     <button
@@ -411,7 +418,11 @@ export default function PublicAlmaSandbox() {
                       type="button"
                       onClick={() => choose(key)}
                       aria-pressed={workflow === key}
-                      className={`flex shrink-0 items-center gap-2 rounded-xl px-3 py-2.5 text-left text-sm lg:mb-1 lg:w-full ${workflow === key ? "bg-black text-white" : "text-[#6B7280] hover:bg-[#F7F7F8]"}`}
+                      className={`flex shrink-0 items-center gap-2 rounded-xl px-3 py-2.5 text-sm md:mb-1 md:w-full ${
+                        workflow === key
+                          ? "bg-black text-white"
+                          : "text-[#667085] hover:bg-[#F7F7F8]"
+                      }`}
                     >
                       <Icon className="h-4 w-4" />
                       {workflows[key][locale].name}
@@ -420,225 +431,240 @@ export default function PublicAlmaSandbox() {
                 })}
               </div>
             </aside>
-            <div className="flex min-w-0 flex-col">
-              <div className="flex items-center justify-between border-b border-[#E5E7EB] bg-white px-4 py-3 md:px-6">
-                <div>
-                  <p className="text-xs uppercase tracking-[0.2em] text-[#9CA3AF]">
-                    {t.demo}
-                  </p>
-                  <h1 className="mt-1 text-xl font-medium md:text-2xl">
-                    {current.name}
-                  </h1>
-                </div>
-                <span className="flex items-center gap-2 text-xs text-[#6B7280]">
-                  <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                  Local demo
-                </span>
-              </div>
-              <div className="grid flex-1 gap-4 p-3 md:p-5 xl:grid-cols-[1fr_320px]">
-                <section className="flex min-h-[430px] flex-col rounded-2xl border border-[#E5E7EB] bg-white p-4 md:p-6">
-                  <label
-                    className="text-sm font-medium"
-                    htmlFor="alma-demo-command"
+            <div className="grid gap-4 p-4 xl:grid-cols-[1fr_230px]">
+              <section className="rounded-[20px] border border-[#E4E7EC] bg-white p-5">
+                <label htmlFor="alma-demo" className="text-sm font-medium">
+                  {t.command}
+                </label>
+                <textarea
+                  id="alma-demo"
+                  value={command}
+                  onChange={(event) => setCommand(event.target.value)}
+                  className="mt-3 min-h-24 w-full resize-none rounded-2xl border border-[#D0D5DD] bg-[#F9FAFB] p-4 text-sm outline-none focus:border-black"
+                />
+                <div className="mt-3 flex gap-2">
+                  <button
+                    type="button"
+                    onClick={run}
+                    disabled={state === "working" || !command.trim()}
+                    className="motion-safe:transition inline-flex items-center gap-2 rounded-full bg-black px-5 py-2.5 text-sm text-white motion-safe:hover:-translate-y-0.5 disabled:opacity-40"
                   >
-                    {t.command}
-                  </label>
-                  <textarea
-                    id="alma-demo-command"
-                    value={command}
-                    onChange={(e) => setCommand(e.target.value)}
-                    className="mt-3 min-h-24 w-full resize-none rounded-2xl border border-[#D1D5DB] bg-[#FAFAFA] p-4 text-sm outline-none focus:border-black"
-                  />
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      onClick={run}
-                      disabled={!command.trim() || state === "planning"}
-                      className="rounded-full bg-black px-5 py-2.5 text-sm text-white disabled:opacity-40"
-                    >
-                      {t.run}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={reset}
-                      className="inline-flex items-center gap-2 rounded-full border px-4 py-2.5 text-sm"
-                    >
-                      <RotateCcw className="h-4 w-4" />
-                      {state === "complete" ? t.replay : t.clear}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={next}
-                      className="rounded-full border px-4 py-2.5 text-sm"
-                    >
-                      {t.another}
-                    </button>
-                  </div>
-                  <div className="mt-6" aria-live="polite">
-                    <div className="flex items-center justify-between text-xs text-[#6B7280]">
-                      <span>{status}</span>
-                      <span>{progress}%</span>
-                    </div>
-                    <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[#E5E7EB]">
-                      <div
-                        className="h-full rounded-full bg-black motion-safe:transition-[width] motion-safe:duration-500"
-                        style={{ width: `${progress}%` }}
-                      />
-                    </div>
-                    {state === "complete" ? (
-                      <div className="mt-5">
-                        <p className="text-xs uppercase tracking-[0.2em] text-[#9CA3AF]">
-                          {t.result}
-                        </p>
-                        <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                          {current.rows.map((row) => (
-                            <div
-                              key={row}
-                              className="flex items-start gap-2 rounded-xl bg-[#F7F7F8] p-3 text-sm"
-                            >
-                              <Check className="mt-0.5 h-4 w-4 shrink-0" />
-                              {row}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    ) : null}
-                  </div>
-                </section>
-                <aside className="rounded-2xl border border-[#E5E7EB] bg-white p-4">
-                  <p className="text-xs uppercase tracking-[0.2em] text-[#9CA3AF]">
-                    {t.activity}
+                    <Play className="h-4 w-4" />
+                    {t.run}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCommand(current.prompt);
+                      setState("ready");
+                    }}
+                    className="rounded-full border border-[#D0D5DD] p-2.5"
+                    title={t.replay}
+                  >
+                    <RefreshCw className="h-4 w-4" />
+                  </button>
+                </div>
+                <div aria-live="polite" className="mt-6">
+                  <p className="text-xs text-[#667085]">
+                    {state === "ready"
+                      ? t.ready
+                      : state === "working"
+                        ? t.working
+                        : current.result}
                   </p>
-                  <div className="mt-4 space-y-3 text-sm">
-                    <div className="rounded-xl bg-[#F7F7F8] p-3">
-                      {current.prompt}
-                    </div>
-                    <div className="rounded-xl border p-3 text-[#6B7280]">
-                      {status}
-                    </div>
-                    <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-amber-900">
-                      {current.event}
-                    </div>
+                  <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[#EAECF0]">
+                    <div
+                      className="h-full rounded-full bg-black transition-all"
+                      style={{
+                        width:
+                          state === "ready"
+                            ? "8%"
+                            : state === "working"
+                              ? "58%"
+                              : "100%",
+                      }}
+                    />
                   </div>
-                </aside>
-              </div>
+                  {state === "complete" ? (
+                    <div className="mt-5 space-y-2">
+                      <p className="text-xs font-medium uppercase tracking-[0.15em] text-[#667085]">
+                        {t.result}
+                      </p>
+                      {current.rows.map((row) => (
+                        <div
+                          key={row}
+                          className="flex gap-2 rounded-xl bg-[#F7F7F8] p-3 text-sm"
+                        >
+                          <Check className="mt-0.5 h-4 w-4 shrink-0" />
+                          {row}
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+              </section>
+              <aside className="rounded-[20px] border border-[#E4E7EC] bg-white p-4">
+                <p className="text-xs font-medium uppercase tracking-[0.15em] text-[#667085]">
+                  {t.attention}
+                </p>
+                <div className="mt-4 space-y-2">
+                  {t.attentionItems.map((item, index) => (
+                    <div
+                      key={item}
+                      className="rounded-xl border border-[#EAECF0] p-3 text-sm"
+                    >
+                      <span className="mr-2 text-[#667085]">0{index + 1}</span>
+                      {item}
+                    </div>
+                  ))}
+                </div>
+              </aside>
             </div>
           </div>
         </div>
       </section>
-      <section id="applications" className="border-y bg-[#F7F7F8] px-6 py-20">
-        <div className="mx-auto max-w-6xl">
-          <p className="text-sm uppercase tracking-[0.24em] text-[#6B7280]">
-            ALMA OS
-          </p>
-          <h2 className="mt-4 max-w-3xl text-4xl font-medium tracking-tight md:text-6xl">
-            {t.apps}
-          </h2>
-          <p className="mt-5 max-w-2xl text-lg leading-8 text-[#6B7280]">
-            {t.appsBody}
-          </p>
-          <div className="mt-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-            {workflowKeys.map((key) => (
-              <button
-                key={key}
-                onClick={() => {
-                  choose(key);
-                  document
-                    .getElementById("experience")
-                    ?.scrollIntoView({ behavior: "smooth" });
-                }}
-                className="rounded-2xl border bg-white p-5 text-left font-medium"
-              >
-                {workflows[key][locale].name}
-                <ArrowRight className="mt-8 h-4 w-4" />
-              </button>
-            ))}
-          </div>
-        </div>
-      </section>
+
       <section
-        id="control"
-        className="mx-auto grid max-w-6xl gap-5 px-6 py-20 md:grid-cols-2"
+        id="office"
+        className="border-y border-[#E4E7EC] bg-[#F7F7F8] px-5 py-20 md:px-8"
       >
-        <article className="rounded-3xl border p-7">
-          <ShieldCheck className="h-7 w-7" />
-          <h2 className="mt-8 text-3xl font-medium">{t.approval}</h2>
-          <p className="mt-4 leading-7 text-[#6B7280]">{t.approvalBody}</p>
-        </article>
-        <article className="rounded-3xl border p-7">
-          <Languages className="h-7 w-7" />
-          <h2 className="mt-8 text-3xl font-medium">{t.bilingual}</h2>
-          <p className="mt-4 leading-7 text-[#6B7280]">{t.bilingualBody}</p>
-        </article>
-      </section>
-      <section id="pricing" className="border-y bg-[#F7F7F8] px-6 py-20">
-        <div className="mx-auto max-w-5xl">
-          <h2 className="text-center text-4xl font-medium tracking-tight md:text-5xl">
-            {t.pricing}
+        <div className="mx-auto max-w-6xl">
+          <h2 className="max-w-3xl text-4xl font-medium tracking-tight md:text-6xl">
+            {t.promise}
           </h2>
-          <div className="mt-10 grid gap-5 md:grid-cols-2">
-            {planCards.map((plan) => (
+          <p className="mt-5 max-w-3xl text-lg leading-8 text-[#667085]">
+            {t.promiseBody}
+          </p>
+          <div className="mt-10 grid gap-4 md:grid-cols-2">
+            {[
+              {
+                Icon: Users,
+                title: t.customers,
+                body: t.customersBody,
+              },
+              {
+                Icon: BriefcaseBusiness,
+                title: t.operations,
+                body: t.operationsBody,
+              },
+              {
+                Icon: CircleDollarSign,
+                title: t.money,
+                body: t.moneyBody,
+              },
+              { Icon: Bot, title: t.assist, body: t.assistBody },
+            ].map(({ Icon, title, body }) => (
               <article
-                key={plan.key}
-                className="rounded-3xl border bg-white p-7"
+                key={String(title)}
+                className="rounded-[24px] border border-[#E4E7EC] bg-white p-7"
               >
-                <p className="text-sm uppercase tracking-[0.2em] text-[#6B7280]">
-                  {plan.name}
-                </p>
-                <p className="mt-4 text-5xl font-medium">
-                  {plan.price}
-                  <span className="text-base font-normal text-[#6B7280]">
-                    {" "}
-                    {t.month}
-                  </span>
-                </p>
-                <p className="mt-4 min-h-12 text-[#6B7280]">{plan.body}</p>
-                <ul className="mt-6 space-y-3">
-                  {plan.items.map((item) => (
-                    <li key={item} className="flex gap-2 text-sm">
-                      <Check className="h-4 w-4" />
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-                <Link
-                  href={`/signup?plan=${plan.key}&next=/billing`}
-                  className="mt-7 block rounded-full bg-black px-5 py-3 text-center text-sm text-white"
-                >
-                  {t.buy} · {plan.name}
-                </Link>
+                <Icon className="h-5 w-5" />
+                <h3 className="mt-8 text-2xl font-medium">{title}</h3>
+                <p className="mt-3 leading-7 text-[#667085]">{body}</p>
               </article>
             ))}
           </div>
         </div>
       </section>
-      <section className="px-6 py-24 text-center">
-        <h2 className="mx-auto max-w-3xl text-4xl font-medium md:text-6xl">
+
+      <section
+        id="control"
+        className="mx-auto grid max-w-6xl gap-5 px-5 py-20 md:grid-cols-2 md:px-8"
+      >
+        <article className="rounded-[28px] bg-black p-8 text-white">
+          <ShieldCheck className="h-6 w-6 text-[#62D4B3]" />
+          <h2 className="mt-10 text-3xl font-medium">{t.control}</h2>
+          <p className="mt-4 leading-7 text-white/65">{t.controlBody}</p>
+        </article>
+        <article className="rounded-[28px] border border-[#D0D5DD] p-8">
+          <Languages className="h-6 w-6" />
+          <h2 className="mt-10 text-3xl font-medium">{t.bilingual}</h2>
+          <p className="mt-4 leading-7 text-[#667085]">{t.bilingualBody}</p>
+        </article>
+      </section>
+
+      <section
+        id="pricing"
+        className="border-y border-[#E4E7EC] bg-[#F7F7F8] px-5 py-20 md:px-8"
+      >
+        <div className="mx-auto max-w-5xl">
+          <h2 className="text-center text-4xl font-medium md:text-6xl">
+            {t.priceTitle}
+          </h2>
+          <div className="mt-10 grid gap-5 md:grid-cols-2">
+            {[
+              {
+                name: t.office,
+                price: "$39",
+                body: t.officeBody,
+                items: t.officeItems,
+                plan: "office",
+                dark: false,
+              },
+              {
+                name: t.ai,
+                price: "$199",
+                body: t.aiBody,
+                items: t.aiItems,
+                plan: "ai",
+                dark: true,
+              },
+            ].map((plan) => (
+              <article
+                key={plan.plan}
+                className={`rounded-[28px] border p-7 ${
+                  plan.dark
+                    ? "border-black bg-black text-white"
+                    : "border-[#D0D5DD] bg-white"
+                }`}
+              >
+                <h3 className="text-2xl font-medium">{plan.name}</h3>
+                <p className="mt-5 text-5xl font-medium">
+                  {plan.price}
+                  <span className="ml-1 text-sm font-normal opacity-60">
+                    {t.perMonth}
+                  </span>
+                </p>
+                <p className="mt-5 leading-7 opacity-65">{plan.body}</p>
+                <ul className="mt-6 space-y-3">
+                  {plan.items.map((item) => (
+                    <li key={item} className="flex gap-3 text-sm">
+                      <Check className="h-4 w-4 shrink-0" />
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+                <Link
+                  href={`/signup?checkout=${plan.plan}`}
+                  className={`mt-8 flex items-center justify-center gap-2 rounded-full px-5 py-3 text-sm font-medium ${
+                    plan.dark ? "bg-white text-black" : "bg-black text-white"
+                  }`}
+                >
+                  {t.buy}
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+              </article>
+            ))}
+          </div>
+          <p className="mt-7 text-center text-xs leading-5 text-[#667085]">
+            {t.disclaimer}
+          </p>
+        </div>
+      </section>
+
+      <section className="px-5 py-24 text-center md:px-8">
+        <h2 className="mx-auto max-w-4xl text-4xl font-medium md:text-6xl">
           {t.final}
         </h2>
-        <p className="mx-auto mt-5 max-w-xl text-[#6B7280]">{t.finalBody}</p>
+        <p className="mx-auto mt-5 max-w-xl text-[#667085]">{t.finalBody}</p>
         <Link
           href="/signup"
-          className="mt-8 inline-flex items-center gap-2 rounded-full bg-black px-6 py-3 text-white"
+          className="mt-8 inline-flex items-center gap-2 rounded-full bg-black px-6 py-3 text-sm font-medium text-white"
         >
-          {t.create}
+          {t.primary}
           <ArrowRight className="h-4 w-4" />
         </Link>
       </section>
-      <footer className="border-t px-6 py-8">
-        <div className="mx-auto flex max-w-6xl flex-col justify-between gap-5 text-sm text-[#6B7280] sm:flex-row">
-          <p>{t.footer}</p>
-          <nav className="flex flex-wrap gap-5">
-            <Link href="/privacy">{t.privacy}</Link>
-            <Link href="/terms">{t.terms}</Link>
-            <a href="mailto:support@seaint.co">{t.contact}</a>
-            <Link href="/login">{t.login}</Link>
-            <a href="https://status.seaint.co" rel="noreferrer">
-              {t.status}
-            </a>
-          </nav>
-        </div>
-      </footer>
     </main>
   );
 }

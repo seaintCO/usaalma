@@ -6,7 +6,7 @@ import {
   connectorOAuthCookieOptions,
   verifyConnectorOAuthState,
 } from "@/lib/connectors/oauthState";
-import { isEmailConnectorProvider } from "@/lib/connectors/config";
+import { isOAuthConnectorProvider } from "@/lib/connectors/config";
 import { ConnectorRepository } from "@/lib/connectors/repository";
 import {
   exchangeGoogleCode,
@@ -18,6 +18,11 @@ import {
   getMicrosoftIdentity,
   MICROSOFT_EMAIL_SCOPES,
 } from "@/lib/connectors/providers/microsoft";
+import {
+  exchangeQuickBooksCode,
+  getQuickBooksCompanyName,
+  QUICKBOOKS_SCOPES,
+} from "@/lib/connectors/providers/quickbooks";
 
 function redirect(request: Request, path: string) {
   const response = NextResponse.redirect(new URL(path, request.url));
@@ -36,7 +41,7 @@ export async function GET(
   const user = await getCurrentUser();
   if (!user) return redirect(request, "/login");
   const { provider } = await context.params;
-  if (!isEmailConnectorProvider(provider)) {
+  if (!isOAuthConnectorProvider(provider)) {
     return redirect(request, "/connections?connection=unsupported_provider");
   }
 
@@ -76,7 +81,7 @@ export async function GET(
         providerAccountEmail: identity.email ?? "",
         providerAccountName: identity.name ?? null,
       });
-    } else {
+    } else if (provider === "outlook") {
       const tokens = await exchangeMicrosoftCode({
         code,
         verifier: oauthState.verifier,
@@ -96,6 +101,44 @@ export async function GET(
         providerAccountId: identity.id,
         providerAccountEmail: identity.email,
         providerAccountName: identity.name,
+      });
+    } else {
+      const realmId = url.searchParams.get("realmId");
+      if (!realmId) {
+        return redirect(request, "/connections?connection=connection_failed");
+      }
+      const tokens = await exchangeQuickBooksCode(code);
+      const companyName = await getQuickBooksCompanyName({
+        realmId,
+        accessToken: tokens.access_token,
+      });
+      const connectionId = await ConnectorRepository.saveOAuthConnection({
+        userId: user.id,
+        workspaceId: oauthState.workspaceId,
+        provider,
+        accessToken: tokens.access_token,
+        refreshToken: tokens.refresh_token ?? null,
+        expiresAt: tokens.expires_in
+          ? new Date(Date.now() + tokens.expires_in * 1000).toISOString()
+          : null,
+        scopes: QUICKBOOKS_SCOPES,
+        providerAccountId: realmId,
+        providerAccountEmail: "",
+        providerAccountName: companyName,
+        metadata: {
+          realmId,
+          environment:
+            process.env.QUICKBOOKS_ENVIRONMENT === "production"
+              ? "production"
+              : "sandbox",
+        },
+      });
+      await ConnectorRepository.saveQuickBooksAuthority({
+        userId: user.id,
+        workspaceId: oauthState.workspaceId,
+        providerConnectionId: connectionId,
+        realmId,
+        companyName,
       });
     }
     return redirect(request, `${oauthState.returnPath}?connection=connected`);

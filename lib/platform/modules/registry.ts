@@ -106,7 +106,7 @@ export const ALMA_MODULE_REGISTRY = [
       "Correct, translate, and prepare owned business messages in English and Spanish.",
     route: WORKSPACE_ROUTES.communications,
     releaseStatus: "active",
-    requiredPlan: "business",
+    requiredPlan: "starter",
     entitlementKey: "communications",
     installKey: "communications",
     capabilities: [
@@ -126,7 +126,7 @@ export const ALMA_MODULE_REGISTRY = [
     description: "Text and speech translation for English and Spanish.",
     route: WORKSPACE_ROUTES.translator,
     releaseStatus: "beta",
-    requiredPlan: "starter",
+    requiredPlan: "business",
     entitlementKey: "communications",
     installKey: "translator",
     capabilities: ["translator.text", "translator.speech"],
@@ -168,6 +168,88 @@ export const ALMA_MODULE_REGISTRY = [
     approvalPolicy: "automatic",
   },
   {
+    key: "customers",
+    name: "Customers",
+    group: "office",
+    category: "Business",
+    description: "Manage contacts, companies, leads, vendors, and pipeline.",
+    route: WORKSPACE_ROUTES.customers,
+    releaseStatus: "active",
+    requiredPlan: "starter",
+    entitlementKey: "crm",
+    capabilities: ["crm.contacts", "crm.companies", "crm.opportunities"],
+    defaultRisk: "internal",
+    approvalPolicy: "automatic",
+  },
+  {
+    key: "work",
+    name: "Work",
+    group: "office",
+    category: "Productivity",
+    description: "Manage tasks, appointments, projects, and recurring work.",
+    route: WORKSPACE_ROUTES.work,
+    releaseStatus: "active",
+    requiredPlan: "starter",
+    entitlementKey: "tasks",
+    capabilities: ["tasks.create", "planner.create", "appointments.manage"],
+    defaultRisk: "internal",
+    approvalPolicy: "automatic",
+  },
+  {
+    key: "money",
+    name: "Money",
+    group: "office",
+    category: "Finance",
+    description:
+      "Organize income, expenses, receipts, estimates, invoices, payroll preparation, and tax readiness.",
+    route: WORKSPACE_ROUTES.money,
+    releaseStatus: "active",
+    requiredPlan: "starter",
+    entitlementKey: "money",
+    capabilities: [
+      "money.transactions",
+      "money.receipts",
+      "money.invoices",
+      "money.reports",
+    ],
+    defaultRisk: "protected",
+    approvalPolicy: "approval_required",
+  },
+  {
+    key: "knowledge",
+    name: "Knowledge",
+    group: "office",
+    category: "Business",
+    description:
+      "Maintain approved business details, services, prices, policies, and documents.",
+    route: WORKSPACE_ROUTES.knowledge,
+    releaseStatus: "active",
+    requiredPlan: "starter",
+    entitlementKey: "knowledge",
+    capabilities: [
+      "knowledge.profile",
+      "knowledge.services",
+      "knowledge.documents",
+    ],
+    defaultRisk: "internal",
+    approvalPolicy: "automatic",
+  },
+  {
+    key: "reports",
+    name: "Reports",
+    group: "office",
+    category: "Finance",
+    description:
+      "Review sales, pipeline, bookkeeping, invoice aging, payroll preparation, and tax readiness.",
+    route: WORKSPACE_ROUTES.reports,
+    releaseStatus: "active",
+    requiredPlan: "starter",
+    entitlementKey: "reports",
+    capabilities: ["reports.sales", "reports.bookkeeping", "reports.export"],
+    defaultRisk: "protected",
+    approvalPolicy: "approval_required",
+  },
+  {
     key: "office",
     name: "Alma Office",
     group: "office",
@@ -175,8 +257,8 @@ export const ALMA_MODULE_REGISTRY = [
     description:
       "Prepare customers, price books, estimates, approvals, and invoice handoff.",
     route: WORKSPACE_ROUTES.office,
-    releaseStatus: "beta",
-    requiredPlan: "business",
+    releaseStatus: "active",
+    requiredPlan: "starter",
     entitlementKey: "office",
     installKey: "office",
     legacyKeys: ["crm", "invoicing"],
@@ -189,7 +271,7 @@ export const ALMA_MODULE_REGISTRY = [
     defaultRisk: "external",
     approvalPolicy: "approval_required",
     limitations: [
-      "No QuickBooks or WhatsApp OAuth in this milestone.",
+      "QuickBooks requires official OAuth credentials.",
       "Payment links require a real connected provider.",
       "AI may use only saved service prices.",
     ],
@@ -218,7 +300,7 @@ export const ALMA_MODULE_REGISTRY = [
       "Manual project takeoff and crew documentation with plan/photo upload, verified measurements, material estimates, scope notes, crew instructions, and private PDF export.",
     route: WORKSPACE_ROUTES.construction,
     releaseStatus: "beta",
-    requiredPlan: "business",
+    requiredPlan: "starter",
     entitlementKey: "construction",
     installKey: "construction",
     capabilities: [
@@ -245,7 +327,7 @@ export const ALMA_MODULE_REGISTRY = [
     description: "Create and manage owned invoices.",
     route: WORKSPACE_ROUTES.invoicing,
     releaseStatus: "active",
-    requiredPlan: "business",
+    requiredPlan: "starter",
     entitlementKey: "invoicing",
     installKey: "invoicing",
     capabilities: ["invoices.create", "invoices.read", "invoices.update"],
@@ -394,8 +476,8 @@ export const ALMA_MODULE_REGISTRY = [
     group: "studio",
     category: "Developer",
     description: "Build automated workflows.",
-    releaseStatus: "coming_soon",
-    requiredPlan: "business",
+    releaseStatus: "active",
+    requiredPlan: "starter",
     entitlementKey: "automations",
     installKey: "automations",
     capabilities: ["automations.design"],
@@ -407,20 +489,46 @@ export const ALMA_MODULE_REGISTRY = [
 
 export type AlmaModuleKey = (typeof ALMA_MODULE_REGISTRY)[number]["key"];
 
+const ACTIVE_BUSINESS_OFFICE_MODULES = new Set([
+  "tasks",
+  "notes",
+  "planner",
+  "documents",
+  "communications",
+  "translator",
+  "voice",
+  "workspaces",
+  "customers",
+  "work",
+  "money",
+  "knowledge",
+  "reports",
+  "office",
+  "crm",
+  "invoicing",
+  "ai_receptionist",
+  "automations",
+]);
+
 export function listAlmaModules(): readonly AlmaModuleDefinition[] {
-  return ALMA_MODULE_REGISTRY;
+  return ALMA_MODULE_REGISTRY.filter((module) =>
+    ACTIVE_BUSINESS_OFFICE_MODULES.has(module.key),
+  );
 }
 
 export function resolveAlmaModuleKey(
   moduleKey: string,
 ): AlmaModuleDefinition | null {
   return (
-    listAlmaModules().find(
+    ALMA_MODULE_REGISTRY.find(
       (definition) =>
         definition.key === moduleKey ||
         definition.entitlementKey === moduleKey ||
-        definition.installKey === moduleKey ||
-        definition.legacyKeys?.includes(moduleKey),
+        ("installKey" in definition && definition.installKey === moduleKey) ||
+        ("legacyKeys" in definition &&
+          (definition.legacyKeys as readonly string[] | undefined)?.includes(
+            moduleKey,
+          )),
     ) ?? null
   );
 }

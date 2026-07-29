@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import PublicAlmaSandbox from "@/components/marketing/PublicAlmaSandbox";
 
 export const metadata: Metadata = {
-  title: "ALMA — Your bilingual AI operating system",
+  title: "ALMA — Autonomous Business Office",
   description:
-    "Experience ALMA through a safe interactive demo, then choose the plan that fits your work.",
+    "Manage customers, conversations, money, tasks, invoices, documents, and daily operations in one bilingual business office.",
 };
 
 export default function HomePage() {

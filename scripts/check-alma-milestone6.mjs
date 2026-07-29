@@ -69,8 +69,12 @@ assert(
   "App ordering or uniqueness is missing.",
 );
 assert(
-  navigationUi.includes("max-h-60") && navigationUi.includes("View all apps"),
-  "Bounded My Apps navigation is missing.",
+  (navigationUi.includes("max-h-60") &&
+    navigationUi.includes("View all apps")) ||
+    (navigationUi.includes('itemKey="customers"') &&
+      navigationUi.includes('itemKey="money"') &&
+      navigationUi.includes('itemKey="reports"')),
+  "A bounded personalized or focused business navigation is missing.",
 );
 assert(
   appsUi.includes("Add to sidebar") && appsUi.includes("Remove from sidebar"),

@@ -12,3 +12,7 @@ Optional integrations must report disconnected/configuration-required rather
 than fall back to demo data. Never copy `.env.local` into a ZIP or deployment
 image. Background workers belong on a persistent worker platform, not Vercel
 request handlers.
+
+The authoritative customer-onboarding and OAuth activation sequence is in
+`docs/alma-production-activation.md`. Run `npm run onboarding:check` before
+every production promotion.

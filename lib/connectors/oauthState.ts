@@ -11,7 +11,7 @@ type ConnectorOAuthState = {
   userId: string;
   workspaceId: string;
   provider: OAuthConnectorProvider;
-  returnPath: "/connections" | "/office" | "/marketplace";
+  returnPath: "/connections" | "/office" | "/marketplace" | "/onboarding";
   expiresAt: number;
   verifier: string;
 };
@@ -67,7 +67,12 @@ function decode(cookieValue: string): ConnectorOAuthState | null {
 }
 
 export function cleanReturnPath(value: string | null) {
-  if (value === "/office" || value === "/marketplace") return value;
+  if (
+    value === "/office" ||
+    value === "/marketplace" ||
+    value === "/onboarding"
+  )
+    return value;
   return "/connections";
 }
 
@@ -75,7 +80,7 @@ export function createConnectorOAuthState(input: {
   userId: string;
   workspaceId: string;
   provider: OAuthConnectorProvider;
-  returnPath: "/connections" | "/office" | "/marketplace";
+  returnPath: "/connections" | "/office" | "/marketplace" | "/onboarding";
 }) {
   const verifier = crypto.randomBytes(48).toString("base64url");
   const state: ConnectorOAuthState = {

@@ -108,8 +108,7 @@ export async function GET() {
         ok: false,
         error: {
           code: "business_office_schema_unavailable",
-          message:
-            "Apply the ALMA Business Office migration before using financial operations.",
+          message: "The financial workspace is not active yet.",
         },
       },
       { status: 503 },

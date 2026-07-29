@@ -46,7 +46,7 @@ export async function GET(req: Request) {
     userId: user.id,
   });
   if (!code || !oauthState)
-    return redirect(req, "/marketplace?stripe=connection_failed");
+    return redirect(req, "/connections?stripe=connection_failed");
   try {
     const tokenRes = await fetch("https://connect.stripe.com/oauth/token", {
       method: "POST",
@@ -58,14 +58,14 @@ export async function GET(req: Request) {
     });
     const tokens = (await tokenRes.json()) as StripeConnectTokens;
     if (!tokenRes.ok || !tokens.access_token || !tokens.stripe_user_id)
-      return redirect(req, "/marketplace?stripe=connection_failed");
+      return redirect(req, `${oauthState.returnPath}?stripe=connection_failed`);
     const accountRes = await fetch("https://api.stripe.com/v1/account", {
       headers: { Authorization: `Bearer ${tokens.access_token}` },
     });
     const account = (await accountRes.json()) as StripeAccount;
     const accountId = account.id ?? tokens.stripe_user_id;
     if (!accountRes.ok || !accountId)
-      return redirect(req, "/marketplace?stripe=connection_failed");
+      return redirect(req, `${oauthState.returnPath}?stripe=connection_failed`);
     const existing = await OAuthRepository.getStripeConnectConnection(user.id);
     await OAuthRepository.saveStripeConnectConnection({
       userId: user.id,
@@ -84,6 +84,6 @@ export async function GET(req: Request) {
     });
     return redirect(req, `${oauthState.returnPath}?stripe=connected`);
   } catch {
-    return redirect(req, "/marketplace?stripe=connection_failed");
+    return redirect(req, `${oauthState.returnPath}?stripe=connection_failed`);
   }
 }

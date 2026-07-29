@@ -8,7 +8,7 @@ export const STRIPE_CONNECT_OAUTH_STATE_COOKIE =
 type StripeConnectState = {
   state: string;
   userId: string;
-  returnPath: "/marketplace";
+  returnPath: "/marketplace" | "/connections" | "/onboarding";
   expiresAt: number;
 };
 
@@ -39,7 +39,9 @@ function decode(value: string): StripeConnectState | null {
     if (
       !state.state ||
       !state.userId ||
-      state.returnPath !== "/marketplace" ||
+      !["/marketplace", "/connections", "/onboarding"].includes(
+        state.returnPath,
+      ) ||
       state.expiresAt <= Date.now()
     )
       return null;
@@ -51,7 +53,7 @@ function decode(value: string): StripeConnectState | null {
 
 export function createStripeConnectOAuthState(
   userId: string,
-  returnPath: "/marketplace",
+  returnPath: "/marketplace" | "/connections" | "/onboarding",
 ) {
   const payload: StripeConnectState = {
     state: crypto.randomBytes(32).toString("base64url"),

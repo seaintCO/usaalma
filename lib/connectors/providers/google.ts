@@ -34,6 +34,7 @@ export function createGoogleAuthorizationUrl(input: {
     response_type: "code",
     access_type: "offline",
     prompt: "consent",
+    include_granted_scopes: "true",
     state: input.state,
     code_challenge: input.codeChallenge,
     code_challenge_method: "S256",

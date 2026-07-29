@@ -1,5 +1,12 @@
 "use client";
-import { ArrowLeft, ShieldCheck, Volume2 } from "lucide-react";
+import {
+  ArrowLeft,
+  ListChecks,
+  Mic2,
+  PlugZap,
+  ShieldCheck,
+  Volume2,
+} from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import AlmaShell from "@/components/alma-shell/AlmaShell";
@@ -19,17 +26,6 @@ type Profile = {
   email: string;
   language: "auto" | "en" | "es";
   almaMode: "auto" | "fast" | "deep";
-};
-type Connection = {
-  key: string;
-  name: string;
-  providerKey?: string;
-  connectionStatus?:
-    | "connect"
-    | "connected"
-    | "reconnect_required"
-    | "setup_required"
-    | "coming_soon";
 };
 type MemoryCandidate = {
   id: string;
@@ -71,6 +67,17 @@ const copy = {
     inbox: "Recent notifications",
     none: "No notifications yet.",
     apps: "Connected Apps",
+    appsText:
+      "Use the guided setup or open Connections to see live, verified provider status.",
+    setupGuide: "Business setup",
+    setupGuideText: "Finish Money, workspace, and provider setup step by step.",
+    manageConnections: "Manage connections",
+    manageConnectionsText:
+      "Connect Gmail, Outlook, QuickBooks, WhatsApp, and other configured providers.",
+    voiceAgents: "Voice agents",
+    voiceAgentsText:
+      "Connect your ElevenLabs account and create a receptionist, assistant, or call transcriber.",
+    open: "Open",
     connect: "Connect",
     reconnect: "Reconnect",
     disconnect: "Disconnect",
@@ -123,6 +130,18 @@ const copy = {
     inbox: "Notificaciones recientes",
     none: "Aún no hay notificaciones.",
     apps: "Aplicaciones conectadas",
+    appsText:
+      "Usa la configuración guiada o abre Conexiones para ver el estado real y verificado.",
+    setupGuide: "Configuración empresarial",
+    setupGuideText:
+      "Completa Dinero, espacio de trabajo y proveedores paso a paso.",
+    manageConnections: "Administrar conexiones",
+    manageConnectionsText:
+      "Conecta Gmail, Outlook, QuickBooks, WhatsApp y otros proveedores configurados.",
+    voiceAgents: "Agentes de voz",
+    voiceAgentsText:
+      "Conecta ElevenLabs y crea un recepcionista, asistente o transcriptor de llamadas.",
+    open: "Abrir",
     connect: "Conectar",
     reconnect: "Reconectar",
     disconnect: "Desconectar",
@@ -162,7 +181,6 @@ export default function SettingsPage() {
   const [imageModels, setImageModels] = useState<string[]>([
     fallback.preferredImageModel,
   ]);
-  const [connections, setConnections] = useState<Connection[]>([]);
   const [notifications, setNotifications] = useState<
     {
       id: string;
@@ -185,13 +203,11 @@ export default function SettingsPage() {
     );
   }
   const load = useCallback(async () => {
-    const [settingsRes, catalogRes, notificationsRes, memoryRes] =
-      await Promise.all([
-        fetch("/api/settings", { cache: "no-store" }),
-        fetch("/api/marketplace/catalog", { cache: "no-store" }),
-        fetch("/api/settings/notifications", { cache: "no-store" }),
-        fetch("/api/memory", { cache: "no-store" }),
-      ]);
+    const [settingsRes, notificationsRes, memoryRes] = await Promise.all([
+      fetch("/api/settings", { cache: "no-store" }),
+      fetch("/api/settings/notifications", { cache: "no-store" }),
+      fetch("/api/memory", { cache: "no-store" }),
+    ]);
     const data = await settingsRes.json();
     if (data.ok) {
       setProfile({
@@ -201,16 +217,6 @@ export default function SettingsPage() {
       setSettings(data.settings);
       setTextModels(data.modelChoices.text);
       setImageModels(data.modelChoices.image);
-    }
-    if (catalogRes.ok) {
-      const catalog = await catalogRes.json();
-      setConnections(
-        (catalog.items ?? []).filter(
-          (item: Connection) =>
-            item.providerKey === "google_workspace" ||
-            item.providerKey === "stripe",
-        ),
-      );
     }
     if (notificationsRes.ok) {
       const data = await notificationsRes.json();
@@ -249,22 +255,6 @@ export default function SettingsPage() {
     } finally {
       setSaving(false);
     }
-  };
-  const connectionAction = async (item: Connection) => {
-    if (item.connectionStatus === "connected") {
-      const route =
-        item.providerKey === "stripe"
-          ? "/api/oauth/stripe/disconnect"
-          : "/api/oauth/google/disconnect";
-      await fetch(route, { method: "POST" });
-      await load();
-      return;
-    }
-    const route =
-      item.providerKey === "stripe"
-        ? "/api/oauth/stripe/start?returnTo=%2Fmarketplace"
-        : "/api/oauth/google/start?returnTo=%2Fmarketplace";
-    window.location.assign(route);
   };
   if (!profile)
     return (
@@ -476,39 +466,41 @@ export default function SettingsPage() {
           ) : null}
           <section className="mt-6 rounded-[2rem] border border-gray-200 bg-white p-6">
             <h2 className="text-xl font-medium">{t.apps}</h2>
-            <div className="mt-5 grid gap-4 md:grid-cols-2">
-              {connections.map((item) => {
-                const status = item.connectionStatus;
-                const label =
-                  status === "connected"
-                    ? t.connected
-                    : status === "reconnect_required"
-                      ? t.reconnect
-                      : status === "setup_required"
-                        ? t.setup
-                        : status === "coming_soon"
-                          ? t.soon
-                          : t.connect;
-                return (
-                  <div
-                    key={item.key}
-                    className="flex items-center justify-between rounded-xl bg-[#F7F7F8] p-4"
-                  >
-                    <span>
-                      {item.name}
-                      <small className="block text-gray-500">{label}</small>
-                    </span>
-                    {status !== "coming_soon" && status !== "setup_required" ? (
-                      <button
-                        onClick={() => void connectionAction(item)}
-                        className="rounded-lg bg-black px-3 py-2 text-sm text-white"
-                      >
-                        {status === "connected" ? t.disconnect : label}
-                      </button>
-                    ) : null}
-                  </div>
-                );
-              })}
+            <p className="mt-2 text-sm leading-6 text-gray-500">{t.appsText}</p>
+            <div className="mt-5 grid gap-4 md:grid-cols-3">
+              {[
+                {
+                  href: "/onboarding",
+                  title: t.setupGuide,
+                  body: t.setupGuideText,
+                  icon: ListChecks,
+                },
+                {
+                  href: "/connections",
+                  title: t.manageConnections,
+                  body: t.manageConnectionsText,
+                  icon: PlugZap,
+                },
+                {
+                  href: "/voice-agents",
+                  title: t.voiceAgents,
+                  body: t.voiceAgentsText,
+                  icon: Mic2,
+                },
+              ].map(({ href, title, body, icon: Icon }) => (
+                <Link
+                  key={href}
+                  href={href}
+                  className="rounded-2xl bg-[#F7F7F8] p-4 transition hover:bg-[#EEEEF0]"
+                >
+                  <Icon className="h-5 w-5" />
+                  <h3 className="mt-4 font-medium">{title}</h3>
+                  <p className="mt-2 text-sm leading-6 text-gray-500">{body}</p>
+                  <span className="mt-4 inline-block text-sm font-medium">
+                    {t.open} →
+                  </span>
+                </Link>
+              ))}
             </div>
           </section>
           <div className="mt-6 grid gap-6 md:grid-cols-4">

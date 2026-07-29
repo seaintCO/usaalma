@@ -43,13 +43,19 @@ export async function POST(request: Request) {
   const body = (await request.json().catch(() => ({}))) as {
     operatingMode?: string;
     language?: string;
+    businessName?: string;
+    industry?: string;
     completeOnboarding?: boolean;
   };
+  const businessName = body.businessName?.trim() ?? "";
+  const industry = body.industry?.trim() ?? "";
   if (
     !body.operatingMode ||
     !MODES.has(body.operatingMode) ||
     !body.language ||
-    !LANGUAGES.has(body.language)
+    !LANGUAGES.has(body.language) ||
+    businessName.length > 120 ||
+    industry.length > 120
   ) {
     return NextResponse.json(
       { error: { code: "invalid_business_profile" } },
@@ -58,6 +64,69 @@ export async function POST(request: Request) {
   }
 
   const supabase = await createClient();
+  const { data: workspace, error: workspaceReadError } = await supabase
+    .from("workspaces")
+    .select("id,name")
+    .eq("owner_id", user.id)
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  if (workspaceReadError) {
+    return NextResponse.json(
+      { error: { code: "workspace_unavailable" } },
+      { status: 503 },
+    );
+  }
+
+  let workspaceId = workspace?.id ?? null;
+  if (!workspaceId && businessName) {
+    const { data: createdWorkspace, error: workspaceCreateError } =
+      await supabase
+        .from("workspaces")
+        .insert({
+          owner_id: user.id,
+          name: businessName,
+          type: body.operatingMode,
+        })
+        .select("id")
+        .single();
+    if (workspaceCreateError || !createdWorkspace?.id) {
+      return NextResponse.json(
+        { error: { code: "workspace_create_failed" } },
+        { status: 503 },
+      );
+    }
+    workspaceId = createdWorkspace.id;
+    const { error: membershipError } = await supabase
+      .from("workspace_members")
+      .upsert(
+        {
+          workspace_id: workspaceId,
+          user_id: user.id,
+          role: "owner",
+        },
+        { onConflict: "workspace_id,user_id" },
+      );
+    if (membershipError) {
+      return NextResponse.json(
+        { error: { code: "workspace_membership_failed" } },
+        { status: 503 },
+      );
+    }
+  } else if (workspaceId && businessName && workspace?.name !== businessName) {
+    const { error: workspaceUpdateError } = await supabase
+      .from("workspaces")
+      .update({ name: businessName })
+      .eq("id", workspaceId)
+      .eq("owner_id", user.id);
+    if (workspaceUpdateError) {
+      return NextResponse.json(
+        { error: { code: "workspace_update_failed" } },
+        { status: 503 },
+      );
+    }
+  }
+
   const { data: existing, error: readError } = await supabase
     .from("business_profiles")
     .select("id")
@@ -74,6 +143,13 @@ export async function POST(request: Request) {
   const values = {
     operating_mode: body.operatingMode,
     preferred_language: body.language,
+    ...(businessName
+      ? {
+          display_name: businessName,
+          legal_name: businessName,
+        }
+      : {}),
+    ...(industry ? { industry } : {}),
     ...(body.completeOnboarding
       ? { onboarding_completed_at: new Date().toISOString() }
       : {}),
@@ -96,5 +172,5 @@ export async function POST(request: Request) {
       { status: 503 },
     );
   }
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, workspaceId });
 }

@@ -105,10 +105,20 @@ export function hasServerSupabaseSecret() {
 }
 
 export function getAppBaseUrl() {
-  if (process.env.NEXT_PUBLIC_APP_URL) return process.env.NEXT_PUBLIC_APP_URL;
-  if (process.env.APP_URL) return process.env.APP_URL;
-  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
-  return "http://localhost:3000";
+  const configured =
+    process.env.NEXT_PUBLIC_APP_URL ||
+    process.env.APP_URL ||
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "") ||
+    "http://localhost:3000";
+  try {
+    const parsed = new URL(configured);
+    if (process.env.NODE_ENV === "production" && parsed.protocol !== "https:") {
+      return "";
+    }
+    return parsed.origin;
+  } catch {
+    return "";
+  }
 }
 
 export function getConnectorCallbackUrl(provider: OAuthConnectorProvider) {
@@ -128,6 +138,9 @@ export function getMissingConnectorEnv(provider: ConnectorProvider) {
   const missing = definition.env.filter((name) => !process.env[name]);
   if (definition.operational && !hasServerSupabaseSecret()) {
     missing.push("SUPABASE_SERVICE_ROLE_KEY");
+  }
+  if (definition.operational && !getAppBaseUrl()) {
+    missing.push("NEXT_PUBLIC_APP_URL");
   }
   return missing;
 }

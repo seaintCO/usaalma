@@ -79,8 +79,8 @@ function summaryFor(
   row: ProviderConnectionRow | null,
 ): ConnectorSummary {
   const definition = CONNECTOR_DEFINITIONS[provider];
-  const missing = getMissingConnectorEnv(provider);
-  const configurationBlocked = definition.operational && missing.length > 0;
+  const configurationBlocked =
+    definition.operational && getMissingConnectorEnv(provider).length > 0;
   return {
     provider,
     name: definition.name,
@@ -102,7 +102,7 @@ function summaryFor(
       ? "server_configuration_required"
       : (row?.last_error_code ?? null),
     lastErrorMessage: configurationBlocked
-      ? `Missing ${missing.join(", ")}.`
+      ? "This connection has not been enabled by the account owner."
       : (row?.last_error_message ?? null),
     canConnect: definition.operational,
     canDisconnect: Boolean(row && row.connection_status !== "not_connected"),

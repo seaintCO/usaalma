@@ -47,7 +47,8 @@ const copy = {
     empty: "No transactions have been entered for this month.",
     markReviewed: "Mark reviewed",
     setup:
-      "Apply the ALMA Business Office migration before using the financial workspace.",
+      "Your financial office needs one owner setup step before Money can open.",
+    finishSetup: "Finish setup",
     unavailable: "Money is temporarily unavailable.",
     signIn: "Sign in to view business finances.",
     retry: "Retry",
@@ -84,7 +85,8 @@ const copy = {
     empty: "No hay transacciones registradas para este mes.",
     markReviewed: "Marcar revisada",
     setup:
-      "Aplica la migración de Oficina Empresarial de ALMA antes de usar el espacio financiero.",
+      "Tu oficina financiera necesita un paso de configuración del propietario antes de abrir Dinero.",
+    finishSetup: "Finalizar configuración",
     unavailable: "Dinero no está disponible temporalmente.",
     signIn: "Inicia sesión para ver las finanzas del negocio.",
     retry: "Reintentar",
@@ -219,7 +221,14 @@ export default function MoneyWorkspace({ language }: { language: Language }) {
             <AlertCircle className="mr-2 inline h-4 w-4" />
           )}
           {message}
-          {state !== "loading" ? (
+          {state === "migration" ? (
+            <Link
+              href="/onboarding?resume=money"
+              className="ml-4 inline-flex rounded-full bg-black px-4 py-2 text-white"
+            >
+              {t.finishSetup}
+            </Link>
+          ) : state !== "loading" ? (
             <button
               type="button"
               onClick={() => void load()}

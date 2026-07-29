@@ -8,11 +8,12 @@ import {
 } from "@/lib/connectors/oauthState";
 import {
   getMissingConnectorEnv,
-  isEmailConnectorProvider,
+  isOAuthConnectorProvider,
 } from "@/lib/connectors/config";
 import { ConnectorRepository } from "@/lib/connectors/repository";
 import { createGoogleAuthorizationUrl } from "@/lib/connectors/providers/google";
 import { createMicrosoftAuthorizationUrl } from "@/lib/connectors/providers/microsoft";
+import { createQuickBooksAuthorizationUrl } from "@/lib/connectors/providers/quickbooks";
 
 export async function GET(
   request: Request,
@@ -26,7 +27,7 @@ export async function GET(
     );
   }
   const { provider } = await context.params;
-  if (!isEmailConnectorProvider(provider)) {
+  if (!isOAuthConnectorProvider(provider)) {
     return NextResponse.json(
       { ok: false, error: { code: "unsupported_provider" } },
       { status: 404 },
@@ -59,7 +60,9 @@ export async function GET(
     const authorizationUrl =
       provider === "gmail"
         ? createGoogleAuthorizationUrl(state)
-        : createMicrosoftAuthorizationUrl(state);
+        : provider === "outlook"
+          ? createMicrosoftAuthorizationUrl(state)
+          : createQuickBooksAuthorizationUrl({ state: state.state });
     const response = NextResponse.redirect(authorizationUrl);
     response.cookies.set(
       CONNECTOR_OAUTH_STATE_COOKIE,

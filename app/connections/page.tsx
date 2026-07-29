@@ -75,6 +75,7 @@ const COPY = {
 const ACTIVE_PROVIDERS = new Set([
   "gmail",
   "outlook",
+  "quickbooks",
   "whatsapp_business",
   "github_app",
 ]);
@@ -209,7 +210,9 @@ export default function ConnectionsPage() {
                             {copy.connectedAccount}
                           </p>
                           <p className="mt-1 truncate text-sm font-medium">
-                            {connection.connectedEmail ?? copy.noAccount}
+                            {connection.connectedEmail ||
+                              connection.connectedName ||
+                              copy.noAccount}
                           </p>
                         </div>
                         <span className="shrink-0 rounded-full border border-[#E5E7EB] px-2 py-1 text-[11px] font-medium">

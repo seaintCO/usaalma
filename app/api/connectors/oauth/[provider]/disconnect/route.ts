@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth/user";
-import { isEmailConnectorProvider } from "@/lib/connectors/config";
+import { isOAuthConnectorProvider } from "@/lib/connectors/config";
 import { ConnectorRepository } from "@/lib/connectors/repository";
 
 export async function POST(
@@ -15,7 +15,7 @@ export async function POST(
     );
   }
   const { provider } = await context.params;
-  if (!isEmailConnectorProvider(provider)) {
+  if (!isOAuthConnectorProvider(provider)) {
     return NextResponse.json(
       { ok: false, error: { code: "unsupported_provider" } },
       { status: 404 },

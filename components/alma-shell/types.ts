@@ -23,6 +23,14 @@ export type AlmaShellLabels = {
   comingSoon?: string;
   unavailable?: string;
   home: string;
+  customers: string;
+  inbox: string;
+  work: string;
+  money: string;
+  automations: string;
+  knowledge: string;
+  reports: string;
+  more: string;
   approvals: string;
   files: string;
   apps: string;

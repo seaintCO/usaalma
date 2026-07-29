@@ -28,6 +28,13 @@ export const ALMA_SHELL_LABELS: Record<AlmaShellLanguage, AlmaShellLabels> =
   shellMessages;
 
 const SHELL_WORKSPACE_RELEASES: AlmaWorkspaceReleaseOverrides = {
+  customers: "active",
+  inbox: "active",
+  work: "active",
+  money: "active",
+  automations: "active",
+  knowledge: "active",
+  reports: "active",
   approvals: "active",
   files: "beta",
   apps: "active",

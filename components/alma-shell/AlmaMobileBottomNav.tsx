@@ -1,4 +1,4 @@
-import { AppWindow, Bot, Home, Settings, ShieldCheck } from "lucide-react";
+import { Bot, Home, Inbox, Menu, Users } from "lucide-react";
 import type { ComponentType } from "react";
 import type { RoutedWorkspace } from "@/lib/platform/workspaceRoutes";
 import type { AlmaShellLabels, AlmaWorkspaceNavigationKey } from "./types";
@@ -11,14 +11,17 @@ type AlmaMobileBottomNavProps = {
   onWorkspaceNavigate: (workspace: RoutedWorkspace) => void;
 };
 
-type ItemProps = {
+function BottomNavItem({
+  active,
+  icon: Icon,
+  label,
+  onClick,
+}: {
   active: boolean;
   icon: ComponentType<{ className?: string }>;
   label: string;
   onClick: () => void;
-};
-
-function BottomNavItem({ active, icon: Icon, label, onClick }: ItemProps) {
+}) {
   return (
     <button
       type="button"
@@ -41,12 +44,18 @@ export default function AlmaMobileBottomNav({
   onWorkspaceNavigate,
 }: AlmaMobileBottomNavProps) {
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 grid h-16 grid-cols-5 border-t border-[#E5E7EB] bg-white/95 shadow-[0_-8px_24px_rgba(17,17,17,0.06)] backdrop-blur md:hidden">
+    <nav className="fixed inset-x-0 bottom-0 z-40 grid h-16 grid-cols-5 border-t border-[#E5E7EB] bg-white/95 shadow-[0_-8px_24px_rgba(17,17,17,0.06)] backdrop-blur md:hidden">
       <BottomNavItem
         active={activeWorkspace === "home"}
         icon={Home}
         label={labels.home}
         onClick={onHome}
+      />
+      <BottomNavItem
+        active={activeWorkspace === "inbox"}
+        icon={Inbox}
+        label={labels.inbox}
+        onClick={() => onWorkspaceNavigate("inbox")}
       />
       <BottomNavItem
         active={activeWorkspace === "chat"}
@@ -55,21 +64,15 @@ export default function AlmaMobileBottomNav({
         onClick={onAskAlma}
       />
       <BottomNavItem
-        active={activeWorkspace === "approvals"}
-        icon={ShieldCheck}
-        label={labels.approvals}
-        onClick={() => onWorkspaceNavigate("approvals")}
-      />
-      <BottomNavItem
-        active={activeWorkspace === "apps"}
-        icon={AppWindow}
-        label={labels.apps}
-        onClick={() => onWorkspaceNavigate("apps")}
+        active={activeWorkspace === "customers"}
+        icon={Users}
+        label={labels.customers}
+        onClick={() => onWorkspaceNavigate("customers")}
       />
       <BottomNavItem
         active={activeWorkspace === "settings"}
-        icon={Settings}
-        label={labels.profile}
+        icon={Menu}
+        label={labels.more}
         onClick={() => onWorkspaceNavigate("settings")}
       />
     </nav>

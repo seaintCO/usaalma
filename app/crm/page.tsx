@@ -97,7 +97,7 @@ export default function CRM() {
     return (
       <AlmaShell
         language={lang}
-        activeWorkspace="crm"
+        activeWorkspace="customers"
         title={t.title}
         onLanguageChange={setLocale}
       >
@@ -107,7 +107,7 @@ export default function CRM() {
   return (
     <AlmaShell
       language={lang}
-      activeWorkspace="crm"
+      activeWorkspace="customers"
       title={t.title}
       onLanguageChange={setLocale}
     >

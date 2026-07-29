@@ -10,6 +10,7 @@ import type {
   ConnectorStatus,
   ConnectorSummary,
   EmailConnectorProvider,
+  OAuthConnectorProvider,
 } from "./types";
 
 type ProviderConnectionRow = {
@@ -178,7 +179,7 @@ export class ConnectorRepository {
   static async saveOAuthConnection(input: {
     userId: string;
     workspaceId: string;
-    provider: EmailConnectorProvider;
+    provider: OAuthConnectorProvider;
     accessToken: string;
     refreshToken: string | null;
     expiresAt: string | null;
@@ -240,6 +241,49 @@ export class ConnectorRepository {
       );
     if (secretError) throw secretError;
     return connection.id as string;
+  }
+
+  static async saveQuickBooksAuthority(input: {
+    userId: string;
+    workspaceId: string;
+    providerConnectionId: string;
+    realmId: string;
+    companyName?: string | null;
+  }) {
+    assertServerConfigured("quickbooks");
+    const supabase = admin();
+    const { data: existing, error: readError } = await supabase
+      .from("quickbooks_connections")
+      .select("id")
+      .eq("user_id", input.userId)
+      .eq("workspace_id", input.workspaceId)
+      .is("disconnected_at", null)
+      .maybeSingle();
+    if (readError) throw readError;
+    const values = {
+      provider_connection_id: input.providerConnectionId,
+      realm_id: input.realmId,
+      company_name: input.companyName ?? null,
+      environment:
+        process.env.QUICKBOOKS_ENVIRONMENT === "production"
+          ? "production"
+          : "sandbox",
+      status: "connected",
+      last_error_code: null,
+      disconnected_at: null,
+    };
+    const { error } = existing?.id
+      ? await supabase
+          .from("quickbooks_connections")
+          .update(values)
+          .eq("id", existing.id)
+          .eq("user_id", input.userId)
+      : await supabase.from("quickbooks_connections").insert({
+          ...values,
+          user_id: input.userId,
+          workspace_id: input.workspaceId,
+        });
+    if (error) throw error;
   }
 
   static async saveWhatsAppConnection(input: {
@@ -523,7 +567,7 @@ export class ConnectorRepository {
 
   static async disconnect(input: {
     userId: string;
-    provider: EmailConnectorProvider;
+    provider: OAuthConnectorProvider;
   }) {
     assertServerConfigured(input.provider);
     const workspaceId = await this.resolveDefaultWorkspaceId(input.userId);
@@ -553,6 +597,16 @@ export class ConnectorRepository {
       })
       .eq("id", connection.id);
     if (error) throw error;
+    if (input.provider === "quickbooks") {
+      await supabase
+        .from("quickbooks_connections")
+        .update({
+          status: "disconnected",
+          disconnected_at: new Date().toISOString(),
+        })
+        .eq("user_id", input.userId)
+        .eq("workspace_id", workspaceId);
+    }
     return connection.id as string;
   }
 

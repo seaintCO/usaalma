@@ -16,3 +16,9 @@ request handlers.
 The authoritative customer-onboarding and OAuth activation sequence is in
 `docs/alma-production-activation.md`. Run `npm run onboarding:check` before
 every production promotion.
+
+Use `npm run release:production` on Windows for the guarded
+validate → migrate → push → deploy → smoke sequence. GitHub's manual
+**ALMA Production Release** workflow provides the same owner-only release path
+after its protected production secrets are configured. See
+`docs/alma-autonomous-release.md`.

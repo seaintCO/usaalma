@@ -17,7 +17,8 @@ $requiredMigrations = @(
     "supabase/migrations/20260728001000_alma_business_office_refocus.sql",
     "supabase/migrations/20260729001000_alma_bookkeeping_voice_agents.sql",
     "supabase/migrations/20260729002000_alma_business_launch_center.sql",
-    "supabase/migrations/20260729003000_alma_office_payment_links.sql"
+    "supabase/migrations/20260729003000_alma_office_payment_links.sql",
+    "supabase/migrations/20260729004000_alma_managed_voice_budgets_invoice_delivery.sql"
 )
 
 foreach ($migration in $requiredMigrations) {
@@ -57,6 +58,10 @@ if ($LASTEXITCODE -ne 0) { throw "Business Office check failed." }
 if ($LASTEXITCODE -ne 0) { throw "Bookkeeping and voice check failed." }
 & npm run business-launch:check
 if ($LASTEXITCODE -ne 0) { throw "Business Launch check failed." }
+& npm run office-payments:check
+if ($LASTEXITCODE -ne 0) { throw "Office payments check failed." }
+& npm run managed-office:check
+if ($LASTEXITCODE -ne 0) { throw "Managed Office check failed." }
 
 Write-Host ""
 Write-Host "ALMA database activation completed." -ForegroundColor Green

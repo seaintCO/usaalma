@@ -18,6 +18,8 @@
     "onboarding:check": "node scripts/check-alma-onboarding-readiness.mjs",
     "office-payments:check": "node scripts/check-alma-office-payments.mjs",
     "managed-office:check": "node scripts/check-alma-managed-office.mjs",
+    "sell-ready:check": "node scripts/check-alma-sell-ready.mjs",
+    "release:production": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/release-alma-production.ps1",
     "usage:check": "jiti scripts/check-alma-usage.ts",
     "milestone7.2:test": "node scripts/run-playwright.mjs",
     "milestone7.2:auth": "playwright codegen --channel=msedge --save-storage=.playwright-auth/user.json http://127.0.0.1:3101/login",

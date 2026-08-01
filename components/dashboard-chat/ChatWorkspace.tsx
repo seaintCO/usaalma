@@ -28,6 +28,7 @@ import {
   type ChatLanguage as SharedChatLanguage,
 } from "@/lib/alma/chat/chatErrorHandling";
 import type { SelectableAlmaMode } from "@/lib/usage/modes";
+import { useIsAlmaIosApp } from "@/lib/mobile/platform";
 
 export type ChatLanguage = SharedChatLanguage;
 
@@ -354,6 +355,7 @@ export function ChatComposer({
     reset: string;
   } | null;
 }) {
+  const isIosApp = useIsAlmaIosApp();
   const fileRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
   const [composerOpen, setComposerOpen] = useState(false);
@@ -423,7 +425,8 @@ export function ChatComposer({
           {modeUsage
             ? ` · ${Math.max(0, (modeUsage.limits[mode] ?? 0) - (modeUsage.used[mode] ?? 0))} ${language === "es" ? "restantes; reinicia" : "remaining; resets"} ${new Date(modeUsage.reset).toLocaleDateString()}`
             : ""}
-          {modeUsage &&
+          {!isIosApp &&
+          modeUsage &&
           ((modeUsage.limits[mode] ?? 0) <= 0 ||
             (modeUsage.used[mode] ?? 0) >= (modeUsage.limits[mode] ?? 0)) ? (
             <a

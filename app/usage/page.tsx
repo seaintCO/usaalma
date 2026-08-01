@@ -5,6 +5,7 @@ import { AlertCircle, RefreshCw } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import AlmaShell from "@/components/alma-shell/AlmaShell";
 import { useAlmaLocale } from "@/lib/i18n/useAlmaLocale";
+import { useIsAlmaIosApp } from "@/lib/mobile/platform";
 
 type Summary = {
   plan: "starter" | "business" | null;
@@ -31,6 +32,7 @@ type Summary = {
 };
 
 export default function UsagePage() {
+  const isIosApp = useIsAlmaIosApp();
   const { locale } = useAlmaLocale();
   const es = locale === "es";
   const [usage, setUsage] = useState<Summary | null>(null);
@@ -127,12 +129,14 @@ export default function UsagePage() {
                     : "Your period will appear when usage tracking is ready."}
             </p>
           </div>
-          <Link
-            href="/billing"
-            className="rounded-full bg-black px-4 py-2 text-sm font-medium text-white"
-          >
-            {es ? "Mejorar plan" : "Upgrade plan"}
-          </Link>
+          {!isIosApp ? (
+            <Link
+              href="/billing"
+              className="rounded-full bg-black px-4 py-2 text-sm font-medium text-white"
+            >
+              {es ? "Mejorar plan" : "Upgrade plan"}
+            </Link>
+          ) : null}
         </div>
         {error ? (
           <section
@@ -187,12 +191,14 @@ export default function UsagePage() {
                           : "Retry"}
                     </button>
                   )}
-                  <Link
-                    href="/billing"
-                    className="rounded-full border border-[#D8DCE2] bg-white px-4 py-2 text-sm font-medium"
-                  >
-                    {es ? "Ver plan" : "View plan"}
-                  </Link>
+                  {!isIosApp ? (
+                    <Link
+                      href="/billing"
+                      className="rounded-full border border-[#D8DCE2] bg-white px-4 py-2 text-sm font-medium"
+                    >
+                      {es ? "Ver plan" : "View plan"}
+                    </Link>
+                  ) : null}
                 </div>
               </div>
             </div>

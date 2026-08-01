@@ -33,28 +33,10 @@ environment variable.
 ```bash
 npm run check:encoding
 npm run business-office:check
-npm run managed-office:check
-npm run sell-ready:check
 npx tsc --noEmit
 npm run lint
 npm run build
 ```
-
-## Production release
-
-The guarded Windows release command validates ALMA, applies pending Supabase
-migrations first, pushes `main`, deploys Vercel production, and performs smoke
-checks:
-
-```powershell
-$env:SUPABASE_PROJECT_REF="YOUR_20_CHARACTER_PROJECT_REF"
-npm run release:production
-```
-
-For a one-click GitHub release, configure the protected production environment
-described in `docs/alma-autonomous-release.md`, then run **ALMA Production
-Release** from GitHub Actions. Customers never run migrations or configure
-owner secrets.
 
 See `PRODUCT_SCOPE.md`, `ARCHITECTURE.md`, `DATABASE.md`, `SECURITY.md`,
 `BILLING.md`, `QUICKBOOKS.md`, `AI_USAGE.md`, `DEPLOYMENT.md`, `TESTING.md`,

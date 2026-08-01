@@ -1,0 +1,8 @@
+.expo/
+dist/
+node_modules/
+*.ipa
+*.mobileprovision
+*.p8
+*.p12
+

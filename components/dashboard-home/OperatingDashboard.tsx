@@ -268,60 +268,36 @@ export default function OperatingDashboard({
       value: office?.attention.newLeads ?? "—",
       href: "/customers",
       icon: Users,
-      surface:
-        "border-cyan-200/80 bg-gradient-to-br from-cyan-50 via-white to-blue-50",
-      iconSurface: "bg-cyan-500 text-white shadow-cyan-200",
-      valueColor: "text-cyan-950",
     },
     {
       label: t.messages,
       value: "—",
       href: "/inbox",
       icon: Inbox,
-      surface:
-        "border-violet-200/80 bg-gradient-to-br from-violet-50 via-white to-fuchsia-50",
-      iconSurface: "bg-violet-500 text-white shadow-violet-200",
-      valueColor: "text-violet-950",
     },
     {
       label: t.appointments,
       value: office?.attention.appointmentsToday ?? summary.planner.length,
       href: "/work",
       icon: CalendarDays,
-      surface:
-        "border-blue-200/80 bg-gradient-to-br from-blue-50 via-white to-indigo-50",
-      iconSurface: "bg-blue-500 text-white shadow-blue-200",
-      valueColor: "text-blue-950",
     },
     {
       label: t.overdue,
       value: office?.attention.overdueInvoices ?? "—",
       href: "/invoicing",
       icon: ReceiptText,
-      surface:
-        "border-amber-200/80 bg-gradient-to-br from-amber-50 via-white to-orange-50",
-      iconSurface: "bg-amber-500 text-white shadow-amber-200",
-      valueColor: "text-amber-950",
     },
     {
       label: t.collected,
       value: office ? money(office.money.collected, language) : "—",
       href: "/money",
       icon: CircleDollarSign,
-      surface:
-        "border-emerald-200/80 bg-gradient-to-br from-emerald-50 via-white to-teal-50",
-      iconSurface: "bg-emerald-500 text-white shadow-emerald-200",
-      valueColor: "text-emerald-950",
     },
     {
       label: t.expenses,
       value: office ? money(office.money.expenses, language) : "—",
       href: "/money",
       icon: CircleDollarSign,
-      surface:
-        "border-rose-200/80 bg-gradient-to-br from-rose-50 via-white to-pink-50",
-      iconSurface: "bg-rose-500 text-white shadow-rose-200",
-      valueColor: "text-rose-950",
     },
   ];
 
@@ -333,44 +309,36 @@ export default function OperatingDashboard({
   }
 
   return (
-    <div className="min-h-0 flex-1 overflow-y-auto bg-[radial-gradient(circle_at_top_left,_#ecfeff_0,_#f7f7f8_32%,_#f7f7f8_100%)] px-4 pb-24 pt-6 md:px-8 md:pb-10 md:pt-10">
+    <div className="min-h-0 flex-1 overflow-y-auto bg-[#F7F7F8] px-4 pb-24 pt-6 md:px-8 md:pb-10 md:pt-10">
       <div className="mx-auto max-w-7xl">
-        <div className="relative overflow-hidden rounded-[28px] border border-slate-800 bg-[#080B12] p-6 text-white shadow-2xl shadow-cyan-950/10 md:p-8">
-          <div className="pointer-events-none absolute -right-20 -top-28 h-72 w-72 rounded-full bg-cyan-400/20 blur-3xl" />
-          <div className="pointer-events-none absolute -bottom-32 left-1/3 h-72 w-72 rounded-full bg-violet-500/15 blur-3xl" />
-          <div className="relative">
-            <p className="text-xs font-medium uppercase tracking-[0.2em] text-cyan-200">
-              {new Intl.DateTimeFormat(language === "es" ? "es-ES" : "en-US", {
-                dateStyle: "full",
-              }).format(new Date())}
-            </p>
-            <h1 className="mt-3 text-3xl font-medium tracking-tight md:text-5xl">
-              {t.greeting}
-            </h1>
-            <p className="mt-3 text-base text-slate-300 md:text-lg">
-              {t.intro}
-            </p>
+        <p className="text-xs font-medium uppercase tracking-[0.2em] text-[#667085]">
+          {new Intl.DateTimeFormat(language === "es" ? "es-ES" : "en-US", {
+            dateStyle: "full",
+          }).format(new Date())}
+        </p>
+        <h1 className="mt-3 text-3xl font-medium tracking-tight md:text-5xl">
+          {t.greeting}
+        </h1>
+        <p className="mt-3 text-base text-[#667085] md:text-lg">{t.intro}</p>
 
-            <div className="mt-7 flex items-center gap-2 rounded-[20px] border border-white/15 bg-white/10 p-2 shadow-lg backdrop-blur">
-              <input
-                value={command}
-                onChange={(event) => setCommand(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") submit();
-                }}
-                placeholder={t.placeholder}
-                className="min-w-0 flex-1 bg-transparent px-3 py-2 text-sm text-white outline-none placeholder:text-slate-400 md:text-base"
-              />
-              <button
-                type="button"
-                onClick={submit}
-                className="inline-flex shrink-0 items-center gap-2 rounded-2xl bg-gradient-to-r from-cyan-300 to-emerald-300 px-4 py-3 text-sm font-semibold text-slate-950 transition hover:brightness-105"
-              >
-                <Send className="h-4 w-4" />
-                <span className="hidden sm:inline">{t.ask}</span>
-              </button>
-            </div>
-          </div>
+        <div className="mt-7 flex items-center gap-2 rounded-[20px] border border-[#D0D5DD] bg-white p-2 shadow-sm">
+          <input
+            value={command}
+            onChange={(event) => setCommand(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") submit();
+            }}
+            placeholder={t.placeholder}
+            className="min-w-0 flex-1 bg-transparent px-3 py-2 text-sm outline-none md:text-base"
+          />
+          <button
+            type="button"
+            onClick={submit}
+            className="inline-flex shrink-0 items-center gap-2 rounded-2xl bg-black px-4 py-3 text-sm font-medium text-white"
+          >
+            <Send className="h-4 w-4" />
+            <span className="hidden sm:inline">{t.ask}</span>
+          </button>
         </div>
 
         {officeNeedsSetup ? (
@@ -380,42 +348,24 @@ export default function OperatingDashboard({
         ) : null}
 
         <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
-          {metrics.map(
-            ({
-              label,
-              value,
-              href,
-              icon: Icon,
-              surface,
-              iconSurface,
-              valueColor,
-            }) => (
-              <Link
-                key={label}
-                href={href}
-                className={`group rounded-[20px] border p-5 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-lg ${surface}`}
-              >
-                <span
-                  className={`inline-grid h-9 w-9 place-items-center rounded-xl shadow-lg ${iconSurface}`}
-                >
-                  <Icon className="h-4 w-4" />
-                </span>
-                <p className={`mt-6 text-2xl font-medium ${valueColor}`}>
-                  {value}
-                </p>
-                <p className="mt-1 text-xs leading-5 text-[#667085]">{label}</p>
-              </Link>
-            ),
-          )}
+          {metrics.map(({ label, value, href, icon: Icon }) => (
+            <Link
+              key={label}
+              href={href}
+              className="rounded-[20px] border border-[#E4E7EC] bg-white p-5 transition hover:border-black"
+            >
+              <Icon className="h-4 w-4 text-[#667085]" />
+              <p className="mt-6 text-2xl font-medium">{value}</p>
+              <p className="mt-1 text-xs leading-5 text-[#667085]">{label}</p>
+            </Link>
+          ))}
         </div>
 
         <div className="mt-6 grid gap-5 xl:grid-cols-[1.3fr_1fr]">
-          <section className="rounded-[24px] border border-amber-200/70 bg-gradient-to-br from-white to-amber-50/70 p-5 shadow-sm">
+          <section className="rounded-[24px] border border-[#E4E7EC] bg-white p-5">
             <div className="flex items-center justify-between">
               <h2 className="font-medium">{t.next}</h2>
-              <span className="grid h-9 w-9 place-items-center rounded-xl bg-amber-100 text-amber-700">
-                <Clock3 className="h-4 w-4" />
-              </span>
+              <Clock3 className="h-4 w-4 text-[#667085]" />
             </div>
             {attention.length ? (
               <div className="mt-4 divide-y divide-[#EAECF0]">
@@ -438,12 +388,10 @@ export default function OperatingDashboard({
             )}
           </section>
 
-          <section className="rounded-[24px] border border-violet-200/70 bg-gradient-to-br from-white to-violet-50/70 p-5 shadow-sm">
+          <section className="rounded-[24px] border border-[#E4E7EC] bg-white p-5">
             <div className="flex items-center justify-between">
               <h2 className="font-medium">{t.approvals}</h2>
-              <span className="grid h-9 w-9 place-items-center rounded-xl bg-violet-100 text-violet-700">
-                <ShieldCheck className="h-4 w-4" />
-              </span>
+              <ShieldCheck className="h-4 w-4 text-[#667085]" />
             </div>
             {approvals.length ? (
               <div className="mt-4 space-y-3">
@@ -474,7 +422,7 @@ export default function OperatingDashboard({
         </div>
 
         <div className="mt-6 grid gap-5 xl:grid-cols-[1.3fr_0.7fr]">
-          <section className="rounded-[24px] border border-cyan-200/70 bg-gradient-to-br from-white to-cyan-50/60 p-5 shadow-sm">
+          <section className="rounded-[24px] border border-[#E4E7EC] bg-white p-5">
             <div className="flex items-center justify-between">
               <h2 className="font-medium">{t.activity}</h2>
               <span className="text-xs text-[#667085]">
@@ -496,24 +444,19 @@ export default function OperatingDashboard({
               <p className="mt-5 text-sm text-[#667085]">{t.noActivity}</p>
             )}
           </section>
-          <section className="relative overflow-hidden rounded-[24px] border border-slate-800 bg-[#080B12] p-5 text-white shadow-xl shadow-violet-950/10">
-            <div className="pointer-events-none absolute -right-12 -top-12 h-40 w-40 rounded-full bg-violet-500/30 blur-3xl" />
-            <div className="relative">
-              <span className="grid h-10 w-10 place-items-center rounded-xl bg-cyan-300 text-slate-950 shadow-lg shadow-cyan-500/20">
-                <PhoneCall className="h-5 w-5" />
-              </span>
-              <h2 className="mt-6 font-medium">{t.voiceAgent}</h2>
-              <p className="mt-2 text-sm leading-6 text-slate-300">
-                {t.voiceAgentBody}
-              </p>
-              <Link
-                href="/voice-agents"
-                className="mt-5 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-cyan-300 to-emerald-300 px-4 py-2 text-sm font-semibold text-slate-950"
-              >
-                {t.configureVoice}
-                <ArrowRight className="h-4 w-4" />
-              </Link>
-            </div>
+          <section className="overflow-hidden rounded-[24px] border border-slate-800 bg-[#080B12] p-5 text-white">
+            <PhoneCall className="h-5 w-5 text-cyan-300" />
+            <h2 className="mt-6 font-medium">{t.voiceAgent}</h2>
+            <p className="mt-2 text-sm leading-6 text-slate-300">
+              {t.voiceAgentBody}
+            </p>
+            <Link
+              href="/voice-agents"
+              className="mt-5 inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-medium text-black"
+            >
+              {t.configureVoice}
+              <ArrowRight className="h-4 w-4" />
+            </Link>
           </section>
         </div>
         <p className="mt-5 text-xs leading-5 text-[#667085]">{t.disclaimer}</p>

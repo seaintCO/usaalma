@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useAlmaLocale } from "@/lib/i18n/useAlmaLocale";
+import { useIsAlmaIosApp } from "@/lib/mobile/platform";
 
 type WorkflowKey = "customers" | "inbox" | "work" | "money" | "alma";
 type DemoState = "ready" | "working" | "complete";
@@ -294,6 +295,7 @@ const copy = {
 } as const;
 
 export default function PublicAlmaSandbox() {
+  const isIosApp = useIsAlmaIosApp();
   const { locale, setLocale } = useAlmaLocale();
   const t = copy[locale];
   const [workflow, setWorkflow] = useState<WorkflowKey>("alma");
@@ -339,7 +341,10 @@ export default function PublicAlmaSandbox() {
             </span>
           </Link>
           <nav className="hidden items-center gap-7 text-sm text-[#667085] lg:flex">
-            {["experience", "office", "control", "pricing"].map((id, index) => (
+            {(isIosApp
+              ? ["experience", "office", "control"]
+              : ["experience", "office", "control", "pricing"]
+            ).map((id, index) => (
               <a key={id} href={`#${id}`} className="hover:text-black">
                 {t.nav[index]}
               </a>
@@ -360,10 +365,10 @@ export default function PublicAlmaSandbox() {
               {t.login}
             </Link>
             <Link
-              href="/signup"
+              href={isIosApp ? "/login" : "/signup"}
               className="rounded-full bg-black px-4 py-2 text-sm text-white"
             >
-              {t.create}
+              {isIosApp ? t.login : t.create}
             </Link>
           </div>
         </div>
@@ -382,17 +387,19 @@ export default function PublicAlmaSandbox() {
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Link
-              href="/signup"
+              href={isIosApp ? "/login" : "/signup"}
               className="rounded-full bg-black px-6 py-3 text-sm font-medium text-white"
             >
-              {t.primary}
+              {isIosApp ? t.login : t.primary}
             </Link>
-            <Link
-              href="/pricing"
-              className="rounded-full border border-[#D0D5DD] px-6 py-3 text-sm font-medium"
-            >
-              {t.pricing}
-            </Link>
+            {!isIosApp ? (
+              <Link
+                href="/pricing"
+                className="rounded-full border border-[#D0D5DD] px-6 py-3 text-sm font-medium"
+              >
+                {t.pricing}
+              </Link>
+            ) : null}
           </div>
         </div>
 
@@ -583,74 +590,76 @@ export default function PublicAlmaSandbox() {
         </article>
       </section>
 
-      <section
-        id="pricing"
-        className="border-y border-[#E4E7EC] bg-[#F7F7F8] px-5 py-20 md:px-8"
-      >
-        <div className="mx-auto max-w-5xl">
-          <h2 className="text-center text-4xl font-medium md:text-6xl">
-            {t.priceTitle}
-          </h2>
-          <div className="mt-10 grid gap-5 md:grid-cols-2">
-            {[
-              {
-                name: t.office,
-                price: "$39",
-                body: t.officeBody,
-                items: t.officeItems,
-                plan: "office",
-                dark: false,
-              },
-              {
-                name: t.ai,
-                price: "$199",
-                body: t.aiBody,
-                items: t.aiItems,
-                plan: "ai",
-                dark: true,
-              },
-            ].map((plan) => (
-              <article
-                key={plan.plan}
-                className={`rounded-[28px] border p-7 ${
-                  plan.dark
-                    ? "border-black bg-black text-white"
-                    : "border-[#D0D5DD] bg-white"
-                }`}
-              >
-                <h3 className="text-2xl font-medium">{plan.name}</h3>
-                <p className="mt-5 text-5xl font-medium">
-                  {plan.price}
-                  <span className="ml-1 text-sm font-normal opacity-60">
-                    {t.perMonth}
-                  </span>
-                </p>
-                <p className="mt-5 leading-7 opacity-65">{plan.body}</p>
-                <ul className="mt-6 space-y-3">
-                  {plan.items.map((item) => (
-                    <li key={item} className="flex gap-3 text-sm">
-                      <Check className="h-4 w-4 shrink-0" />
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-                <Link
-                  href={`/signup?checkout=${plan.plan}`}
-                  className={`mt-8 flex items-center justify-center gap-2 rounded-full px-5 py-3 text-sm font-medium ${
-                    plan.dark ? "bg-white text-black" : "bg-black text-white"
+      {!isIosApp ? (
+        <section
+          id="pricing"
+          className="border-y border-[#E4E7EC] bg-[#F7F7F8] px-5 py-20 md:px-8"
+        >
+          <div className="mx-auto max-w-5xl">
+            <h2 className="text-center text-4xl font-medium md:text-6xl">
+              {t.priceTitle}
+            </h2>
+            <div className="mt-10 grid gap-5 md:grid-cols-2">
+              {[
+                {
+                  name: t.office,
+                  price: "$39",
+                  body: t.officeBody,
+                  items: t.officeItems,
+                  plan: "office",
+                  dark: false,
+                },
+                {
+                  name: t.ai,
+                  price: "$199",
+                  body: t.aiBody,
+                  items: t.aiItems,
+                  plan: "ai",
+                  dark: true,
+                },
+              ].map((plan) => (
+                <article
+                  key={plan.plan}
+                  className={`rounded-[28px] border p-7 ${
+                    plan.dark
+                      ? "border-black bg-black text-white"
+                      : "border-[#D0D5DD] bg-white"
                   }`}
                 >
-                  {t.buy}
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
-              </article>
-            ))}
+                  <h3 className="text-2xl font-medium">{plan.name}</h3>
+                  <p className="mt-5 text-5xl font-medium">
+                    {plan.price}
+                    <span className="ml-1 text-sm font-normal opacity-60">
+                      {t.perMonth}
+                    </span>
+                  </p>
+                  <p className="mt-5 leading-7 opacity-65">{plan.body}</p>
+                  <ul className="mt-6 space-y-3">
+                    {plan.items.map((item) => (
+                      <li key={item} className="flex gap-3 text-sm">
+                        <Check className="h-4 w-4 shrink-0" />
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                  <Link
+                    href={`/signup?checkout=${plan.plan}`}
+                    className={`mt-8 flex items-center justify-center gap-2 rounded-full px-5 py-3 text-sm font-medium ${
+                      plan.dark ? "bg-white text-black" : "bg-black text-white"
+                    }`}
+                  >
+                    {t.buy}
+                    <ArrowRight className="h-4 w-4" />
+                  </Link>
+                </article>
+              ))}
+            </div>
+            <p className="mt-7 text-center text-xs leading-5 text-[#667085]">
+              {t.disclaimer}
+            </p>
           </div>
-          <p className="mt-7 text-center text-xs leading-5 text-[#667085]">
-            {t.disclaimer}
-          </p>
-        </div>
-      </section>
+        </section>
+      ) : null}
 
       <section className="px-5 py-24 text-center md:px-8">
         <h2 className="mx-auto max-w-4xl text-4xl font-medium md:text-6xl">
@@ -658,10 +667,10 @@ export default function PublicAlmaSandbox() {
         </h2>
         <p className="mx-auto mt-5 max-w-xl text-[#667085]">{t.finalBody}</p>
         <Link
-          href="/signup"
+          href={isIosApp ? "/login" : "/signup"}
           className="mt-8 inline-flex items-center gap-2 rounded-full bg-black px-6 py-3 text-sm font-medium text-white"
         >
-          {t.primary}
+          {isIosApp ? t.login : t.primary}
           <ArrowRight className="h-4 w-4" />
         </Link>
       </section>

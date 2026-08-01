@@ -19,6 +19,7 @@ import type {
   VoiceCallRecord,
 } from "@/lib/voice-agents/types";
 import BrowserVoiceSession from "./BrowserVoiceSession";
+import { useIsAlmaIosApp } from "@/lib/mobile/platform";
 
 type Language = "en" | "es";
 
@@ -129,6 +130,7 @@ export default function VoiceAgentWorkspace({
 }: {
   language: Language;
 }) {
+  const isIosApp = useIsAlmaIosApp();
   const t = copy[language];
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -288,10 +290,8 @@ export default function VoiceAgentWorkspace({
         </p>
       ) : null}
 
-      <section className="relative mt-6 overflow-hidden rounded-[24px] border border-slate-800 bg-[#080B12] p-6 text-white shadow-2xl shadow-cyan-950/10">
-        <div className="pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full bg-cyan-400/25 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-24 left-1/3 h-48 w-48 rounded-full bg-violet-500/20 blur-3xl" />
-        <div className="relative flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+      <section className="mt-6 overflow-hidden rounded-[24px] border border-slate-800 bg-[#080B12] p-6 text-white">
+        <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
           <div className="max-w-3xl">
             <div className="flex items-center gap-3">
               <Bot className="h-5 w-5 text-cyan-300" />
@@ -303,13 +303,19 @@ export default function VoiceAgentWorkspace({
             <p className="mt-2 text-xs text-slate-400">{t.diy}</p>
           </div>
           <div className="flex shrink-0 flex-wrap gap-2">
-            {!managedSetup ||
-            ["cancelled", "refunded"].includes(managedSetup.status) ? (
+            {isIosApp ? (
+              <span className="max-w-xs rounded-2xl border border-slate-700 px-4 py-3 text-xs leading-5 text-slate-300">
+                {language === "es"
+                  ? "La compra de configuración no está disponible dentro de la app para iPhone."
+                  : "Managed-setup purchasing is not available inside the iPhone app."}
+              </span>
+            ) : !managedSetup ||
+              ["cancelled", "refunded"].includes(managedSetup.status) ? (
               <button
                 type="button"
                 disabled={setupBusy}
                 onClick={() => void purchaseSetup()}
-                className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-cyan-300 to-emerald-300 px-5 py-3 text-sm font-semibold text-slate-950 shadow-lg shadow-cyan-500/10 disabled:opacity-50"
+                className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-medium text-black disabled:opacity-50"
               >
                 {setupBusy ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -325,7 +331,7 @@ export default function VoiceAgentWorkspace({
               <button
                 type="button"
                 onClick={() => void markBooked()}
-                className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-cyan-300 to-emerald-300 px-5 py-3 text-sm font-semibold text-slate-950 shadow-lg shadow-cyan-500/10"
+                className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-medium text-black"
               >
                 <CalendarDays className="h-4 w-4" />
                 {managedSetup.status === "paid" ? t.bookCall : t.setupBooked}

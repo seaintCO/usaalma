@@ -9,6 +9,7 @@ import AlmaShell from "@/components/alma-shell/AlmaShell";
 import type { AlmaShellLanguage } from "@/components/alma-shell/types";
 import { useAlmaLocale } from "@/lib/i18n/useAlmaLocale";
 import { normalizeBillingPlan } from "@/lib/billing/plans";
+import { useIsAlmaIosApp } from "@/lib/mobile/platform";
 import { DASHBOARD_ROUTE } from "@/lib/platform/workspaceRoutes";
 import {
   ArrowLeft,
@@ -88,6 +89,8 @@ const copy = {
     incomplete_expired: "Expired",
     paused: "Paused",
     inactive: "Inactive",
+    iosPlan:
+      "Your plan is managed outside the iPhone app. No purchase or upgrade links are shown here.",
   },
   es: {
     back: "Volver al panel",
@@ -138,6 +141,8 @@ const copy = {
     incomplete_expired: "Vencida",
     paused: "En pausa",
     inactive: "Inactiva",
+    iosPlan:
+      "Tu plan se administra fuera de la app para iPhone. Aquí no se muestran enlaces de compra ni de mejora.",
   },
 } as const;
 
@@ -162,6 +167,7 @@ function formatDate(value: string | null, language: Language) {
 }
 
 export default function BillingPage() {
+  const isIosApp = useIsAlmaIosApp();
   const { locale: language, setLocale } = useAlmaLocale();
   const [state, setState] = useState<LoadState>("loading");
   const [subscription, setSubscription] = useState<BillingSubscription | null>(
@@ -294,7 +300,12 @@ export default function BillingPage() {
   }, [action]);
 
   useEffect(() => {
-    if (state !== "ready" || continuationStarted.current || activeSubscription)
+    if (
+      isIosApp ||
+      state !== "ready" ||
+      continuationStarted.current ||
+      activeSubscription
+    )
       return;
     const plan = normalizeBillingPlan(
       new URLSearchParams(window.location.search).get("checkout"),
@@ -303,7 +314,7 @@ export default function BillingPage() {
     continuationStarted.current = true;
     const timer = window.setTimeout(() => void openCheckout(plan), 0);
     return () => window.clearTimeout(timer);
-  }, [activeSubscription, openCheckout, state]);
+  }, [activeSubscription, isIosApp, openCheckout, state]);
 
   const periodEnd = formatDate(
     subscription?.currentPeriodEnd ?? null,
@@ -417,7 +428,13 @@ export default function BillingPage() {
             ) : null}
           </section>
 
-          {state === "ready" && subscription?.stripeCustomerId ? (
+          {state === "ready" && isIosApp ? (
+            <section className="mt-6 rounded-[2rem] border border-gray-200 bg-white p-6 shadow-sm md:p-8">
+              <p className="text-sm leading-6 text-gray-600">{text.iosPlan}</p>
+            </section>
+          ) : null}
+
+          {state === "ready" && !isIosApp && subscription?.stripeCustomerId ? (
             <section className="mt-6 rounded-[2rem] border border-gray-200 bg-white p-6 shadow-sm md:p-8">
               <h2 className="text-2xl font-medium">{text.choose}</h2>
               <p className="mt-2 text-sm text-gray-500">
@@ -434,7 +451,7 @@ export default function BillingPage() {
             </section>
           ) : null}
 
-          {state === "ready" && !subscription?.stripeCustomerId ? (
+          {state === "ready" && !isIosApp && !subscription?.stripeCustomerId ? (
             <section className="mt-6 rounded-[2rem] border border-gray-200 bg-white p-6 shadow-sm md:p-8">
               <h2 className="text-2xl font-medium">{text.choose}</h2>
               {!plansConfigured ? (
@@ -497,7 +514,7 @@ export default function BillingPage() {
                             ? `${text.paid}: ${formatMoney(invoice.amountPaid, invoice.currency, language)}`
                             : `${text.due}: ${formatMoney(invoice.amountDue, invoice.currency, language)}`}
                         </span>
-                        {invoice.hostedInvoiceUrl ? (
+                        {!isIosApp && invoice.hostedInvoiceUrl ? (
                           <a
                             href={invoice.hostedInvoiceUrl}
                             target="_blank"
@@ -511,7 +528,7 @@ export default function BillingPage() {
                             />
                           </a>
                         ) : null}
-                        {invoice.invoicePdfUrl ? (
+                        {!isIosApp && invoice.invoicePdfUrl ? (
                           <a
                             href={invoice.invoicePdfUrl}
                             target="_blank"

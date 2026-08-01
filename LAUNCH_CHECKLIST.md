@@ -1,8 +1,6 @@
 # Launch checklist
 
 - [ ] Apply all migrations to staging, then production.
-- [ ] Configure the protected GitHub production environment or verify the
-      guarded local release command.
 - [ ] Configure Supabase, Stripe, app URL, and encryption secrets.
 - [ ] Create $39 Office and $199 AI recurring Stripe prices.
 - [ ] Register and verify the Stripe webhook.
@@ -24,6 +22,3 @@
 - [ ] Confirm legacy modules redirect to the dashboard.
 - [ ] Run the release checks in `TESTING.md`.
 - [ ] Take a database backup and record rollback steps.
-- [ ] Run `npm run sell-ready:check`.
-- [ ] Release through the database-first production workflow and confirm the
-      homepage and login smoke checks pass.

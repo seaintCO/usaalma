@@ -19,6 +19,7 @@
     "office-payments:check": "node scripts/check-alma-office-payments.mjs",
     "managed-office:check": "node scripts/check-alma-managed-office.mjs",
     "mobile:check": "node scripts/check-alma-mobile.mjs",
+    "live-camera:check": "node scripts/check-alma-live-camera.mjs",
     "usage:check": "jiti scripts/check-alma-usage.ts",
     "milestone7.2:test": "node scripts/run-playwright.mjs",
     "milestone7.2:auth": "playwright codegen --channel=msedge --save-storage=.playwright-auth/user.json http://127.0.0.1:3101/login",

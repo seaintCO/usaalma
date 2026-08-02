@@ -44,7 +44,7 @@ export default function AlmaMobileBottomNav({
   onWorkspaceNavigate,
 }: AlmaMobileBottomNavProps) {
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-40 grid h-16 grid-cols-5 border-t border-[#E5E7EB] bg-white/95 shadow-[0_-8px_24px_rgba(17,17,17,0.06)] backdrop-blur md:hidden">
+    <nav className="relative z-40 grid h-[calc(4rem+env(safe-area-inset-bottom))] min-h-16 shrink-0 grid-cols-5 border-t border-[#E5E7EB] bg-white/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_24px_rgba(17,17,17,0.06)] backdrop-blur md:hidden">
       <BottomNavItem
         active={activeWorkspace === "home"}
         icon={Home}

@@ -425,6 +425,26 @@ export default function DashboardPage() {
     ]);
   }
 
+  function addLiveCameraObservation(answer: string) {
+    const timestamp = Date.now();
+    setMessages((previous) => [
+      ...previous,
+      {
+        id: `live-camera-${timestamp}-user`,
+        role: "user",
+        content:
+          language === "es"
+            ? "Guardar la observación de la cámara en vivo."
+            : "Save the Live Camera observation.",
+      },
+      {
+        id: `live-camera-${timestamp}-assistant`,
+        role: "assistant",
+        content: answer,
+      },
+    ]);
+  }
+
   useEffect(() => {
     async function checkOnboarding() {
       const res = await fetch("/api/onboarding/status");
@@ -663,6 +683,7 @@ export default function DashboardPage() {
               void loadHistory();
             }}
             onAnalyzeFile={analyzeFile}
+            onLiveCameraObservation={addLiveCameraObservation}
           />
         )}
         <AlmaMobileBottomNav

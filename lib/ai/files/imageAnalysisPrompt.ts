@@ -1,18 +1,27 @@
-export function buildImageAnalysisPrompt(fileName:string, question:string) {
-  const lower = fileName.toLowerCase();
-
-  const isScreenshot =
-    lower.includes("screenshot") ||
-    lower.includes("screen") ||
-    lower.endsWith(".png") ||
-    lower.endsWith(".jpg") ||
-    lower.endsWith(".jpeg") ||
-    lower.endsWith(".webp");
-
+export function buildImageAnalysisPrompt(
+  fileName: string,
+  question: string,
+  context?: {
+    liveCamera?: boolean;
+    automaticObservation?: boolean;
+    language?: "en" | "es";
+  },
+) {
   return `
 You are ALMA Vision.
 
-Analyze this uploaded image or screenshot like ChatGPT would, but with a premium analyst style.
+Analyze this ${context?.liveCamera ? "current Live Camera frame" : "uploaded image or screenshot"} with a premium, practical analyst style.
+
+${
+  context?.liveCamera
+    ? `This frame is a moment from a live camera session. Describe only what is visibly supported. Focus on the user's question, surface safety-critical or operationally important details first, and give concise next actions. Do not imply that you can see frames before or after this one. ${context.automaticObservation ? "This is an automatic observation, so report meaningful changes or useful facts without unnecessary repetition." : "This is a user-requested observation."}`
+    : ""
+}
+
+Respond in ${context?.language === "es" ? "Spanish" : "the same language as the user's request"}.
+
+Frame or file label:
+${fileName}
 
 User request:
 ${question}

@@ -8,6 +8,13 @@ import { withUsageReservation } from "@/lib/usage/service";
 import { withUsageRoute } from "@/lib/usage/routeBoundary";
 
 const require = createRequire(import.meta.url);
+const MAX_UPLOAD_BYTES = 20 * 1024 * 1024;
+const MAX_LIVE_CAMERA_BYTES = 8 * 1024 * 1024;
+const LIVE_CAMERA_IMAGE_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+]);
 
 async function extractText(file: File, buffer: Buffer) {
   const name = file.name.toLowerCase();
@@ -57,10 +64,33 @@ async function post(req: Request) {
 
   const form = await req.formData();
   const file = form.get("file") as File | null;
-  const question = String(form.get("question") || "Analyze this file clearly.");
+  const source = String(form.get("source") || "upload");
+  const liveCamera = source === "live_camera";
+  const automaticObservation =
+    liveCamera && String(form.get("observation") || "manual") === "auto";
+  const language = String(form.get("language") || "en") === "es" ? "es" : "en";
+  const question = String(form.get("question") || "Analyze this file clearly.")
+    .trim()
+    .slice(0, 2_000);
 
   if (!file)
     return NextResponse.json({ error: "Missing file" }, { status: 400 });
+  if (file.size <= 0 || file.size > MAX_UPLOAD_BYTES) {
+    return NextResponse.json(
+      { error: "File size is not supported." },
+      { status: 413 },
+    );
+  }
+  if (
+    liveCamera &&
+    (file.size > MAX_LIVE_CAMERA_BYTES ||
+      !LIVE_CAMERA_IMAGE_TYPES.has(file.type))
+  ) {
+    return NextResponse.json(
+      { error: "Live Camera frame is not supported." },
+      { status: 415 },
+    );
+  }
   if (!process.env.OPENAI_API_KEY)
     return NextResponse.json(
       { error: "Missing OPENAI_API_KEY" },
@@ -69,7 +99,7 @@ async function post(req: Request) {
 
   const buffer = Buffer.from(await file.arrayBuffer());
   const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-  const configured = modeConfiguration("thinking");
+  const configured = modeConfiguration(liveCamera ? "instant" : "thinking");
 
   if (file.type.startsWith("image/")) {
     const dataUrl = `data:${file.type};base64,${buffer.toString("base64")}`;
@@ -92,16 +122,27 @@ async function post(req: Request) {
               content: [
                 {
                   type: "input_text",
-                  text: buildImageAnalysisPrompt(file.name, question),
+                  text: buildImageAnalysisPrompt(file.name, question, {
+                    liveCamera,
+                    automaticObservation,
+                    language,
+                  }),
                 },
-                { type: "input_image", image_url: dataUrl, detail: "high" },
+                {
+                  type: "input_image",
+                  image_url: dataUrl,
+                  detail: automaticObservation ? "low" : "high",
+                },
               ],
             },
           ],
         }),
     );
 
-    return NextResponse.json({ success: true, answer: result.output_text });
+    return NextResponse.json(
+      { success: true, answer: result.output_text },
+      { headers: { "Cache-Control": "no-store" } },
+    );
   }
 
   const extracted = await extractText(file, buffer);

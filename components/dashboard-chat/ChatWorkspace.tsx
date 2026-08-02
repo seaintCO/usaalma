@@ -8,6 +8,7 @@ import {
   Mic,
   Paperclip,
   RefreshCw,
+  Video,
 } from "lucide-react";
 import {
   type Dispatch,
@@ -18,6 +19,7 @@ import {
 } from "react";
 import BilingualComposer from "@/components/communications/BilingualComposer";
 import AlmaVoiceControls from "@/components/voice/AlmaVoiceControls";
+import LiveCameraSession from "@/components/dashboard-chat/LiveCameraSession";
 import {
   CHAT_REQUEST_TIMEOUT_MS,
   createChatSubmissionKey,
@@ -340,6 +342,7 @@ export function ChatComposer({
   mode,
   onModeChange,
   modeUsage,
+  onLiveCameraObservation,
 }: {
   value: string;
   language: ChatLanguage;
@@ -354,14 +357,26 @@ export function ChatComposer({
     limits: Record<string, number>;
     reset: string;
   } | null;
+  onLiveCameraObservation: (answer: string) => void;
 }) {
   const isIosApp = useIsAlmaIosApp();
   const fileRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
   const [composerOpen, setComposerOpen] = useState(false);
   const [voiceOpen, setVoiceOpen] = useState(false);
+  const [liveCameraOpen, setLiveCameraOpen] = useState(
+    () =>
+      typeof window !== "undefined" &&
+      new URL(window.location.href).searchParams.get("liveCamera") === "1",
+  );
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    if (url.searchParams.get("liveCamera") !== "1") return;
+    url.searchParams.delete("liveCamera");
+    window.history.replaceState({}, "", url);
+  }, []);
   return (
-    <div className="border-t border-[#E5E7EB] bg-white px-3 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 md:px-6">
+    <div className="shrink-0 border-t border-[#E5E7EB] bg-white px-3 pb-3 pt-3 md:px-6 md:pb-4">
       <div className="mx-auto w-full max-w-3xl">
         <div
           className="mb-2 flex items-center gap-2 overflow-x-auto"
@@ -463,7 +478,7 @@ export function ChatComposer({
             }}
             rows={1}
             placeholder={copy[language].prompt}
-            className="min-h-28 max-h-44 w-full resize-none bg-transparent px-4 pb-14 pt-4 pr-14 text-base leading-6 outline-none placeholder:text-gray-400 disabled:opacity-60"
+            className="min-h-20 max-h-36 w-full resize-none bg-transparent px-4 pb-14 pt-3 pr-14 text-base leading-6 outline-none placeholder:text-gray-400 disabled:opacity-60 md:min-h-28 md:max-h-44 md:pt-4"
           />
           <div className="absolute bottom-3 left-3 flex items-center gap-1">
             <input
@@ -501,9 +516,25 @@ export function ChatComposer({
               type="button"
               disabled={busy}
               onClick={() => cameraRef.current?.click()}
+              aria-label={language === "es" ? "Tomar foto" : "Take photo"}
               className="rounded-md p-1 text-[#6B7280] hover:bg-gray-200 hover:text-black"
             >
               <Camera className="h-5 w-5" />
+            </button>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => setLiveCameraOpen(true)}
+              aria-label={
+                language === "es"
+                  ? "Abrir cámara en vivo de ALMA"
+                  : "Open ALMA Live Camera"
+              }
+              title={language === "es" ? "Cámara en vivo" : "Live Camera"}
+              data-alma-live-camera="true"
+              className="rounded-md p-1 text-[#0A8F70] hover:bg-[#E8FBF5] hover:text-[#05634F]"
+            >
+              <Video className="h-5 w-5" />
             </button>
             <button
               type="button"
@@ -542,6 +573,13 @@ export function ChatComposer({
           </div>
         ) : null}
       </div>
+      {liveCameraOpen ? (
+        <LiveCameraSession
+          language={language}
+          onClose={() => setLiveCameraOpen(false)}
+          onAddToChat={onLiveCameraObservation}
+        />
+      ) : null}
     </div>
   );
 }
@@ -559,6 +597,7 @@ type ChatWorkspaceProps = {
   initialPrompt?: string;
   onComplete: (conversationId?: string) => void;
   onAnalyzeFile: (file: File) => void;
+  onLiveCameraObservation: (answer: string) => void;
 };
 
 export default function ChatWorkspace({
@@ -574,6 +613,7 @@ export default function ChatWorkspace({
   initialPrompt = "",
   onComplete,
   onAnalyzeFile,
+  onLiveCameraObservation,
 }: ChatWorkspaceProps) {
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
@@ -1170,6 +1210,7 @@ export default function ChatWorkspace({
         mode={mode}
         onModeChange={setMode}
         modeUsage={modeUsage}
+        onLiveCameraObservation={onLiveCameraObservation}
       />
     </div>
   );

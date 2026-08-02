@@ -89,6 +89,19 @@ function AlmaApp() {
     }, 900);
   }
 
+  async function openLiveCamera() {
+    const permission = await Camera.requestCameraPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert(
+        "Camera permission",
+        "Enable camera access in iPhone Settings to use ALMA Live Camera.",
+      );
+      return;
+    }
+    setToolsOpen(false);
+    setSource(`${appUrl(ALMA_ROUTES.alma)}?liveCamera=1`);
+  }
+
   async function openDocumentPicker() {
     go("documents");
     setTimeout(() => {
@@ -186,6 +199,7 @@ function AlmaApp() {
           javaScriptEnabled
           domStorageEnabled
           allowsInlineMediaPlayback
+          mediaCapturePermissionGrantType="grantIfSameHostElsePrompt"
           mediaPlaybackRequiresUserAction
           allowsBackForwardNavigationGestures
           onShouldStartLoadWithRequest={handleNavigation}
@@ -266,6 +280,11 @@ function AlmaApp() {
               icon="camera-outline"
               label="Scan receipt"
               onPress={() => void openReceiptCamera()}
+            />
+            <Tool
+              icon="videocam-outline"
+              label="Live Camera"
+              onPress={() => void openLiveCamera()}
             />
             <Tool
               icon="document-outline"

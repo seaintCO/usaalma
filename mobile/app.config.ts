@@ -8,7 +8,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
   name: "ALMA Office",
   slug: "alma-office",
-  owner: process.env.EXPO_OWNER || undefined,
+  owner: process.env.EXPO_OWNER || "seaintcos-team",
   version: "1.0.0",
   orientation: "portrait",
   icon: "./assets/icon.png",
@@ -31,6 +31,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         "ALMA lets you choose photos to attach to receipts, customers, documents, and conversations.",
       NSFaceIDUsageDescription:
         "ALMA can use Face ID to protect access to your signed-in business office.",
+      ITSAppUsesNonExemptEncryption: false,
       UIBackgroundModes: ["remote-notification"],
     },
   },

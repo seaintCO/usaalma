@@ -2,6 +2,7 @@ import { Search } from "lucide-react";
 import { ConversationNewChatButton } from "./ConversationNavigation";
 import WorkspaceNavigation from "./WorkspaceNavigation";
 import type { AlmaMobileDrawerProps } from "./types";
+import AlmaThemeToggle from "@/components/theme/AlmaThemeToggle";
 
 type AlmaDesktopSidebarProps = Pick<
   AlmaMobileDrawerProps,
@@ -30,7 +31,7 @@ export default function AlmaDesktopSidebar({
   workspaceReleases,
 }: AlmaDesktopSidebarProps) {
   return (
-    <aside className="flex h-full w-72 shrink-0 flex-col border-r border-[#E5E7EB] bg-[#F7F7F8] md:w-64">
+    <aside className="alma-sidebar flex h-full w-72 shrink-0 flex-col border-r border-[#E5E7EB] bg-[#F7F7F8] md:w-64">
       <div className="px-5 pb-4 pt-5">
         <button onClick={onBrandClick} className="text-left">
           <div className="text-lg font-medium tracking-tight">ALMA</div>
@@ -52,6 +53,9 @@ export default function AlmaDesktopSidebar({
           >
             ES
           </button>
+        </div>
+        <div className="mt-2">
+          <AlmaThemeToggle />
         </div>
       </div>
 

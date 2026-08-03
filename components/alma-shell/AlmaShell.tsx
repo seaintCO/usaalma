@@ -88,7 +88,7 @@ export default function AlmaShell({
   }
 
   return (
-    <main className="flex h-[100dvh] w-full max-w-full overflow-hidden bg-white text-[#111111]">
+    <main className="alma-premium-root flex h-[100dvh] w-full max-w-full overflow-hidden bg-white text-[#111111]">
       <div className="hidden md:block">
         <AlmaDesktopSidebar
           language={language}
@@ -132,7 +132,7 @@ export default function AlmaShell({
           onMenuClick={() => setMobileOpen(true)}
           onAskAlma={openDashboard}
         />
-        <div className="min-h-0 w-full max-w-full flex-1 overflow-y-auto bg-[#F7F7F8]">
+        <div className="alma-workspace-canvas min-h-0 w-full max-w-full flex-1 overflow-y-auto bg-[#F7F7F8]">
           {children}
         </div>
         <AlmaMobileBottomNav

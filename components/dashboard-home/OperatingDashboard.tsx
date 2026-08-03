@@ -78,6 +78,15 @@ const copy = {
     voiceAgentBody:
       "Set up a receptionist or assistant that can log signed call transcripts in ALMA CRM.",
     configureVoice: "Configure voice agent",
+    quickActions: "Command center",
+    quickActionsBody: "Move from signal to action without leaving your office.",
+    customerBrief: "Prepare a customer follow-up",
+    moneyReview: "Review money that needs attention",
+    dayPlan: "Build today's operating plan",
+    inboxTriage: "Triage unanswered messages",
+    operatingPulse: "Operating pulse",
+    operatingPulseBody:
+      "Live signals from customers, work, money, and approvals.",
   },
   es: {
     greeting: "Buenos días.",
@@ -116,6 +125,15 @@ const copy = {
     voiceAgentBody:
       "Configura un recepcionista o asistente que guarde transcripciones firmadas en el CRM.",
     configureVoice: "Configurar agente de voz",
+    quickActions: "Centro de comando",
+    quickActionsBody: "Pasa de la señal a la acción sin salir de tu oficina.",
+    customerBrief: "Preparar seguimiento para un cliente",
+    moneyReview: "Revisar dinero que requiere atención",
+    dayPlan: "Crear el plan operativo de hoy",
+    inboxTriage: "Organizar mensajes sin respuesta",
+    operatingPulse: "Pulso operativo",
+    operatingPulseBody:
+      "Señales en vivo de clientes, trabajo, dinero y aprobaciones.",
   },
 } as const;
 
@@ -240,8 +258,8 @@ export default function OperatingDashboard({
 
   if (state !== "ready" || !summary) {
     return (
-      <div className="min-h-0 flex-1 overflow-y-auto bg-[#F7F7F8] p-4 md:p-8">
-        <div className="mx-auto max-w-7xl rounded-[24px] border border-[#E4E7EC] bg-white p-6 text-sm text-[#667085]">
+      <div className="alma-workspace-canvas min-h-0 flex-1 overflow-y-auto bg-[#F7F7F8] p-4 md:p-8">
+        <div className="alma-glass-card mx-auto max-w-7xl rounded-[24px] p-6 text-sm text-[#667085]">
           {state === "loading" ? (
             <Loader2 className="mr-2 inline h-4 w-4 animate-spin" />
           ) : (
@@ -309,19 +327,19 @@ export default function OperatingDashboard({
   }
 
   return (
-    <div className="min-h-0 flex-1 overflow-y-auto bg-[#F7F7F8] px-4 pb-24 pt-6 md:px-8 md:pb-10 md:pt-10">
+    <div className="alma-workspace-canvas min-h-0 flex-1 overflow-y-auto bg-[#F7F7F8] px-4 pb-24 pt-6 md:px-8 md:pb-10 md:pt-10">
       <div className="mx-auto max-w-7xl">
         <p className="text-xs font-medium uppercase tracking-[0.2em] text-[#667085]">
           {new Intl.DateTimeFormat(language === "es" ? "es-ES" : "en-US", {
             dateStyle: "full",
           }).format(new Date())}
         </p>
-        <h1 className="mt-3 text-3xl font-medium tracking-tight md:text-5xl">
+        <h1 className="alma-gradient-text mt-3 text-3xl font-medium tracking-[-0.045em] md:text-5xl">
           {t.greeting}
         </h1>
         <p className="mt-3 text-base text-[#667085] md:text-lg">{t.intro}</p>
 
-        <div className="mt-7 flex items-center gap-2 rounded-[20px] border border-[#D0D5DD] bg-white p-2 shadow-sm">
+        <div className="alma-command-glow mt-7 flex items-center gap-2 rounded-[20px] border border-[#D0D5DD] bg-white p-2 shadow-sm backdrop-blur-2xl">
           <input
             value={command}
             onChange={(event) => setCommand(event.target.value)}
@@ -352,7 +370,7 @@ export default function OperatingDashboard({
             <Link
               key={label}
               href={href}
-              className="rounded-[20px] border border-[#E4E7EC] bg-white p-5 transition hover:border-black"
+              className="alma-glass-card alma-glass-card--interactive rounded-[20px] p-5"
             >
               <Icon className="h-4 w-4 text-[#667085]" />
               <p className="mt-6 text-2xl font-medium">{value}</p>
@@ -361,8 +379,53 @@ export default function OperatingDashboard({
           ))}
         </div>
 
+        <section className="alma-glass-card mt-6 rounded-[24px] p-5 md:p-6">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#667085]">
+                {t.operatingPulse}
+              </p>
+              <h2 className="mt-2 text-xl font-medium tracking-tight md:text-2xl">
+                {t.quickActions}
+              </h2>
+              <p className="mt-1 text-sm text-[#667085]">
+                {t.quickActionsBody}
+              </p>
+            </div>
+            <span className="inline-flex w-fit items-center gap-2 rounded-full border border-[#E4E7EC] bg-white px-3 py-1.5 text-xs text-[#667085]">
+              <span className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_14px_rgba(52,211,153,0.75)]" />
+              {t.operatingPulseBody}
+            </span>
+          </div>
+          <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            {[
+              { label: t.customerBrief, prompt: t.customerBrief, icon: Users },
+              {
+                label: t.moneyReview,
+                prompt: t.moneyReview,
+                icon: ReceiptText,
+              },
+              { label: t.dayPlan, prompt: t.dayPlan, icon: CalendarDays },
+              { label: t.inboxTriage, prompt: t.inboxTriage, icon: Inbox },
+            ].map(({ label, prompt, icon: Icon }) => (
+              <button
+                key={label}
+                type="button"
+                onClick={() => onAsk(prompt)}
+                className="alma-glass-card alma-glass-card--interactive group flex min-h-28 flex-col justify-between rounded-2xl p-4 text-left"
+              >
+                <Icon className="h-5 w-5 text-cyan-400" />
+                <span className="mt-5 flex items-end justify-between gap-3 text-sm font-medium">
+                  {label}
+                  <ArrowRight className="h-4 w-4 shrink-0 text-[#98A2B3] transition group-hover:translate-x-1" />
+                </span>
+              </button>
+            ))}
+          </div>
+        </section>
+
         <div className="mt-6 grid gap-5 xl:grid-cols-[1.3fr_1fr]">
-          <section className="rounded-[24px] border border-[#E4E7EC] bg-white p-5">
+          <section className="alma-glass-card rounded-[24px] p-5">
             <div className="flex items-center justify-between">
               <h2 className="font-medium">{t.next}</h2>
               <Clock3 className="h-4 w-4 text-[#667085]" />
@@ -388,7 +451,7 @@ export default function OperatingDashboard({
             )}
           </section>
 
-          <section className="rounded-[24px] border border-[#E4E7EC] bg-white p-5">
+          <section className="alma-glass-card rounded-[24px] p-5">
             <div className="flex items-center justify-between">
               <h2 className="font-medium">{t.approvals}</h2>
               <ShieldCheck className="h-4 w-4 text-[#667085]" />
@@ -422,7 +485,7 @@ export default function OperatingDashboard({
         </div>
 
         <div className="mt-6 grid gap-5 xl:grid-cols-[1.3fr_0.7fr]">
-          <section className="rounded-[24px] border border-[#E4E7EC] bg-white p-5">
+          <section className="alma-glass-card rounded-[24px] p-5">
             <div className="flex items-center justify-between">
               <h2 className="font-medium">{t.activity}</h2>
               <span className="text-xs text-[#667085]">

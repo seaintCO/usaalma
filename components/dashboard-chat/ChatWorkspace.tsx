@@ -3,6 +3,8 @@
 import {
   ArrowUp,
   Camera,
+  CheckCircle2,
+  Circle,
   Languages,
   LogIn,
   Mic,
@@ -193,6 +195,67 @@ function MessageContent({ content }: { content: string }) {
   );
 }
 
+function ThinkingActivity({
+  language,
+  durable,
+}: {
+  language: ChatLanguage;
+  durable: boolean;
+}) {
+  const steps =
+    language === "es"
+      ? [
+          "Solicitud protegida",
+          durable ? "Respuesta en cola segura" : "Conexión de respuesta activa",
+          "ALMA está preparando la respuesta",
+        ]
+      : [
+          "Request secured",
+          durable ? "Response safely queued" : "Response connection active",
+          "ALMA is preparing the response",
+        ];
+  return (
+    <div className="relative min-w-[16rem] overflow-hidden rounded-2xl border border-white/10 bg-black/20 p-4">
+      <div className="alma-thinking-shimmer absolute inset-y-0 left-0 w-1/3 -translate-x-full bg-gradient-to-r from-transparent via-white/7 to-transparent [animation:alma-shimmer_2.2s_ease-in-out_infinite]" />
+      <div className="flex items-center gap-3">
+        <span className="alma-thinking-orb relative grid h-9 w-9 place-items-center rounded-full border border-violet-300/25 bg-violet-400/10 shadow-[0_0_32px_rgba(125,95,255,0.38)]">
+          <span className="h-2.5 w-2.5 rounded-full bg-cyan-300 [animation:alma-pulse-ring_1.5s_ease-in-out_infinite]" />
+        </span>
+        <div>
+          <p className="text-sm font-medium text-[var(--alma-text)]">
+            {language === "es" ? "ALMA está pensando" : "ALMA is thinking"}
+          </p>
+          <p className="mt-0.5 text-[11px] text-[var(--alma-muted)]">
+            {language === "es"
+              ? "Estado real de la solicitud"
+              : "Live request status"}
+          </p>
+        </div>
+      </div>
+      <div className="mt-4 space-y-2.5">
+        {steps.map((step, index) => (
+          <div key={step} className="flex items-center gap-2.5 text-xs">
+            {index < 2 ? (
+              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
+            ) : (
+              <Circle className="h-3.5 w-3.5 animate-pulse fill-violet-400/30 text-violet-300" />
+            )}
+            <span
+              className={
+                index < 2
+                  ? "text-[var(--alma-muted)]"
+                  : "text-[var(--alma-text)]"
+              }
+            >
+              {step}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function ChatErrorCard({
   category,
   language,
@@ -282,10 +345,10 @@ export function ChatMessageList({
             }
           >
             {message.status === "streaming" && !message.content ? (
-              <div className="flex items-center gap-2 text-[#6B7280]">
-                <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-neutral-300 border-t-black" />
-                {copy[language].thinking}
-              </div>
+              <ThinkingActivity
+                language={language}
+                durable={Boolean(message.runId || message.executionId)}
+              />
             ) : (
               <>
                 {message.content ? (
@@ -388,10 +451,14 @@ export function ChatComposer({
               language === "es"
                 ? {
                     instant: "Instantáneo",
-                    thinking: "Razonamiento",
-                    pro: "Pro",
+                    thinking: "Sol Light",
+                    pro: "Sol Ultra",
                   }
-                : { instant: "Instant", thinking: "Thinking", pro: "Pro" };
+                : {
+                    instant: "Instant",
+                    thinking: "Sol Light",
+                    pro: "Sol Ultra",
+                  };
             const descriptions =
               language === "es"
                 ? {
@@ -1174,7 +1241,7 @@ export default function ChatWorkspace({
   }, [messages, durableEnabled]);
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col bg-white">
+    <div className="alma-workspace-canvas flex min-h-0 flex-1 flex-col bg-white">
       <div
         ref={messageArea}
         onScroll={(event) => {

@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ChatLanguage } from "./ChatWorkspace";
+import AlmaVoiceControls from "@/components/voice/AlmaVoiceControls";
 
 const AUTO_OBSERVE_INTERVAL_MS = 8_000;
 const MAX_AUTO_OBSERVATIONS = 10;
@@ -49,6 +50,7 @@ const text = {
     failed: "ALMA could not analyze this frame. Try again in a moment.",
     limit: "Auto Observe finished its 10-observation safety limit.",
     observation: "observation",
+    talk: "Talk live about what ALMA sees",
   },
   es: {
     title: "Cámara en vivo de ALMA",
@@ -77,6 +79,7 @@ const text = {
     limit:
       "La observación automática llegó al límite de seguridad de 10 análisis.",
     observation: "observación",
+    talk: "Habla en vivo sobre lo que ALMA ve",
   },
 } as const;
 
@@ -480,6 +483,12 @@ export default function LiveCameraSession({
               {error}
             </p>
           ) : null}
+          <div className="mt-3">
+            <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/45">
+              {copy.talk}
+            </p>
+            <AlmaVoiceControls language={language} visualContext={answer} />
+          </div>
           <div className="mt-3 flex items-start gap-2 text-[10px] leading-4 text-white/45">
             <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#38E8B0]" />
             <span>

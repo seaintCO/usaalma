@@ -19,6 +19,7 @@ import AlmaMobileDrawer from "@/components/alma-shell/AlmaMobileDrawer";
 import AlmaMobileBottomNav from "@/components/alma-shell/AlmaMobileBottomNav";
 import type { AlmaWorkspaceNavigationKey } from "@/components/alma-shell/types";
 import { useAlmaLocale } from "@/lib/i18n/useAlmaLocale";
+import AlmaThemeToggle from "@/components/theme/AlmaThemeToggle";
 
 type AlmaLanguage = "en" | "es";
 
@@ -291,6 +292,7 @@ export default function DashboardPage() {
     );
   }
   async function loadConversation(id: string) {
+    setActiveWorkspace("chat");
     setStreamEpoch((value) => value + 1);
     setConversationId(id);
     setConversationStatuses((current) => ({
@@ -358,6 +360,7 @@ export default function DashboardPage() {
     const url = new URL(window.location.href);
     url.searchParams.set("conversation", id);
     window.history[replace ? "replaceState" : "pushState"]({}, "", url);
+    setActiveWorkspace("chat");
     void loadConversation(id);
   }
 
@@ -511,7 +514,7 @@ export default function DashboardPage() {
 
   function renderSidebar() {
     return (
-      <aside className="flex h-full w-72 flex-col border-r border-[#E5E7EB] bg-[#F7F7F8] md:w-64">
+      <aside className="alma-sidebar flex h-full w-72 flex-col border-r border-[#E5E7EB] bg-[#F7F7F8] md:w-64">
         <div className="px-5 pb-4 pt-5">
           <button
             onClick={() => {
@@ -539,6 +542,9 @@ export default function DashboardPage() {
             >
               ES
             </button>
+          </div>
+          <div className="mt-2">
+            <AlmaThemeToggle />
           </div>
         </div>
 
@@ -591,7 +597,7 @@ export default function DashboardPage() {
 
   if (!authReady) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-white text-black">
+      <main className="alma-premium-root flex min-h-screen items-center justify-center bg-white text-black">
         <div className="text-center">
           <div className="text-3xl font-medium tracking-tight">ALMA</div>
           <div className="mt-2 text-sm text-[#6B7280]">{t.loading}</div>
@@ -601,7 +607,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <main className="flex h-[100dvh] w-full overflow-hidden bg-white text-[#111111]">
+    <main className="alma-premium-root flex h-[100dvh] w-full overflow-hidden bg-white text-[#111111]">
       <div className="hidden md:block">{renderSidebar()}</div>
 
       <AlmaMobileDrawer
@@ -642,12 +648,15 @@ export default function DashboardPage() {
             <Menu className="h-5 w-5" />
           </button>
           <span className="text-lg font-medium tracking-tight">ALMA</span>
-          <button
-            onClick={startNewChat}
-            className="rounded-lg p-2 hover:bg-[#F7F7F8]"
-          >
-            <PenSquare className="h-5 w-5" />
-          </button>
+          <div className="flex items-center gap-1">
+            <AlmaThemeToggle compact />
+            <button
+              onClick={startNewChat}
+              className="rounded-lg p-2 hover:bg-[#F7F7F8]"
+            >
+              <PenSquare className="h-5 w-5" />
+            </button>
+          </div>
         </div>
 
         {activeWorkspace === "home" ? (

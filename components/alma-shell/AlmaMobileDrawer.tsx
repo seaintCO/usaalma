@@ -4,6 +4,7 @@ import ConversationNavigation, {
 } from "./ConversationNavigation";
 import WorkspaceNavigation from "./WorkspaceNavigation";
 import type { AlmaMobileDrawerProps } from "./types";
+import AlmaThemeToggle from "@/components/theme/AlmaThemeToggle";
 
 export default function AlmaMobileDrawer({
   open,
@@ -30,7 +31,7 @@ export default function AlmaMobileDrawer({
 
   return (
     <div className="fixed inset-0 z-50 flex max-w-full md:hidden">
-      <aside className="flex h-full w-72 max-w-[85vw] shrink-0 flex-col border-r border-[#E5E7EB] bg-[#F7F7F8] md:w-64">
+      <aside className="alma-sidebar flex h-full w-72 max-w-[85vw] shrink-0 flex-col border-r border-[#E5E7EB] bg-[#F7F7F8] md:w-64">
         <div className="px-5 pb-4 pt-5">
           <button onClick={onBrandClick} className="text-left">
             <div className="text-lg font-medium tracking-tight">ALMA</div>
@@ -52,6 +53,9 @@ export default function AlmaMobileDrawer({
             >
               ES
             </button>
+          </div>
+          <div className="mt-2">
+            <AlmaThemeToggle />
           </div>
         </div>
 

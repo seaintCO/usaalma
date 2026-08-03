@@ -1,4 +1,5 @@
 import { Menu, PenSquare } from "lucide-react";
+import AlmaThemeToggle from "@/components/theme/AlmaThemeToggle";
 
 type WorkspaceHeaderProps = {
   title: string;
@@ -22,12 +23,15 @@ export default function WorkspaceHeader({
       <span className="min-w-0 flex-1 truncate text-center text-lg font-medium tracking-tight">
         {title}
       </span>
-      <button
-        onClick={onAskAlma}
-        className="shrink-0 rounded-lg p-2 hover:bg-[#F7F7F8]"
-      >
-        <PenSquare className="h-5 w-5" />
-      </button>
+      <div className="flex items-center gap-1">
+        <AlmaThemeToggle compact />
+        <button
+          onClick={onAskAlma}
+          className="shrink-0 rounded-lg p-2 hover:bg-[#F7F7F8]"
+        >
+          <PenSquare className="h-5 w-5" />
+        </button>
+      </div>
     </div>
   );
 }

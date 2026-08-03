@@ -36,6 +36,16 @@ const NATIVE_BOOTSTRAP = `
   (function () {
     document.documentElement.dataset.almaNativeIos = 'true';
     window.__ALMA_NATIVE_IOS__ = true;
+    var theme = localStorage.getItem('alma-theme') === 'light' ? 'light' : 'dark';
+    document.documentElement.dataset.almaTheme = theme;
+    document.documentElement.style.colorScheme = theme;
+    function reportTheme(){
+      if(window.ReactNativeWebView){
+        window.ReactNativeWebView.postMessage('theme:' + (document.documentElement.dataset.almaTheme || 'dark'));
+      }
+    }
+    new MutationObserver(reportTheme).observe(document.documentElement, {attributes:true, attributeFilter:['data-alma-theme']});
+    setTimeout(reportTheme, 50);
   })();
   true;
 `;
@@ -48,6 +58,7 @@ function AlmaApp() {
   const [notificationBusy, setNotificationBusy] = useState(false);
   const [canGoBack, setCanGoBack] = useState(false);
   const [canGoForward, setCanGoForward] = useState(false);
+  const [dark, setDark] = useState(true);
 
   const host = useMemo(() => new URL(configuredBase).host, []);
 
@@ -166,16 +177,43 @@ function AlmaApp() {
     }
   }
 
+  function toggleAppearance() {
+    const next = dark ? "light" : "dark";
+    setDark(!dark);
+    setToolsOpen(false);
+    webView.current?.injectJavaScript(`
+      (function(){
+        var next=${JSON.stringify(next)};
+        localStorage.setItem('alma-theme', next);
+        document.documentElement.dataset.almaTheme=next;
+        document.documentElement.style.colorScheme=next;
+        window.dispatchEvent(new CustomEvent('alma-theme-change',{detail:next}));
+      })(); true;
+    `);
+  }
+
+  const ink = dark ? "#F5F7FB" : "#080A0D";
+  const muted = dark ? "#99A5BA" : "#697386";
+  const chrome = dark ? "#080B12" : "#FFFFFF";
+
   return (
-    <SafeAreaView style={styles.safe}>
-      <StatusBar style="dark" />
-      <View style={styles.header}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: chrome }]}>
+      <StatusBar style={dark ? "light" : "dark"} />
+      <View
+        style={[
+          styles.header,
+          {
+            backgroundColor: chrome,
+            borderBottomColor: dark ? "#20283A" : "#D9DEE7",
+          },
+        ]}
+      >
         <View style={styles.brandMark}>
           <Text style={styles.brandLetter}>A</Text>
         </View>
         <View style={styles.headerCopy}>
-          <Text style={styles.title}>ALMA Office</Text>
-          <Text style={styles.host}>{host}</Text>
+          <Text style={[styles.title, { color: ink }]}>ALMA Office</Text>
+          <Text style={[styles.host, { color: muted }]}>{host}</Text>
         </View>
         <Pressable
           accessibilityRole="button"
@@ -183,11 +221,16 @@ function AlmaApp() {
           onPress={() => setToolsOpen(true)}
           style={styles.toolButton}
         >
-          <Ionicons name="add" size={25} color="#080A0D" />
+          <Ionicons name="add" size={25} color={ink} />
         </Pressable>
       </View>
 
-      <View style={styles.webContainer}>
+      <View
+        style={[
+          styles.webContainer,
+          { backgroundColor: dark ? "#05070C" : "#F7F8FA" },
+        ]}
+      >
         <WebView
           ref={webView}
           source={{ uri: source }}
@@ -208,6 +251,8 @@ function AlmaApp() {
           onLoadEnd={() => setLoading(false)}
           onError={() => setLoading(false)}
           onMessage={(event) => {
+            if (event.nativeEvent.data === "theme:dark") setDark(true);
+            if (event.nativeEvent.data === "theme:light") setDark(false);
             if (event.nativeEvent.data === "push:signin-required") {
               Alert.alert(
                 "Sign in required",
@@ -216,7 +261,10 @@ function AlmaApp() {
             }
           }}
           setSupportMultipleWindows={false}
-          style={styles.webView}
+          style={[
+            styles.webView,
+            { backgroundColor: dark ? "#05070C" : "#F7F8FA" },
+          ]}
         />
         {loading ? (
           <View style={styles.loader}>
@@ -225,7 +273,15 @@ function AlmaApp() {
         ) : null}
       </View>
 
-      <View style={styles.browserBar}>
+      <View
+        style={[
+          styles.browserBar,
+          {
+            backgroundColor: chrome,
+            borderTopColor: dark ? "#20283A" : "#D9DEE7",
+          },
+        ]}
+      >
         <Pressable
           disabled={!canGoBack}
           onPress={() => webView.current?.goBack()}
@@ -234,7 +290,7 @@ function AlmaApp() {
           <Ionicons
             name="chevron-back"
             size={22}
-            color={canGoBack ? "#080A0D" : "#B8BEC8"}
+            color={canGoBack ? ink : dark ? "#4C5568" : "#B8BEC8"}
           />
         </Pressable>
         <Pressable
@@ -245,20 +301,20 @@ function AlmaApp() {
           <Ionicons
             name="chevron-forward"
             size={22}
-            color={canGoForward ? "#080A0D" : "#B8BEC8"}
+            color={canGoForward ? ink : dark ? "#4C5568" : "#B8BEC8"}
           />
         </Pressable>
         <Pressable
           onPress={() => webView.current?.reload()}
           style={styles.browserButton}
         >
-          <Ionicons name="refresh" size={20} color="#080A0D" />
+          <Ionicons name="refresh" size={20} color={ink} />
         </Pressable>
         <Pressable
           onPress={() => setToolsOpen(true)}
           style={[styles.browserButton, styles.activeBrowserButton]}
         >
-          <Ionicons name="attach" size={20} color="#080A0D" />
+          <Ionicons name="attach" size={20} color={ink} />
         </Pressable>
       </View>
 
@@ -269,10 +325,10 @@ function AlmaApp() {
         onRequestClose={() => setToolsOpen(false)}
       >
         <Pressable style={styles.scrim} onPress={() => setToolsOpen(false)} />
-        <View style={styles.sheet}>
+        <View style={[styles.sheet, { backgroundColor: chrome }]}>
           <View style={styles.sheetHandle} />
-          <Text style={styles.sheetTitle}>Add to ALMA</Text>
-          <Text style={styles.sheetBody}>
+          <Text style={[styles.sheetTitle, { color: ink }]}>Add to ALMA</Text>
+          <Text style={[styles.sheetBody, { color: muted }]}>
             Permissions are requested only when you choose a tool.
           </Text>
           <View style={styles.toolGrid}>
@@ -280,29 +336,40 @@ function AlmaApp() {
               icon="camera-outline"
               label="Scan receipt"
               onPress={() => void openReceiptCamera()}
+              dark={dark}
             />
             <Tool
               icon="videocam-outline"
               label="Live Camera"
               onPress={() => void openLiveCamera()}
+              dark={dark}
             />
             <Tool
               icon="document-outline"
               label="Choose document"
               onPress={() => void openDocumentPicker()}
+              dark={dark}
             />
             <Tool
               icon="mic-outline"
               label="Talk to ALMA"
               onPress={() => void enableMicrophone()}
+              dark={dark}
             />
             <Tool
               icon="notifications-outline"
               label={notificationBusy ? "Enabling…" : "Notifications"}
               onPress={() => void enableNotifications()}
+              dark={dark}
+            />
+            <Tool
+              icon={dark ? "sunny-outline" : "moon-outline"}
+              label={dark ? "Light appearance" : "Dark appearance"}
+              onPress={toggleAppearance}
+              dark={dark}
             />
           </View>
-          <Text style={styles.privacy}>
+          <Text style={[styles.privacy, { color: muted }]}>
             Your files and business records use your signed-in ALMA workspace
             and are never shared across accounts.
           </Text>
@@ -316,15 +383,22 @@ function Tool({
   icon,
   label,
   onPress,
+  dark,
 }: {
   icon: keyof typeof Ionicons.glyphMap;
   label: string;
   onPress: () => void;
+  dark: boolean;
 }) {
   return (
-    <Pressable onPress={onPress} style={styles.toolCard}>
-      <Ionicons name={icon} size={24} color="#080A0D" />
-      <Text style={styles.toolLabel}>{label}</Text>
+    <Pressable
+      onPress={onPress}
+      style={[styles.toolCard, dark ? styles.toolCardDark : null]}
+    >
+      <Ionicons name={icon} size={24} color={dark ? "#F5F7FB" : "#080A0D"} />
+      <Text style={[styles.toolLabel, { color: dark ? "#F5F7FB" : "#080A0D" }]}>
+        {label}
+      </Text>
     </Pressable>
   );
 }
@@ -428,6 +502,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     backgroundColor: "#F8FAFC",
   },
+  toolCardDark: { borderColor: "#273149", backgroundColor: "#111622" },
   toolLabel: { fontSize: 14, fontWeight: "600", color: "#080A0D" },
   privacy: { marginTop: 18, color: "#697386", fontSize: 12, lineHeight: 18 },
 });

@@ -13,6 +13,7 @@ import {
   ShieldCheck,
   Sparkles,
   Users,
+  ChevronDown,
 } from "lucide-react";
 import type { ComponentType } from "react";
 import type { RoutedWorkspace } from "@/lib/platform/workspaceRoutes";
@@ -78,6 +79,13 @@ export default function WorkspaceNavigation({
         />
         <NavigationButton
           activeWorkspace={activeWorkspace}
+          itemKey="chat"
+          label={labels.alma}
+          icon={Bot}
+          onClick={onAskAlma}
+        />
+        <NavigationButton
+          activeWorkspace={activeWorkspace}
           itemKey="customers"
           label={labels.customers}
           icon={Users}
@@ -104,78 +112,72 @@ export default function WorkspaceNavigation({
           icon={CircleDollarSign}
           onClick={() => onWorkspaceNavigate("money")}
         />
-        <NavigationButton
-          activeWorkspace={activeWorkspace}
-          itemKey="automations"
-          label={labels.automations}
-          icon={Sparkles}
-          onClick={() => onWorkspaceNavigate("automations")}
-        />
-        <NavigationButton
-          activeWorkspace={activeWorkspace}
-          itemKey="chat"
-          label={labels.alma}
-          icon={Bot}
-          onClick={onAskAlma}
-        />
-        <NavigationButton
-          activeWorkspace={activeWorkspace}
-          itemKey="knowledge"
-          label={labels.knowledge}
-          icon={Library}
-          onClick={() => onWorkspaceNavigate("knowledge")}
-        />
-        <NavigationButton
-          activeWorkspace={activeWorkspace}
-          itemKey="reports"
-          label={labels.reports}
-          icon={FileSearch}
-          onClick={() => onWorkspaceNavigate("reports")}
-        />
       </div>
 
-      <div className="mx-2 my-5 h-px bg-[#E5E7EB]" />
-
-      <div className="mb-6 space-y-1">
-        <h5 className="mb-2 px-2 text-xs font-medium uppercase tracking-wide text-[#7C8495]">
-          {labels.secondary}
-        </h5>
-        <NavigationButton
-          activeWorkspace={activeWorkspace}
-          itemKey="approvals"
-          label={labels.approvals}
-          icon={ShieldCheck}
-          onClick={() => onWorkspaceNavigate("approvals")}
-        />
-        <NavigationButton
-          activeWorkspace={activeWorkspace}
-          itemKey="connections"
-          label={labels.connections}
-          icon={MessagesSquare}
-          onClick={() => onWorkspaceNavigate("connections")}
-        />
-        <NavigationButton
-          activeWorkspace={activeWorkspace}
-          itemKey="billing"
-          label={labels.billing}
-          icon={CreditCard}
-          onClick={() => onWorkspaceNavigate("billing")}
-        />
-        <NavigationButton
-          activeWorkspace={activeWorkspace}
-          itemKey="settings"
-          label={labels.settings}
-          icon={Settings}
-          onClick={() => onWorkspaceNavigate("settings")}
-        />
-        <NavigationButton
-          activeWorkspace={activeWorkspace}
-          itemKey="files"
-          label={labels.files}
-          icon={KeyRound}
-          onClick={() => onWorkspaceNavigate("files")}
-        />
-      </div>
+      <details className="group mb-6 border-t border-[#E5E7EB] pt-4">
+        <summary className="flex cursor-pointer list-none items-center justify-between rounded-xl px-3 py-2 text-xs font-medium text-[#7C8495] hover:bg-white">
+          <span>{labels.more}</span>
+          <ChevronDown className="h-4 w-4 transition group-open:rotate-180" />
+        </summary>
+        <div className="mt-2 space-y-1">
+          <NavigationButton
+            activeWorkspace={activeWorkspace}
+            itemKey="automations"
+            label={labels.automations}
+            icon={Sparkles}
+            onClick={() => onWorkspaceNavigate("automations")}
+          />
+          <NavigationButton
+            activeWorkspace={activeWorkspace}
+            itemKey="knowledge"
+            label={labels.knowledge}
+            icon={Library}
+            onClick={() => onWorkspaceNavigate("knowledge")}
+          />
+          <NavigationButton
+            activeWorkspace={activeWorkspace}
+            itemKey="reports"
+            label={labels.reports}
+            icon={FileSearch}
+            onClick={() => onWorkspaceNavigate("reports")}
+          />
+          <NavigationButton
+            activeWorkspace={activeWorkspace}
+            itemKey="approvals"
+            label={labels.approvals}
+            icon={ShieldCheck}
+            onClick={() => onWorkspaceNavigate("approvals")}
+          />
+          <NavigationButton
+            activeWorkspace={activeWorkspace}
+            itemKey="connections"
+            label={labels.connections}
+            icon={MessagesSquare}
+            onClick={() => onWorkspaceNavigate("connections")}
+          />
+          <NavigationButton
+            activeWorkspace={activeWorkspace}
+            itemKey="billing"
+            label={labels.billing}
+            icon={CreditCard}
+            onClick={() => onWorkspaceNavigate("billing")}
+          />
+          <NavigationButton
+            activeWorkspace={activeWorkspace}
+            itemKey="settings"
+            label={labels.settings}
+            icon={Settings}
+            onClick={() => onWorkspaceNavigate("settings")}
+          />
+          <NavigationButton
+            activeWorkspace={activeWorkspace}
+            itemKey="files"
+            label={labels.files}
+            icon={KeyRound}
+            onClick={() => onWorkspaceNavigate("files")}
+          />
+        </div>
+      </details>
     </>
   );
 }

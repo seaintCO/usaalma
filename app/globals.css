@@ -291,3 +291,162 @@ html[data-alma-theme="dark"] .alma-premium-root {
     transition: none !important;
   }
 }
+
+/* Public SaaS experience */
+.alma-saas {
+  position: relative;
+  background:
+    radial-gradient(
+      circle at 20% 5%,
+      rgba(102, 76, 255, 0.12),
+      transparent 27%
+    ),
+    radial-gradient(
+      circle at 82% 15%,
+      rgba(27, 214, 225, 0.09),
+      transparent 24%
+    ),
+    #05070c;
+}
+
+.alma-saas::before {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  content: "";
+  opacity: 0.07;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.09) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.09) 1px, transparent 1px);
+  background-size: 52px 52px;
+  mask-image: linear-gradient(to bottom, black, transparent 76%);
+}
+
+.alma-saas-gradient {
+  color: transparent;
+  background: linear-gradient(100deg, #ffffff 5%, #67e8f9 48%, #9b8cff 88%);
+  background-clip: text;
+}
+
+.alma-saas-orb {
+  position: absolute;
+  pointer-events: none;
+  border-radius: 999px;
+  filter: blur(110px);
+}
+
+.alma-saas-orb--one {
+  top: 9rem;
+  left: -9rem;
+  width: 30rem;
+  height: 30rem;
+  background: rgba(108, 76, 255, 0.16);
+}
+
+.alma-saas-orb--two {
+  top: 5rem;
+  right: -10rem;
+  width: 34rem;
+  height: 34rem;
+  background: rgba(31, 206, 221, 0.1);
+}
+
+.alma-saas-card {
+  border: 1px solid rgba(214, 226, 255, 0.09);
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.075), transparent 35%),
+    rgba(13, 17, 27, 0.72);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 28px 90px rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(28px) saturate(140%);
+}
+
+.alma-phone-shell {
+  position: relative;
+  overflow: hidden;
+  min-height: 665px;
+  border: 1px solid rgba(226, 234, 255, 0.17);
+  border-radius: 46px;
+  background:
+    radial-gradient(circle at 17% 8%, rgba(133, 94, 255, 0.2), transparent 30%),
+    radial-gradient(
+      circle at 88% 24%,
+      rgba(25, 211, 224, 0.14),
+      transparent 27%
+    ),
+    linear-gradient(155deg, rgba(18, 24, 38, 0.98), rgba(6, 8, 14, 0.99));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.15),
+    inset 0 0 0 8px rgba(0, 0, 0, 0.35),
+    0 45px 120px rgba(0, 0, 0, 0.56),
+    0 0 100px rgba(80, 70, 255, 0.13);
+}
+
+.alma-phone-reflection {
+  position: absolute;
+  top: -22%;
+  left: -38%;
+  width: 75%;
+  height: 105%;
+  transform: rotate(16deg);
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.075),
+    transparent
+  );
+}
+
+.alma-phone-glow {
+  position: absolute;
+  inset: 12% -12% 6%;
+  border-radius: 999px;
+  background: linear-gradient(
+    145deg,
+    rgba(113, 83, 255, 0.24),
+    rgba(27, 211, 225, 0.13)
+  );
+  filter: blur(70px);
+}
+
+.alma-demo-orb {
+  width: 26px;
+  height: 26px;
+  border: 1px solid rgba(103, 232, 249, 0.5);
+  border-radius: 999px;
+  background: radial-gradient(
+    circle at 30% 30%,
+    #d8fbff,
+    #6d5df7 45%,
+    transparent 72%
+  );
+  box-shadow: 0 0 28px rgba(103, 232, 249, 0.42);
+  animation: alma-demo-breathe 1.2s ease-in-out infinite;
+}
+
+@keyframes alma-demo-breathe {
+  0%,
+  100% {
+    transform: scale(0.82);
+    opacity: 0.55;
+  }
+  50% {
+    transform: scale(1.08);
+    opacity: 1;
+  }
+}
+
+@media (max-width: 480px) {
+  .alma-phone-shell {
+    min-height: 625px;
+    border-radius: 38px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .alma-demo-orb {
+    animation: none;
+  }
+}

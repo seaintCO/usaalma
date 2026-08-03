@@ -77,30 +77,30 @@ type Copy = {
 
 const copy: Record<ChatLanguage, Copy> = {
   en: {
-    greeting: "Good morning.",
-    identity: "I am ALMA.",
-    subtitle: "Chat, images, documents, code, and automation in one place.",
-    prompt: "Ask ALMA to create, edit, write, or build...",
+    greeting: "What can I handle for you?",
+    identity: "",
+    subtitle: "Ask about customers, messages, work, money, or anything in your office.",
+    prompt: "Message ALMA...",
     disclaimer: "ALMA can make mistakes. Verify important information.",
     thinking: "ALMA is thinking...",
-    chipImage: "Create a premium image",
-    chipLogo: "Make a logo",
-    chipAd: "Generate a 16:9 ad",
-    chipCode: "Write code",
+    chipImage: "Give me today’s briefing",
+    chipLogo: "Who needs a follow-up?",
+    chipAd: "What needs attention in money?",
+    chipCode: "Plan my work today",
     loading: "Loading conversation...",
   },
   es: {
-    greeting: "Buenos dias.",
-    identity: "Soy ALMA.",
+    greeting: "¿Qué quieres que resuelva?",
+    identity: "",
     subtitle:
-      "Chat, imagenes, documentos, codigo y automatizacion en un solo lugar.",
-    prompt: "Pidele a ALMA crear, editar, escribir o construir...",
+      "Pregunta sobre clientes, mensajes, trabajo, dinero o cualquier parte de tu oficina.",
+    prompt: "Mensaje para ALMA...",
     disclaimer: "ALMA puede cometer errores. Verifica informacion importante.",
     thinking: "ALMA esta pensando...",
-    chipImage: "Crea una imagen premium",
-    chipLogo: "Haz un logo",
-    chipAd: "Genera un anuncio 16:9",
-    chipCode: "Escribe codigo",
+    chipImage: "Dame el resumen de hoy",
+    chipLogo: "¿Quién necesita seguimiento?",
+    chipAd: "¿Qué necesita atención en dinero?",
+    chipCode: "Planifica mi trabajo de hoy",
     loading: "Cargando conversacion...",
   },
 };
@@ -325,14 +325,14 @@ export function ChatMessageList({
   return (
     <div className="mx-auto w-full max-w-3xl space-y-5 px-4 py-8 md:px-6 md:py-12">
       {messages.length === 0 ? (
-        <div className="mt-20 text-center md:mt-28">
-          <h1 className="mb-2 text-3xl font-normal tracking-tight md:text-4xl">
+        <div className="mt-14 text-center md:mt-24">
+          <span className="mx-auto mb-5 grid h-12 w-12 place-items-center rounded-2xl border border-[#E5E7EB] bg-white/5 shadow-[0_0_40px_rgba(49,213,236,.12)]">
+            <span className="h-3 w-3 rounded-full bg-gradient-to-br from-cyan-300 to-violet-500 shadow-[0_0_18px_rgba(49,213,236,.7)]" />
+          </span>
+          <h1 className="mb-3 text-3xl font-normal tracking-[-0.045em] md:text-4xl">
             {copy[language].greeting}
           </h1>
-          <h2 className="mb-4 text-3xl font-normal tracking-tight md:text-4xl">
-            {copy[language].identity}
-          </h2>
-          <p className="text-lg text-[#6B7280]">{copy[language].subtitle}</p>
+          <p className="mx-auto max-w-xl text-sm leading-6 text-[#6B7280] md:text-base">{copy[language].subtitle}</p>
         </div>
       ) : (
         messages.map((message) => (

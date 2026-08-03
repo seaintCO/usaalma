@@ -16,7 +16,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import { WebView, type WebViewNavigation } from "react-native-webview";
+import { WebView } from "react-native-webview";
 import {
   ALMA_ROUTES,
   classifyNavigation,
@@ -56,8 +56,6 @@ function AlmaApp() {
   const [loading, setLoading] = useState(true);
   const [toolsOpen, setToolsOpen] = useState(false);
   const [notificationBusy, setNotificationBusy] = useState(false);
-  const [canGoBack, setCanGoBack] = useState(false);
-  const [canGoForward, setCanGoForward] = useState(false);
   const [dark, setDark] = useState(true);
 
   const host = useMemo(() => new URL(configuredBase).host, []);
@@ -72,12 +70,6 @@ function AlmaApp() {
     if (decision === "internal" || decision === "oauth") return true;
     if (decision === "external") void Linking.openURL(request.url);
     return false;
-  }
-
-  function afterNavigate(event: WebViewNavigation) {
-    setCanGoBack(event.canGoBack);
-    setCanGoForward(event.canGoForward);
-    setLoading(false);
   }
 
   async function openReceiptCamera() {
@@ -246,7 +238,6 @@ function AlmaApp() {
           mediaPlaybackRequiresUserAction
           allowsBackForwardNavigationGestures
           onShouldStartLoadWithRequest={handleNavigation}
-          onNavigationStateChange={afterNavigate}
           onLoadStart={() => setLoading(true)}
           onLoadEnd={() => setLoading(false)}
           onError={() => setLoading(false)}
@@ -271,51 +262,6 @@ function AlmaApp() {
             <ActivityIndicator color="#25C9A7" />
           </View>
         ) : null}
-      </View>
-
-      <View
-        style={[
-          styles.browserBar,
-          {
-            backgroundColor: chrome,
-            borderTopColor: dark ? "#20283A" : "#D9DEE7",
-          },
-        ]}
-      >
-        <Pressable
-          disabled={!canGoBack}
-          onPress={() => webView.current?.goBack()}
-          style={styles.browserButton}
-        >
-          <Ionicons
-            name="chevron-back"
-            size={22}
-            color={canGoBack ? ink : dark ? "#4C5568" : "#B8BEC8"}
-          />
-        </Pressable>
-        <Pressable
-          disabled={!canGoForward}
-          onPress={() => webView.current?.goForward()}
-          style={styles.browserButton}
-        >
-          <Ionicons
-            name="chevron-forward"
-            size={22}
-            color={canGoForward ? ink : dark ? "#4C5568" : "#B8BEC8"}
-          />
-        </Pressable>
-        <Pressable
-          onPress={() => webView.current?.reload()}
-          style={styles.browserButton}
-        >
-          <Ionicons name="refresh" size={20} color={ink} />
-        </Pressable>
-        <Pressable
-          onPress={() => setToolsOpen(true)}
-          style={[styles.browserButton, styles.activeBrowserButton]}
-        >
-          <Ionicons name="attach" size={20} color={ink} />
-        </Pressable>
       </View>
 
       <Modal
@@ -455,24 +401,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  browserBar: {
-    height: 48,
-    flexDirection: "row",
-    justifyContent: "center",
-    gap: 18,
-    alignItems: "center",
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: "#D9DEE7",
-    backgroundColor: "#FFFFFF",
-  },
-  browserButton: {
-    width: 40,
-    height: 36,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  activeBrowserButton: { backgroundColor: "#DDF8F2" },
   scrim: { flex: 1, backgroundColor: "rgba(8,10,13,0.38)" },
   sheet: {
     backgroundColor: "#FFFFFF",

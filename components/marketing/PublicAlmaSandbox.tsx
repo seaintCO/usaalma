@@ -6,140 +6,138 @@ import {
   Bot,
   BriefcaseBusiness,
   Check,
+  ChevronRight,
   CircleDollarSign,
   Inbox,
-  Languages,
+  Menu,
+  MessageCircle,
+  Mic,
   Play,
-  RefreshCw,
   ShieldCheck,
+  Sparkles,
   Users,
+  Video,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useAlmaLocale } from "@/lib/i18n/useAlmaLocale";
 import { useIsAlmaIosApp } from "@/lib/mobile/platform";
 
-type WorkflowKey = "customers" | "inbox" | "work" | "money" | "alma";
-type DemoState = "ready" | "working" | "complete";
+type DemoKey = "alma" | "customers" | "inbox" | "work" | "money";
+type DemoState = "ready" | "working" | "done";
 
-const workflows = {
-  customers: {
-    icon: Users,
+const demoContent = {
+  alma: {
+    icon: Sparkles,
     en: {
-      name: "Customers",
-      prompt: "Show the leads that need a follow-up today.",
-      result: "3 leads need attention",
+      label: "Today",
+      prompt: "Give me my morning business briefing.",
+      result: "Your office is ready",
       rows: [
-        "Rivera Home · estimate viewed · follow up today",
-        "Luna Bakery · new website inquiry · assign owner",
-        "Martinez HVAC · no reply for 4 days · draft reminder",
+        "3 leads need a reply",
+        "2 appointments today",
+        "1 approval waiting",
       ],
     },
     es: {
-      name: "Clientes",
-      prompt: "Muestra los prospectos que necesitan seguimiento hoy.",
-      result: "3 prospectos requieren atención",
+      label: "Hoy",
+      prompt: "Dame el resumen de mi negocio esta mañana.",
+      result: "Tu oficina está lista",
       rows: [
-        "Hogar Rivera · estimado visto · seguimiento hoy",
-        "Panadería Luna · consulta nueva · asignar responsable",
-        "Martinez HVAC · 4 días sin respuesta · preparar recordatorio",
+        "3 prospectos necesitan respuesta",
+        "2 citas hoy",
+        "1 aprobación pendiente",
+      ],
+    },
+  },
+  customers: {
+    icon: Users,
+    en: {
+      label: "Customers",
+      prompt: "Who should I follow up with today?",
+      result: "3 relationships need attention",
+      rows: [
+        "Rivera Home · estimate viewed",
+        "Luna Bakery · new lead",
+        "Martinez HVAC · 4 days quiet",
+      ],
+    },
+    es: {
+      label: "Clientes",
+      prompt: "¿Con quién debo dar seguimiento hoy?",
+      result: "3 relaciones requieren atención",
+      rows: [
+        "Hogar Rivera · estimado visto",
+        "Panadería Luna · prospecto nuevo",
+        "Martinez HVAC · 4 días sin respuesta",
       ],
     },
   },
   inbox: {
     icon: Inbox,
     en: {
-      name: "Inbox",
-      prompt: "Prepare replies for the messages waiting on me.",
-      result: "2 reply drafts prepared",
+      label: "Inbox",
+      prompt: "Organize the messages waiting on me.",
+      result: "2 drafts are ready for review",
       rows: [
-        "Email · availability request · English reply drafted",
-        "WhatsApp · estimate question · Spanish reply drafted",
-        "Protected action · nothing will be sent without approval",
+        "Availability request · reply drafted",
+        "Estimate question · Spanish draft",
+        "Nothing sends without approval",
       ],
     },
     es: {
-      name: "Bandeja",
-      prompt: "Prepara respuestas para los mensajes que esperan por mí.",
-      result: "2 respuestas preparadas",
+      label: "Bandeja",
+      prompt: "Organiza los mensajes que esperan por mí.",
+      result: "2 borradores listos para revisar",
       rows: [
-        "Correo · solicitud de disponibilidad · respuesta en inglés",
-        "WhatsApp · pregunta de estimado · respuesta en español",
-        "Acción protegida · nada se enviará sin aprobación",
+        "Solicitud de disponibilidad · borrador",
+        "Pregunta de estimado · respuesta",
+        "Nada se envía sin aprobación",
       ],
     },
   },
   work: {
     icon: BriefcaseBusiness,
     en: {
-      name: "Work",
-      prompt: "Organize today around appointments and overdue tasks.",
+      label: "Work",
+      prompt: "Organize my work around today’s appointments.",
       result: "Today is organized",
       rows: [
         "8:30 · review overdue invoices",
-        "10:00 · customer appointment · Rivera Home",
-        "13:30 · estimate follow-up block",
-        "16:00 · payroll preparation review",
+        "10:00 · Rivera Home appointment",
+        "1:30 · estimate follow-up block",
       ],
     },
     es: {
-      name: "Trabajo",
-      prompt: "Organiza hoy alrededor de citas y tareas vencidas.",
+      label: "Trabajo",
+      prompt: "Organiza mi trabajo alrededor de las citas de hoy.",
       result: "El día está organizado",
       rows: [
         "8:30 · revisar facturas vencidas",
-        "10:00 · cita con cliente · Hogar Rivera",
-        "13:30 · bloque de seguimiento de estimados",
-        "16:00 · revisión de preparación de nómina",
+        "10:00 · cita con Hogar Rivera",
+        "1:30 · bloque de seguimientos",
       ],
     },
   },
   money: {
     icon: CircleDollarSign,
     en: {
-      name: "Money",
-      prompt: "Explain this month's cash flow without counting transfers.",
-      result: "Bookkeeping preparation summary",
+      label: "Money",
+      prompt: "What needs attention in my money?",
+      result: "Cash flow looks healthy",
       rows: [
-        "Posted operating income · $18,420",
-        "Operating expenses · $11,280",
-        "Estimated operating profit · $7,140",
-        "4 transactions and 2 receipts need review",
+        "$18,420 operating income",
+        "$11,280 operating expenses",
+        "4 transactions need review",
       ],
     },
     es: {
-      name: "Dinero",
-      prompt: "Explica el flujo de caja del mes sin contar transferencias.",
-      result: "Resumen de preparación contable",
+      label: "Dinero",
+      prompt: "¿Qué necesita atención en mi dinero?",
+      result: "El flujo de caja se ve saludable",
       rows: [
-        "Ingresos operativos registrados · $18,420",
-        "Gastos operativos · $11,280",
-        "Ganancia operativa estimada · $7,140",
-        "4 transacciones y 2 recibos requieren revisión",
-      ],
-    },
-  },
-  alma: {
-    icon: Bot,
-    en: {
-      name: "ALMA",
-      prompt: "Give me the morning business briefing.",
-      result: "Morning briefing prepared",
-      rows: [
-        "3 leads need a response",
-        "2 appointments are scheduled today",
-        "1 invoice is overdue",
-        "1 protected action is waiting for approval",
-      ],
-    },
-    es: {
-      name: "ALMA",
-      prompt: "Dame el resumen empresarial de la mañana.",
-      result: "Resumen de la mañana preparado",
-      rows: [
-        "3 prospectos necesitan respuesta",
-        "2 citas están programadas hoy",
-        "1 factura está vencida",
-        "1 acción protegida espera aprobación",
+        "$18,420 de ingresos operativos",
+        "$11,280 de gastos",
+        "4 transacciones por revisar",
       ],
     },
   },
@@ -147,170 +145,106 @@ const workflows = {
 
 const copy = {
   en: {
-    nav: ["Experience", "What it manages", "Control", "Pricing"],
-    login: "Log in",
-    create: "Create account",
-    eyebrow: "AUTONOMOUS BUSINESS OFFICE",
-    title: "Run the business. Keep the control.",
+    signIn: "Sign in",
+    create: "Start free",
+    eyebrow: "THE CALM BUSINESS OPERATING SYSTEM",
+    titleA: "Run your business.",
+    titleB: "Just ask ALMA.",
     subtitle:
-      "Manage customers, conversations, money, tasks, invoices, documents, and daily operations—with AI only when you choose it.",
+      "Customers, messages, work, and money in one simple conversation—with powerful automation behind it.",
     primary: "Create my ALMA",
-    pricing: "View pricing",
-    demoLabel: "Interactive product sandbox",
-    demoSafe:
-      "This public demo is deterministic. It makes no provider calls, changes no records, and sends nothing.",
-    command: "Command ALMA",
-    run: "Run demo",
-    replay: "Replay",
-    ready: "Ready for a business request",
-    working: "ALMA is organizing the workspace…",
-    result: "Result",
-    activity: "Business activity",
-    attention: "Requires attention",
-    attentionItems: [
-      "3 customer replies",
-      "1 overdue invoice",
-      "4 transactions to review",
-    ],
-    promise: "One office. Four jobs.",
-    promiseBody:
-      "Talk to customers. Manage the work. Track the money. Let ALMA assist or automate only what you authorize.",
-    customers: "Talk to customers",
-    customersBody:
-      "Contacts, companies, leads, pipeline, a unified inbox, saved replies, follow-ups, and human takeover.",
-    operations: "Manage the work",
-    operationsBody:
-      "Tasks, appointments, estimates, invoices, documents, approvals, and recurring rules.",
-    money: "Track the money",
-    moneyBody:
-      "Income, expenses, receipts, payments, reports, payroll preparation, tax readiness, and QuickBooks.",
-    assist: "Let ALMA assist",
-    assistBody:
-      "A metered business assistant grounded in your workspace with permissions, usage limits, and audit history.",
-    control: "Autonomy without surrendering control.",
+    demo: "Try the live preview",
+    trusted: "Built for real work",
+    safe: "Approval protected",
+    bilingual: "English + Spanish",
+    phoneGreeting: "Good morning, Luis",
+    phoneBody: "What would you like to handle today?",
+    placeholder: "Ask ALMA anything about your business…",
+    run: "Run preview",
+    working: "ALMA is organizing your office…",
+    preview: "Interactive product preview",
+    previewNote: "No account, provider call, or record change.",
+    oneChat: "One conversation. Your whole office.",
+    oneChatBody:
+      "Start with a question. Open the details only when you need them.",
+    stepAsk: "Ask naturally",
+    stepAskBody: "No training required. Say what you need in plain language.",
+    stepReview: "Review the plan",
+    stepReviewBody: "ALMA organizes context and shows what needs approval.",
+    stepDone: "Stay in control",
+    stepDoneBody: "Track activity, outcomes, and every protected action.",
+    power: "Powerful underneath. Simple on purpose.",
+    powerBody:
+      "CRM, inbox, tasks, invoices, documents, voice, live camera, and automation stay connected behind one calm interface.",
+    control: "Autonomy with guardrails",
     controlBody:
-      "Manual, Draft, Assisted, and Autonomous modes let you decide exactly what ALMA may do. Messages, financial changes, exports, and destructive actions remain protected.",
-    bilingual: "English and Spanish, everywhere.",
-    bilingualBody:
-      "The workspace, customer records, documents, billing, errors, and assistant respect the language you choose.",
-    priceTitle: "Choose your office",
+      "Choose manual, draft, assisted, or autonomous behavior. Sensitive actions remain approval protected.",
+    pricing: "Simple plans",
     office: "ALMA Office",
     ai: "ALMA AI",
-    perMonth: "/month",
-    buy: "Start",
-    officeBody: "A complete business operating system without generative AI.",
+    officeBody: "Your complete business workspace without paid generative AI.",
     aiBody:
-      "The complete office plus measured AI assistance and approval-controlled autonomy.",
-    officeItems: [
-      "CRM, Inbox, Work, Money, Reports",
-      "Estimates, invoices, receipts, and payments",
-      "Payroll and tax preparation",
-      "Rule-based automations",
-    ],
-    aiItems: [
-      "Everything in ALMA Office",
-      "Business assistant and drafting",
-      "Extraction, summaries, and suggestions",
-      "Usage limits and approval controls",
-    ],
-    disclaimer:
-      "ALMA prepares business and bookkeeping records. It is not a bank, payroll processor, tax filing service, law firm, or licensed accountant.",
-    final: "Your business should feel organized before the day starts.",
-    finalBody:
-      "Start with the sandbox. Create a real workspace when you are ready.",
+      "Everything in Office plus metered chat, voice, vision, documents, and autonomous assistance.",
+    month: "/month",
+    start: "Get started",
+    final: "A calmer way to run the business starts here.",
+    finalBody: "One place to ask, review, approve, and move forward.",
   },
   es: {
-    nav: ["Experiencia", "Qué administra", "Control", "Precios"],
-    login: "Iniciar sesión",
-    create: "Crear cuenta",
-    eyebrow: "OFICINA EMPRESARIAL AUTÓNOMA",
-    title: "Opera el negocio. Conserva el control.",
+    signIn: "Iniciar sesión",
+    create: "Comenzar gratis",
+    eyebrow: "EL SISTEMA OPERATIVO EMPRESARIAL TRANQUILO",
+    titleA: "Opera tu negocio.",
+    titleB: "Solo pídeselo a ALMA.",
     subtitle:
-      "Administra clientes, conversaciones, dinero, tareas, facturas, documentos y operaciones diarias, con IA solo cuando tú la eliges.",
+      "Clientes, mensajes, trabajo y dinero en una conversación simple, con automatización potente detrás.",
     primary: "Crear mi ALMA",
-    pricing: "Ver precios",
-    demoLabel: "Sandbox interactivo del producto",
-    demoSafe:
-      "Esta demo pública es determinista. No llama proveedores, no cambia registros y no envía nada.",
-    command: "Indica qué debe hacer ALMA",
-    run: "Ejecutar demo",
-    replay: "Repetir",
-    ready: "Lista para una solicitud empresarial",
-    working: "ALMA está organizando el espacio…",
-    result: "Resultado",
-    activity: "Actividad empresarial",
-    attention: "Requiere atención",
-    attentionItems: [
-      "3 respuestas a clientes",
-      "1 factura vencida",
-      "4 transacciones por revisar",
-    ],
-    promise: "Una oficina. Cuatro trabajos.",
-    promiseBody:
-      "Habla con clientes. Administra el trabajo. Controla el dinero. Permite que ALMA asista o automatice solo lo que autorizas.",
-    customers: "Habla con clientes",
-    customersBody:
-      "Contactos, empresas, prospectos, pipeline, bandeja unificada, respuestas, seguimientos y control humano.",
-    operations: "Administra el trabajo",
-    operationsBody:
-      "Tareas, citas, estimados, facturas, documentos, aprobaciones y reglas recurrentes.",
-    money: "Controla el dinero",
-    moneyBody:
-      "Ingresos, gastos, recibos, pagos, reportes, preparación de nómina, impuestos y QuickBooks.",
-    assist: "Deja que ALMA asista",
-    assistBody:
-      "Un asistente empresarial medido, basado en tu espacio, con permisos, límites y auditoría.",
-    control: "Autonomía sin entregar el control.",
+    demo: "Probar vista interactiva",
+    trusted: "Hecho para trabajo real",
+    safe: "Protegido por aprobación",
+    bilingual: "Inglés + Español",
+    phoneGreeting: "Buenos días, Luis",
+    phoneBody: "¿Qué quieres resolver hoy?",
+    placeholder: "Pregúntale a ALMA sobre tu negocio…",
+    run: "Ejecutar vista",
+    working: "ALMA está organizando tu oficina…",
+    preview: "Vista interactiva del producto",
+    previewNote: "Sin cuenta, llamadas externas ni cambios de datos.",
+    oneChat: "Una conversación. Toda tu oficina.",
+    oneChatBody:
+      "Empieza con una pregunta. Abre los detalles solo cuando los necesites.",
+    stepAsk: "Pregunta naturalmente",
+    stepAskBody: "Sin capacitación. Di lo que necesitas en lenguaje sencillo.",
+    stepReview: "Revisa el plan",
+    stepReviewBody:
+      "ALMA organiza el contexto y muestra lo que requiere aprobación.",
+    stepDone: "Mantén el control",
+    stepDoneBody: "Sigue la actividad, los resultados y cada acción protegida.",
+    power: "Potente por dentro. Simple a propósito.",
+    powerBody:
+      "CRM, bandeja, tareas, facturas, documentos, voz, cámara en vivo y automatización conectados detrás de una interfaz tranquila.",
+    control: "Autonomía con límites",
     controlBody:
-      "Los modos Manual, Borrador, Asistido y Autónomo determinan exactamente qué puede hacer ALMA. Mensajes, cambios financieros, exportaciones y eliminaciones permanecen protegidos.",
-    bilingual: "Inglés y español, en todas partes.",
-    bilingualBody:
-      "El espacio, clientes, documentos, facturación, errores y asistente respetan el idioma elegido.",
-    priceTitle: "Elige tu oficina",
+      "Elige manual, borrador, asistido o autónomo. Las acciones sensibles siguen protegidas por aprobación.",
+    pricing: "Planes simples",
     office: "ALMA Office",
     ai: "ALMA AI",
-    perMonth: "/mes",
-    buy: "Comenzar",
-    officeBody: "Un sistema operativo empresarial completo sin IA generativa.",
+    officeBody: "Tu espacio empresarial completo sin IA generativa pagada.",
     aiBody:
-      "La oficina completa más asistencia medida y autonomía con aprobación.",
-    officeItems: [
-      "CRM, Bandeja, Trabajo, Dinero y Reportes",
-      "Estimados, facturas, recibos y pagos",
-      "Preparación de nómina e impuestos",
-      "Automatizaciones por reglas",
-    ],
-    aiItems: [
-      "Todo en ALMA Office",
-      "Asistente empresarial y redacción",
-      "Extracción, resúmenes y sugerencias",
-      "Límites de uso y aprobaciones",
-    ],
-    disclaimer:
-      "ALMA prepara registros empresariales y contables. No es banco, procesador de nómina, servicio fiscal, bufete ni contador profesional.",
-    final: "Tu negocio debe sentirse organizado antes de comenzar el día.",
-    finalBody:
-      "Comienza con el sandbox. Crea un espacio real cuando estés listo.",
+      "Todo en Office más chat, voz, visión, documentos y asistencia autónoma medida.",
+    month: "/mes",
+    start: "Comenzar",
+    final: "Una manera más tranquila de operar empieza aquí.",
+    finalBody: "Un lugar para pedir, revisar, aprobar y avanzar.",
   },
 } as const;
 
-export default function PublicAlmaSandbox() {
-  const isIosApp = useIsAlmaIosApp();
-  const { locale, setLocale } = useAlmaLocale();
+function PhoneDemo({ locale }: { locale: "en" | "es" }) {
   const t = copy[locale];
-  const [workflow, setWorkflow] = useState<WorkflowKey>("alma");
+  const [active, setActive] = useState<DemoKey>("alma");
   const [state, setState] = useState<DemoState>("ready");
-  const [command, setCommand] = useState<string>(workflows.alma[locale].prompt);
   const timer = useRef<number | null>(null);
-  const keys = Object.keys(workflows) as WorkflowKey[];
-  const current = workflows[workflow][locale];
-
-  useEffect(() => {
-    // Keep the deterministic demo command aligned to its selected workflow.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setCommand(workflows[workflow][locale].prompt);
-    setState("ready");
-  }, [locale, workflow]);
+  const current = demoContent[active][locale];
 
   useEffect(
     () => () => {
@@ -319,361 +253,392 @@ export default function PublicAlmaSandbox() {
     [],
   );
 
-  function run() {
-    if (!command.trim() || state === "working") return;
-    setState("working");
-    timer.current = window.setTimeout(() => setState("complete"), 650);
+  function choose(key: DemoKey) {
+    if (timer.current) window.clearTimeout(timer.current);
+    setActive(key);
+    setState("ready");
   }
 
-  function choose(key: WorkflowKey) {
-    if (timer.current) window.clearTimeout(timer.current);
-    setWorkflow(key);
+  function run() {
+    if (state === "working") return;
+    setState("working");
+    timer.current = window.setTimeout(() => setState("done"), 720);
   }
 
   return (
-    <main className="min-h-screen bg-white text-[#111]">
-      <header className="sticky top-0 z-50 border-b border-[#E4E7EC] bg-white/95 backdrop-blur">
-        <div className="mx-auto flex h-16 max-w-[1440px] items-center justify-between px-4 md:px-8">
-          <Link href="/" className="font-medium tracking-tight">
-            ALMA
-            <span className="ml-2 text-[10px] font-normal text-[#667085]">
+    <div className="relative mx-auto w-full max-w-[390px]" id="preview">
+      <div className="alma-phone-glow" />
+      <div className="alma-phone-shell">
+        <div className="alma-phone-reflection" />
+        <div className="relative z-10 flex items-center justify-between px-5 pb-3 pt-5 text-[11px] text-white/55">
+          <span>9:41</span>
+          <span className="h-5 w-20 rounded-full bg-black/80" />
+          <span>● ● ●</span>
+        </div>
+        <div className="relative z-10 border-y border-white/8 px-5 py-3">
+          <div className="flex items-center justify-between">
+            <button type="button" className="rounded-xl p-2 text-white/70">
+              <Menu className="h-5 w-5" />
+            </button>
+            <span className="text-sm font-semibold tracking-[0.18em]">
+              ALMA
+            </span>
+            <span className="grid h-9 w-9 place-items-center rounded-full border border-white/10 bg-white/5">
+              <Sparkles className="h-4 w-4 text-cyan-200" />
+            </span>
+          </div>
+        </div>
+        <div className="relative z-10 px-5 pb-6 pt-7">
+          <span className="inline-flex items-center gap-2 rounded-full border border-emerald-300/15 bg-emerald-300/8 px-3 py-1 text-[10px] text-emerald-200">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-300 shadow-[0_0_10px_#6ee7b7]" />{" "}
+            Office ready
+          </span>
+          <h3 className="mt-5 text-[26px] font-medium tracking-[-0.04em] text-white">
+            {t.phoneGreeting}
+          </h3>
+          <p className="mt-2 text-sm text-white/48">{t.phoneBody}</p>
+
+          <div className="mt-5 grid grid-cols-5 gap-1.5">
+            {(Object.keys(demoContent) as DemoKey[]).map((key) => {
+              const item = demoContent[key];
+              const Icon = item.icon;
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => choose(key)}
+                  className={`motion-safe:transition rounded-2xl border px-1 py-3 ${active === key ? "border-cyan-300/30 bg-cyan-300/10 text-white shadow-[0_0_30px_rgba(49,213,236,.12)]" : "border-white/7 bg-white/[.035] text-white/48"}`}
+                >
+                  <Icon className="mx-auto h-4 w-4" />
+                  <span className="mt-2 block truncate text-[9px]">
+                    {demoContent[key][locale].label}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="mt-4 rounded-[22px] border border-white/10 bg-black/25 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,.07)]">
+            <p className="text-sm leading-6 text-white/80">{current.prompt}</p>
+            <button
+              type="button"
+              onClick={run}
+              className="mt-4 inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-xs font-semibold text-black"
+            >
+              <Play className="h-3.5 w-3.5" /> {t.run}
+            </button>
+          </div>
+
+          <div
+            aria-live="polite"
+            className="mt-4 min-h-[128px] rounded-[22px] border border-white/8 bg-white/[.035] p-4"
+          >
+            {state === "ready" ? (
+              <div className="flex h-24 items-center justify-center text-center text-xs text-white/35">
+                {t.placeholder}
+              </div>
+            ) : state === "working" ? (
+              <div className="flex h-24 flex-col items-center justify-center">
+                <span className="alma-demo-orb" />
+                <p className="mt-3 text-xs text-white/55">{t.working}</p>
+              </div>
+            ) : (
+              <div>
+                <p className="text-xs font-medium text-cyan-200">
+                  {current.result}
+                </p>
+                <div className="mt-3 space-y-2">
+                  {current.rows.map((row) => (
+                    <div
+                      key={row}
+                      className="flex items-center gap-2 text-[11px] text-white/60"
+                    >
+                      <Check className="h-3 w-3 shrink-0 text-emerald-300" />
+                      {row}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+      <div className="mt-5 text-center">
+        <p className="text-xs font-medium text-white/60">{t.preview}</p>
+        <p className="mt-1 text-[10px] text-white/30">{t.previewNote}</p>
+      </div>
+    </div>
+  );
+}
+
+export default function PublicAlmaSandbox() {
+  const isIosApp = useIsAlmaIosApp();
+  const { locale, setLocale } = useAlmaLocale();
+  const t = copy[locale];
+
+  return (
+    <main className="alma-saas min-h-screen overflow-hidden bg-[#05070c] text-white">
+      <header className="fixed inset-x-0 top-0 z-50 border-b border-white/7 bg-[#05070c]/72 backdrop-blur-2xl">
+        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-5 lg:px-8">
+          <Link href="/" className="flex items-center gap-3">
+            <span className="grid h-8 w-8 place-items-center rounded-xl border border-white/12 bg-white/[.055] text-sm font-semibold shadow-[inset_0_1px_0_rgba(255,255,255,.12)]">
+              A
+            </span>
+            <span className="text-sm font-semibold tracking-[0.14em]">
+              ALMA
+            </span>
+            <span className="hidden text-[9px] text-white/30 sm:inline">
               BY SEAINT
             </span>
           </Link>
-          <nav className="hidden items-center gap-7 text-sm text-[#667085] lg:flex">
-            {(isIosApp
-              ? ["experience", "office", "control"]
-              : ["experience", "office", "control", "pricing"]
-            ).map((id, index) => (
-              <a key={id} href={`#${id}`} className="hover:text-black">
-                {t.nav[index]}
-              </a>
-            ))}
-          </nav>
           <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={() => void setLocale(locale === "en" ? "es" : "en")}
-              className="rounded-full border border-[#D0D5DD] px-3 py-2 text-xs"
+              className="rounded-full border border-white/10 px-3 py-2 text-xs text-white/60 hover:bg-white/5"
             >
               {locale === "en" ? "ES" : "EN"}
             </button>
             <Link
               href="/login"
-              className="hidden rounded-full border border-[#D0D5DD] px-4 py-2 text-sm sm:block"
+              className="hidden rounded-full px-4 py-2 text-xs text-white/60 hover:text-white sm:block"
             >
-              {t.login}
+              {t.signIn}
             </Link>
             <Link
               href={isIosApp ? "/login" : "/signup"}
-              className="rounded-full bg-black px-4 py-2 text-sm text-white"
+              className="rounded-full bg-white px-4 py-2 text-xs font-semibold text-black"
             >
-              {isIosApp ? t.login : t.create}
+              {isIosApp ? t.signIn : t.create}
             </Link>
           </div>
         </div>
       </header>
 
-      <section className="mx-auto grid max-w-[1440px] items-center gap-10 px-5 py-16 md:px-8 md:py-24 xl:grid-cols-[0.85fr_1.15fr]">
-        <div>
-          <p className="text-xs font-medium tracking-[0.25em] text-[#667085]">
-            {t.eyebrow}
-          </p>
-          <h1 className="mt-5 max-w-2xl text-5xl font-medium leading-[0.96] tracking-[-0.055em] md:text-7xl">
-            {t.title}
-          </h1>
-          <p className="mt-6 max-w-xl text-lg leading-8 text-[#667085]">
-            {t.subtitle}
-          </p>
-          <div className="mt-8 flex flex-wrap gap-3">
-            <Link
-              href={isIosApp ? "/login" : "/signup"}
-              className="rounded-full bg-black px-6 py-3 text-sm font-medium text-white"
-            >
-              {isIosApp ? t.login : t.primary}
-            </Link>
-            {!isIosApp ? (
+      <section className="relative px-5 pb-20 pt-32 lg:px-8 lg:pb-28 lg:pt-40">
+        <div className="alma-saas-orb alma-saas-orb--one" />
+        <div className="alma-saas-orb alma-saas-orb--two" />
+        <div className="relative mx-auto grid max-w-7xl items-center gap-16 lg:grid-cols-[1.08fr_.92fr]">
+          <div className="max-w-2xl text-center lg:text-left">
+            <p className="text-[11px] font-semibold tracking-[0.24em] text-cyan-200/70">
+              {t.eyebrow}
+            </p>
+            <h1 className="mt-6 text-[clamp(3rem,8vw,6.7rem)] font-medium leading-[.9] tracking-[-0.07em]">
+              {t.titleA}
+              <br />
+              <span className="alma-saas-gradient">{t.titleB}</span>
+            </h1>
+            <p className="mx-auto mt-7 max-w-xl text-base leading-7 text-white/50 sm:text-lg lg:mx-0">
+              {t.subtitle}
+            </p>
+            <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row lg:justify-start">
               <Link
-                href="/pricing"
-                className="rounded-full border border-[#D0D5DD] px-6 py-3 text-sm font-medium"
+                href={isIosApp ? "/login" : "/signup"}
+                className="inline-flex items-center justify-center gap-2 rounded-full bg-white px-6 py-3.5 text-sm font-semibold text-black"
               >
-                {t.pricing}
+                {t.primary}
+                <ArrowRight className="h-4 w-4" />
               </Link>
-            ) : null}
+              <a
+                href="#preview"
+                className="inline-flex items-center justify-center gap-2 rounded-full border border-white/12 bg-white/[.035] px-6 py-3.5 text-sm text-white/72 backdrop-blur-xl"
+              >
+                {t.demo}
+                <Play className="h-4 w-4" />
+              </a>
+            </div>
+            <div className="mt-9 flex flex-wrap justify-center gap-x-5 gap-y-3 text-[11px] text-white/35 lg:justify-start">
+              {[t.trusted, t.safe, t.bilingual].map((item) => (
+                <span key={item} className="inline-flex items-center gap-2">
+                  <Check className="h-3.5 w-3.5 text-emerald-300" />
+                  {item}
+                </span>
+              ))}
+            </div>
+          </div>
+          <PhoneDemo locale={locale} />
+        </div>
+      </section>
+
+      <section className="border-y border-white/7 bg-white/[.018] px-5 py-20 lg:px-8 lg:py-28">
+        <div className="mx-auto max-w-6xl">
+          <div className="mx-auto max-w-2xl text-center">
+            <p className="text-[11px] font-semibold tracking-[.22em] text-violet-200/60">
+              HOW IT FEELS
+            </p>
+            <h2 className="mt-5 text-3xl font-medium tracking-[-.045em] sm:text-5xl">
+              {t.oneChat}
+            </h2>
+            <p className="mt-4 text-white/45">{t.oneChatBody}</p>
+          </div>
+          <div className="mt-12 grid gap-3 md:grid-cols-3">
+            {[
+              [MessageCircle, "01", t.stepAsk, t.stepAskBody],
+              [Bot, "02", t.stepReview, t.stepReviewBody],
+              [ShieldCheck, "03", t.stepDone, t.stepDoneBody],
+            ].map(([Icon, number, title, body]) => {
+              const StepIcon = Icon as typeof MessageCircle;
+              return (
+                <article
+                  key={String(title)}
+                  className="alma-saas-card group rounded-[26px] p-6"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="grid h-10 w-10 place-items-center rounded-2xl border border-white/10 bg-white/5">
+                      <StepIcon className="h-4 w-4 text-cyan-200" />
+                    </span>
+                    <span className="text-xs text-white/20">
+                      {String(number)}
+                    </span>
+                  </div>
+                  <h3 className="mt-12 text-xl font-medium">{String(title)}</h3>
+                  <p className="mt-3 text-sm leading-6 text-white/42">
+                    {String(body)}
+                  </p>
+                </article>
+              );
+            })}
           </div>
         </div>
+      </section>
 
-        <div
-          id="experience"
-          className="overflow-hidden rounded-[28px] border border-[#D0D5DD] bg-[#F7F7F8] shadow-2xl shadow-black/10"
-        >
-          <div className="flex items-center justify-between border-b border-[#E4E7EC] bg-white p-4">
-            <div>
-              <p className="text-sm font-medium">{t.demoLabel}</p>
-              <p className="mt-1 text-xs text-[#667085]">{t.demoSafe}</p>
+      <section className="px-5 py-20 lg:px-8 lg:py-28">
+        <div className="mx-auto grid max-w-6xl gap-5 lg:grid-cols-[1.2fr_.8fr]">
+          <article className="alma-saas-card relative min-h-[430px] overflow-hidden rounded-[32px] p-7 sm:p-10">
+            <div className="absolute -right-24 -top-24 h-72 w-72 rounded-full bg-violet-500/20 blur-[80px]" />
+            <p className="relative text-[11px] font-semibold tracking-[.22em] text-cyan-200/60">
+              ALMA WORKSPACE
+            </p>
+            <h2 className="relative mt-5 max-w-xl text-3xl font-medium tracking-[-.045em] sm:text-5xl">
+              {t.power}
+            </h2>
+            <p className="relative mt-5 max-w-xl text-sm leading-7 text-white/45 sm:text-base">
+              {t.powerBody}
+            </p>
+            <div className="relative mt-10 flex flex-wrap gap-2">
+              {[
+                Users,
+                Inbox,
+                BriefcaseBusiness,
+                CircleDollarSign,
+                Mic,
+                Video,
+              ].map((Icon, index) => (
+                <span
+                  key={index}
+                  className="grid h-12 w-12 place-items-center rounded-2xl border border-white/10 bg-white/[.04]"
+                >
+                  <Icon className="h-5 w-5 text-white/55" />
+                </span>
+              ))}
             </div>
-            <span className="h-2.5 w-2.5 rounded-full bg-[#62D4B3]" />
-          </div>
-          <div className="grid min-h-[580px] md:grid-cols-[180px_1fr]">
-            <aside className="border-b border-[#E4E7EC] bg-white p-3 md:border-b-0 md:border-r">
-              <div className="flex gap-2 overflow-x-auto md:block">
-                {keys.map((key) => {
-                  const Icon = workflows[key].icon;
-                  return (
-                    <button
-                      key={key}
-                      type="button"
-                      onClick={() => choose(key)}
-                      aria-pressed={workflow === key}
-                      className={`flex shrink-0 items-center gap-2 rounded-xl px-3 py-2.5 text-sm md:mb-1 md:w-full ${
-                        workflow === key
-                          ? "bg-black text-white"
-                          : "text-[#667085] hover:bg-[#F7F7F8]"
-                      }`}
-                    >
-                      <Icon className="h-4 w-4" />
-                      {workflows[key][locale].name}
-                    </button>
-                  );
-                })}
-              </div>
-            </aside>
-            <div className="grid gap-4 p-4 xl:grid-cols-[1fr_230px]">
-              <section className="rounded-[20px] border border-[#E4E7EC] bg-white p-5">
-                <label htmlFor="alma-demo" className="text-sm font-medium">
-                  {t.command}
-                </label>
-                <textarea
-                  id="alma-demo"
-                  value={command}
-                  onChange={(event) => setCommand(event.target.value)}
-                  className="mt-3 min-h-24 w-full resize-none rounded-2xl border border-[#D0D5DD] bg-[#F9FAFB] p-4 text-sm outline-none focus:border-black"
-                />
-                <div className="mt-3 flex gap-2">
-                  <button
-                    type="button"
-                    onClick={run}
-                    disabled={state === "working" || !command.trim()}
-                    className="motion-safe:transition inline-flex items-center gap-2 rounded-full bg-black px-5 py-2.5 text-sm text-white motion-safe:hover:-translate-y-0.5 disabled:opacity-40"
+          </article>
+          <article className="alma-saas-card rounded-[32px] p-7 sm:p-10">
+            <ShieldCheck className="h-6 w-6 text-emerald-300" />
+            <h2 className="mt-14 text-3xl font-medium tracking-[-.04em]">
+              {t.control}
+            </h2>
+            <p className="mt-5 text-sm leading-7 text-white/45">
+              {t.controlBody}
+            </p>
+            <div className="mt-10 space-y-2">
+              {["Manual", "Draft", "Assisted", "Autonomous"].map(
+                (mode, index) => (
+                  <div
+                    key={mode}
+                    className="flex items-center justify-between rounded-2xl border border-white/7 bg-white/[.025] px-4 py-3 text-sm text-white/55"
                   >
-                    <Play className="h-4 w-4" />
-                    {t.run}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setCommand(current.prompt);
-                      setState("ready");
-                    }}
-                    className="rounded-full border border-[#D0D5DD] p-2.5"
-                    title={t.replay}
-                  >
-                    <RefreshCw className="h-4 w-4" />
-                  </button>
-                </div>
-                <div aria-live="polite" className="mt-6">
-                  <p className="text-xs text-[#667085]">
-                    {state === "ready"
-                      ? t.ready
-                      : state === "working"
-                        ? t.working
-                        : current.result}
-                  </p>
-                  <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[#EAECF0]">
-                    <div
-                      className="h-full rounded-full bg-black transition-all"
-                      style={{
-                        width:
-                          state === "ready"
-                            ? "8%"
-                            : state === "working"
-                              ? "58%"
-                              : "100%",
-                      }}
+                    <span>{mode}</span>
+                    <span
+                      className={`h-2 w-2 rounded-full ${index === 2 ? "bg-cyan-300 shadow-[0_0_12px_#67e8f9]" : "bg-white/15"}`}
                     />
                   </div>
-                  {state === "complete" ? (
-                    <div className="mt-5 space-y-2">
-                      <p className="text-xs font-medium uppercase tracking-[0.15em] text-[#667085]">
-                        {t.result}
-                      </p>
-                      {current.rows.map((row) => (
-                        <div
-                          key={row}
-                          className="flex gap-2 rounded-xl bg-[#F7F7F8] p-3 text-sm"
-                        >
-                          <Check className="mt-0.5 h-4 w-4 shrink-0" />
-                          {row}
-                        </div>
-                      ))}
-                    </div>
-                  ) : null}
-                </div>
-              </section>
-              <aside className="rounded-[20px] border border-[#E4E7EC] bg-white p-4">
-                <p className="text-xs font-medium uppercase tracking-[0.15em] text-[#667085]">
-                  {t.attention}
-                </p>
-                <div className="mt-4 space-y-2">
-                  {t.attentionItems.map((item, index) => (
-                    <div
-                      key={item}
-                      className="rounded-xl border border-[#EAECF0] p-3 text-sm"
-                    >
-                      <span className="mr-2 text-[#667085]">0{index + 1}</span>
-                      {item}
-                    </div>
-                  ))}
-                </div>
-              </aside>
+                ),
+              )}
             </div>
-          </div>
+          </article>
         </div>
-      </section>
-
-      <section
-        id="office"
-        className="border-y border-[#E4E7EC] bg-[#F7F7F8] px-5 py-20 md:px-8"
-      >
-        <div className="mx-auto max-w-6xl">
-          <h2 className="max-w-3xl text-4xl font-medium tracking-tight md:text-6xl">
-            {t.promise}
-          </h2>
-          <p className="mt-5 max-w-3xl text-lg leading-8 text-[#667085]">
-            {t.promiseBody}
-          </p>
-          <div className="mt-10 grid gap-4 md:grid-cols-2">
-            {[
-              {
-                Icon: Users,
-                title: t.customers,
-                body: t.customersBody,
-              },
-              {
-                Icon: BriefcaseBusiness,
-                title: t.operations,
-                body: t.operationsBody,
-              },
-              {
-                Icon: CircleDollarSign,
-                title: t.money,
-                body: t.moneyBody,
-              },
-              { Icon: Bot, title: t.assist, body: t.assistBody },
-            ].map(({ Icon, title, body }) => (
-              <article
-                key={String(title)}
-                className="rounded-[24px] border border-[#E4E7EC] bg-white p-7"
-              >
-                <Icon className="h-5 w-5" />
-                <h3 className="mt-8 text-2xl font-medium">{title}</h3>
-                <p className="mt-3 leading-7 text-[#667085]">{body}</p>
-              </article>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section
-        id="control"
-        className="mx-auto grid max-w-6xl gap-5 px-5 py-20 md:grid-cols-2 md:px-8"
-      >
-        <article className="rounded-[28px] bg-black p-8 text-white">
-          <ShieldCheck className="h-6 w-6 text-[#62D4B3]" />
-          <h2 className="mt-10 text-3xl font-medium">{t.control}</h2>
-          <p className="mt-4 leading-7 text-white/65">{t.controlBody}</p>
-        </article>
-        <article className="rounded-[28px] border border-[#D0D5DD] p-8">
-          <Languages className="h-6 w-6" />
-          <h2 className="mt-10 text-3xl font-medium">{t.bilingual}</h2>
-          <p className="mt-4 leading-7 text-[#667085]">{t.bilingualBody}</p>
-        </article>
       </section>
 
       {!isIosApp ? (
         <section
           id="pricing"
-          className="border-y border-[#E4E7EC] bg-[#F7F7F8] px-5 py-20 md:px-8"
+          className="border-y border-white/7 bg-white/[.018] px-5 py-20 lg:px-8"
         >
           <div className="mx-auto max-w-5xl">
-            <h2 className="text-center text-4xl font-medium md:text-6xl">
-              {t.priceTitle}
+            <h2 className="text-center text-3xl font-medium tracking-[-.04em] sm:text-5xl">
+              {t.pricing}
             </h2>
-            <div className="mt-10 grid gap-5 md:grid-cols-2">
+            <div className="mt-10 grid gap-4 md:grid-cols-2">
               {[
                 {
                   name: t.office,
                   price: "$39",
                   body: t.officeBody,
-                  items: t.officeItems,
                   plan: "office",
-                  dark: false,
+                  featured: false,
                 },
                 {
                   name: t.ai,
                   price: "$199",
                   body: t.aiBody,
-                  items: t.aiItems,
                   plan: "ai",
-                  dark: true,
+                  featured: true,
                 },
               ].map((plan) => (
                 <article
                   key={plan.plan}
-                  className={`rounded-[28px] border p-7 ${
-                    plan.dark
-                      ? "border-black bg-black text-white"
-                      : "border-[#D0D5DD] bg-white"
-                  }`}
+                  className={`rounded-[28px] border p-7 ${plan.featured ? "border-violet-300/20 bg-violet-400/[.07] shadow-[0_0_70px_rgba(124,92,255,.12)]" : "border-white/8 bg-white/[.025]"}`}
                 >
-                  <h3 className="text-2xl font-medium">{plan.name}</h3>
-                  <p className="mt-5 text-5xl font-medium">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-xl font-medium">{plan.name}</h3>
+                    {plan.featured ? (
+                      <Sparkles className="h-4 w-4 text-violet-200" />
+                    ) : null}
+                  </div>
+                  <p className="mt-7 text-4xl font-medium">
                     {plan.price}
-                    <span className="ml-1 text-sm font-normal opacity-60">
-                      {t.perMonth}
+                    <span className="ml-1 text-xs font-normal text-white/35">
+                      {t.month}
                     </span>
                   </p>
-                  <p className="mt-5 leading-7 opacity-65">{plan.body}</p>
-                  <ul className="mt-6 space-y-3">
-                    {plan.items.map((item) => (
-                      <li key={item} className="flex gap-3 text-sm">
-                        <Check className="h-4 w-4 shrink-0" />
-                        {item}
-                      </li>
-                    ))}
-                  </ul>
+                  <p className="mt-4 min-h-14 text-sm leading-6 text-white/42">
+                    {plan.body}
+                  </p>
                   <Link
                     href={`/signup?checkout=${plan.plan}`}
-                    className={`mt-8 flex items-center justify-center gap-2 rounded-full px-5 py-3 text-sm font-medium ${
-                      plan.dark ? "bg-white text-black" : "bg-black text-white"
-                    }`}
+                    className="mt-7 flex items-center justify-between rounded-full bg-white px-5 py-3 text-sm font-semibold text-black"
                   >
-                    {t.buy}
-                    <ArrowRight className="h-4 w-4" />
+                    {t.start}
+                    <ChevronRight className="h-4 w-4" />
                   </Link>
                 </article>
               ))}
             </div>
-            <p className="mt-7 text-center text-xs leading-5 text-[#667085]">
-              {t.disclaimer}
-            </p>
           </div>
         </section>
       ) : null}
 
-      <section className="px-5 py-24 text-center md:px-8">
-        <h2 className="mx-auto max-w-4xl text-4xl font-medium md:text-6xl">
+      <section className="px-5 py-24 text-center lg:px-8">
+        <h2 className="mx-auto max-w-3xl text-4xl font-medium tracking-[-.05em] sm:text-6xl">
           {t.final}
         </h2>
-        <p className="mx-auto mt-5 max-w-xl text-[#667085]">{t.finalBody}</p>
+        <p className="mx-auto mt-5 max-w-xl text-white/42">{t.finalBody}</p>
         <Link
           href={isIosApp ? "/login" : "/signup"}
-          className="mt-8 inline-flex items-center gap-2 rounded-full bg-black px-6 py-3 text-sm font-medium text-white"
+          className="mt-8 inline-flex items-center gap-2 rounded-full bg-white px-6 py-3.5 text-sm font-semibold text-black"
         >
-          {isIosApp ? t.login : t.primary}
+          {isIosApp ? t.signIn : t.primary}
           <ArrowRight className="h-4 w-4" />
         </Link>
       </section>
+
+      <footer className="border-t border-white/7 px-5 py-8">
+        <div className="mx-auto flex max-w-7xl items-center justify-between text-[11px] text-white/28">
+          <span>ALMA BY SEAINT</span>
+          <span>© {new Date().getFullYear()}</span>
+        </div>
+      </footer>
     </main>
   );
 }

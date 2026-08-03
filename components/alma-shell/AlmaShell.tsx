@@ -9,7 +9,6 @@ import {
   type RoutedWorkspace,
 } from "@/lib/platform/workspaceRoutes";
 import AlmaDesktopSidebar from "./AlmaDesktopSidebar";
-import AlmaMobileBottomNav from "./AlmaMobileBottomNav";
 import AlmaMobileDrawer from "./AlmaMobileDrawer";
 import WorkspaceHeader from "./WorkspaceHeader";
 import type {
@@ -135,13 +134,6 @@ export default function AlmaShell({
         <div className="alma-workspace-canvas min-h-0 w-full max-w-full flex-1 overflow-y-auto bg-[#F7F7F8]">
           {children}
         </div>
-        <AlmaMobileBottomNav
-          activeWorkspace={activeWorkspace}
-          labels={labels}
-          onHome={openDashboard}
-          onAskAlma={openDashboard}
-          onWorkspaceNavigate={openWorkspace}
-        />
       </section>
     </main>
   );

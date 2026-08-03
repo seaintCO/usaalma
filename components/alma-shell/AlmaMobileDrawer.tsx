@@ -1,4 +1,3 @@
-import { Search } from "lucide-react";
 import ConversationNavigation, {
   ConversationNewChatButton,
 } from "./ConversationNavigation";
@@ -64,14 +63,6 @@ export default function AlmaMobileDrawer({
             label={labels.newChat}
             onNewChat={onNewChat}
           />
-
-          <div className="relative mb-4">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#6B7280]" />
-            <input
-              placeholder={labels.search}
-              className="w-full rounded-lg border border-[#E5E7EB] bg-transparent py-1.5 pl-9 pr-3 text-sm outline-none focus:border-black"
-            />
-          </div>
         </div>
 
         <div className="flex-1 overflow-y-auto px-3 pb-8 text-sm">
